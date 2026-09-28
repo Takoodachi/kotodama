@@ -87,6 +87,8 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: none;
+    /* Never scroll sideways. Unlike overflow: hidden, clip keeps position: sticky working. */
+    overflow-x: clip;
   }
 
   ::selection {

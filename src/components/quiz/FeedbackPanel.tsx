@@ -2,18 +2,21 @@
 
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useRef } from "react";
+import { ExampleSentence } from "@/components/japanese/ExampleSentence";
 import { JpText } from "@/components/japanese/Furigana";
 import { SpeakButton } from "@/components/japanese/SpeakButton";
 import { Button } from "@/components/ui/Button";
-import { speechText } from "@/data/library";
+import { speechText, writtenItem } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { cleanKanjiReading } from "@/lib/japanese";
+import type { Script } from "@/lib/writing";
 import type { FuriganaMode } from "@/store/settings";
 
 interface FeedbackPanelProps {
   item: StudyItem;
+  /** Scripts words, phrases and sentences are shown in. */
+  writing: readonly Script[];
   correct: boolean;
   given: string;
   furigana: FuriganaMode;
@@ -29,15 +32,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/** Slides up after an answer with everything about the item. */
-export function FeedbackPanel({ item, correct, given, furigana, onContinue }: FeedbackPanelProps) {
-  const continueRef = useRef<HTMLButtonElement>(null);
+/** Slides up after an answer with everything about the item, including an example sentence. */
+export function FeedbackPanel({ item: source, writing, correct, given, furigana, onContinue }: FeedbackPanelProps) {
+  const item = writtenItem(source, writing);
   const isKana = item.category === "hiragana" || item.category === "katakana";
-
-  useEffect(() => {
-    // Keeps Enter / Space working for "continue" without reaching for the mouse.
-    continueRef.current?.focus({ preventScroll: true });
-  }, []);
 
   return (
     <motion.section
@@ -51,7 +49,7 @@ export function FeedbackPanel({ item, correct, given, furigana, onContinue }: Fe
     >
       <div
         className={cn(
-          "mx-auto max-w-2xl rounded-t-3xl border-x border-t bg-ink-900/95 px-5 pt-5 pb-5 backdrop-blur-xl sm:px-8",
+          "mx-auto max-h-[85dvh] max-w-2xl overflow-y-auto overscroll-contain rounded-t-3xl border-x border-t bg-ink-900/95 px-5 pt-5 pb-5 backdrop-blur-xl sm:px-8",
           correct ? "border-gold/40" : "border-crimson/40",
         )}
       >
@@ -102,8 +100,13 @@ export function FeedbackPanel({ item, correct, given, furigana, onContinue }: Fe
           </dl>
         </div>
 
-        <Button ref={continueRef} variant="primary" size="lg" className="mt-5 w-full" onClick={onContinue}>
+        <ExampleSentence key={item.id} item={source} writing={writing} furigana={furigana} className="mt-4" />
+
+        <Button variant="primary" size="lg" className="mt-5 w-full" onClick={onContinue}>
           Continue <ArrowRight className="size-4" />
+          <kbd className="ml-1 hidden rounded border border-white/25 px-1.5 py-0.5 font-sans text-[10px] tracking-wide text-paper/80 pointer-fine:inline">
+            Enter
+          </kbd>
         </Button>
       </div>
     </motion.section>

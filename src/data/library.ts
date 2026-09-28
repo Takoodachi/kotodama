@@ -1,14 +1,20 @@
 import { toHiragana, toRomaji } from "wanakana";
 import { cleanKanjiReading } from "@/lib/japanese";
 import { toReading, toSurface } from "@/lib/furigana";
+import { ALL_SCRIPTS, isStandardWriting, writeAs, type Script } from "@/lib/writing";
+import examplesJson from "./examples.json";
 import { HIRAGANA_ROWS, KATAKANA_ROWS } from "./kana";
 import kanjiJson from "./kanji.json";
 import phrasesJson from "./phrases.json";
 import sentencesJson from "./sentences.json";
 import vocabJson from "./vocab.json";
-import type { Category, RawItem, StudyItem } from "./types";
+import type { Category, Example, RawItem, StudyItem } from "./types";
+
+/** Example sentences for words and kanji, keyed by item id. */
+export const EXAMPLES: Record<string, Example> = examplesJson;
 
 function resolve(raw: RawItem, category: Category): StudyItem {
+  const example = EXAMPLES[raw.id];
   if (category === "kanji") {
     const readings = kanjiReadings(raw);
     return {
@@ -18,6 +24,7 @@ function resolve(raw: RawItem, category: Category): StudyItem {
       surface: raw.jp,
       reading: readings[0],
       romaji: raw.romaji ?? readings.map((r) => toRomaji(r)),
+      example,
     };
   }
   const reading = raw.reading ?? toReading(raw.jp);
@@ -28,6 +35,37 @@ function resolve(raw: RawItem, category: Category): StudyItem {
     surface: toSurface(raw.jp),
     reading,
     romaji: raw.romaji ?? [toRomaji(reading)],
+    example,
+  };
+}
+
+/** Categories whose writing (hiragana / katakana / kanji) the learner can choose. */
+const WRITTEN_CATEGORIES = new Set<Category>(["vocab", "phrase", "sentence"]);
+
+/**
+ * The part of an item to find (and highlight) inside its example sentence:
+ * the word without its trailing kana, so conjugated forms still match
+ * (食べる → 食, found in 食べましょう). Written in the chosen scripts.
+ */
+export function exampleTarget(item: StudyItem, scripts: readonly Script[] = ALL_SCRIPTS): string {
+  const stem = item.jp.replace(/[ぁ-ゖ]+$/, "") || item.jp;
+  return toSurface(WRITTEN_CATEGORIES.has(item.category) ? writeAs(stem, scripts) : stem);
+}
+
+/**
+ * An item as it should be shown when words, phrases and sentences are
+ * written only in the chosen scripts. Kana and kanji items are unchanged,
+ * and speech keeps the normal writing so the voice reads it naturally.
+ */
+export function writtenItem(item: StudyItem, scripts: readonly Script[] = ALL_SCRIPTS): StudyItem {
+  if (!WRITTEN_CATEGORIES.has(item.category) || isStandardWriting(scripts)) return item;
+  const jp = writeAs(item.jp, scripts);
+  return {
+    ...item,
+    jp,
+    surface: toSurface(jp),
+    speech: speechText(item),
+    example: item.example && { ...item.example, jp: writeAs(item.example.jp, scripts) },
   };
 }
 

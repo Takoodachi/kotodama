@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { DEFAULT_DIRECTIONS, type Direction, type Mode } from "@/lib/quiz/directions";
+import { ALL_SCRIPTS, type Script } from "@/lib/writing";
 
 export type FuriganaMode = "show" | "after" | "hide";
 export type GlyphStyle = "sans" | "mincho";
@@ -25,6 +26,10 @@ interface SettingsState {
   audio: AudioSettings;
   builtInIme: boolean;
   autoAdvance: boolean;
+  /** Scripts words, phrases and sentences are written in. */
+  writing: Script[];
+  /** Whether the practice guide has been shown (it opens by itself on the first visit). */
+  guideSeen: boolean;
 
   toggleGroup: (id: string) => void;
   setGroups: (ids: string[], on: boolean) => void;
@@ -38,6 +43,8 @@ interface SettingsState {
   setAudio: (audio: Partial<AudioSettings>) => void;
   setBuiltInIme: (on: boolean) => void;
   setAutoAdvance: (on: boolean) => void;
+  toggleWriting: (script: Script) => void;
+  setGuideSeen: (seen: boolean) => void;
 }
 
 export const useSettings = create<SettingsState>()(
@@ -53,6 +60,8 @@ export const useSettings = create<SettingsState>()(
       audio: { autoplay: "answer", rate: 0.9, voiceURI: null },
       builtInIme: false,
       autoAdvance: true,
+      writing: ALL_SCRIPTS,
+      guideSeen: false,
 
       toggleGroup: (id) =>
         set((s) => ({
@@ -81,6 +90,13 @@ export const useSettings = create<SettingsState>()(
       setAudio: (audio) => set((s) => ({ audio: { ...s.audio, ...audio } })),
       setBuiltInIme: (builtInIme) => set({ builtInIme }),
       setAutoAdvance: (autoAdvance) => set({ autoAdvance }),
+      toggleWriting: (script) =>
+        set((s) => {
+          const next = s.writing.includes(script) ? s.writing.filter((w) => w !== script) : [...s.writing, script];
+          // At least one script must stay on.
+          return next.length ? { writing: next } : s;
+        }),
+      setGuideSeen: (guideSeen) => set({ guideSeen }),
     }),
     {
       name: "kotodama-settings",

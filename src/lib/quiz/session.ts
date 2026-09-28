@@ -2,6 +2,7 @@ import type { StudyItem } from "@/data/types";
 import { randomInt, weightedSample, type Rng } from "@/lib/random";
 import { priority, type SrsRecord } from "@/lib/srs";
 import { pickDirection, type Direction, type Mode } from "./directions";
+import type { Script } from "@/lib/writing";
 import { buildOptions, type ChoiceOption } from "./distractors";
 
 export interface Question {
@@ -18,11 +19,15 @@ export interface Question {
 export interface SessionConfig {
   mode: Mode;
   directions: readonly Direction[];
+  /** Scripts words, phrases and sentences are written in. */
+  writing?: readonly Script[];
 }
 
 /** How many times a missed item is re-asked within one session. */
 export const MAX_RETRIES = 2;
 
+// Keys must stay unique across page loads, since a saved session can resume after a reload.
+const KEY_PREFIX = Date.now().toString(36);
 let questionCounter = 0;
 
 export function makeQuestion(
@@ -34,10 +39,10 @@ export function makeQuestion(
 ): Question {
   const direction = pickDirection(item, config.mode, config.directions, rng);
   return {
-    key: `${item.id}#${++questionCounter}`,
+    key: `${item.id}#${KEY_PREFIX}.${++questionCounter}`,
     itemId: item.id,
     direction,
-    options: config.mode === "choice" ? buildOptions(item, direction, pool, rng) : null,
+    options: config.mode === "choice" ? buildOptions(item, direction, pool, rng, { writing: config.writing }) : null,
     attempt,
   };
 }

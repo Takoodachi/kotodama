@@ -36,9 +36,12 @@ const pagesConfig: NextConfig = {
   basePath,
 };
 
+/** Identifies this build; the service worker uses it to swap caches on each deploy. */
+const buildId = process.env.GITHUB_SHA?.slice(0, 10) ?? Date.now().toString(36);
+
 const nextConfig: NextConfig = {
   ...(basePath ? pagesConfig : serverConfig),
-  env: { NEXT_PUBLIC_BASE_PATH: basePath },
+  env: { NEXT_PUBLIC_BASE_PATH: basePath, NEXT_PUBLIC_BUILD_ID: buildId },
 };
 
 export default nextConfig;

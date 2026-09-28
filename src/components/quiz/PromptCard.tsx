@@ -16,6 +16,8 @@ interface PromptCardProps {
   furigana: FuriganaMode;
   /** null while unanswered. */
   correct: boolean | null;
+  /** Ghost mode gets a pale, spectral edge. */
+  ghost?: boolean;
 }
 
 function jpSize(text: string): string {
@@ -44,14 +46,19 @@ function rubyFor(furigana: FuriganaMode, direction: Direction, answered: boolean
   return furigana === "after" || direction === "jp-romaji" ? "reserve" : "show";
 }
 
-export function PromptCard({ item, direction, mode, furigana, correct }: PromptCardProps) {
+export function PromptCard({ item, direction, mode, furigana, correct, ghost }: PromptCardProps) {
   const side = promptSide(direction);
   const answered = correct !== null;
   // Hearing the word would give away a reading question, so the button waits for the answer.
   const canSpeak = side === "jp" ? direction !== "jp-romaji" || answered : answered;
 
   return (
-    <div className="glass relative overflow-hidden rounded-3xl px-5 pt-5 pb-10 text-center sm:px-10">
+    <div
+      className={cn(
+        "glass relative overflow-hidden rounded-3xl px-5 pt-5 pb-10 text-center sm:px-10",
+        ghost && "border-white/20 shadow-[0_0_60px_-20px_rgb(242_239_234/0.35),inset_0_0_40px_-20px_rgb(242_239_234/0.25)]",
+      )}
+    >
       <AnimatePresence>
         {answered && (
           <motion.div
@@ -73,7 +80,7 @@ export function PromptCard({ item, direction, mode, furigana, correct }: PromptC
 
       <div className="relative flex items-center justify-between gap-3">
         <p className="eyebrow text-left">{questionHint(item, direction, mode)}</p>
-        <div className="size-11">{canSpeak && <SpeakButton text={speechText(item)} />}</div>
+        <SpeakButton text={speechText(item)} locked={!canSpeak} />
       </div>
 
       <motion.div
