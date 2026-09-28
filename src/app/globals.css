@@ -1,26 +1,126 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --color-ink-950: #0a0a0a;
+  --color-ink-900: #121212;
+  --color-ink-800: #1a1a1a;
+  --color-ink-700: #262626;
+  --color-paper: #f2efea;
+  --color-mist: #a8a39b;
+  --color-smoke: #6f6a63;
+  --color-line: rgb(255 255 255 / 0.08);
+  --color-crimson: #c8102e;
+  --color-crimson-bright: #e0243f;
+  --color-gold: #c9a45c;
+  --color-gold-bright: #e6c98a;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --animate-drift-a: drift-a 38s ease-in-out infinite alternate;
+  --animate-drift-b: drift-b 46s ease-in-out infinite alternate;
+
+  @keyframes drift-a {
+    from { transform: translate3d(-8%, -4%, 0) scale(1); }
+    to { transform: translate3d(10%, 6%, 0) scale(1.15); }
+  }
+  @keyframes drift-b {
+    from { transform: translate3d(6%, 8%, 0) scale(1.1); }
+    to { transform: translate3d(-10%, -6%, 0) scale(0.95); }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --font-sans: var(--font-inter), var(--font-noto-jp), ui-sans-serif, system-ui, sans-serif;
+  --font-jp: var(--font-noto-jp), "Hiragino Sans", "Yu Gothic", sans-serif;
+  --font-mincho: var(--font-shippori), "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-display: var(--font-cinzel), var(--font-shippori), serif;
+}
+
+@utility glass {
+  background: rgb(255 255 255 / 0.03);
+  border: 1px solid var(--color-line);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+}
+
+@utility text-gold-metal {
+  background: linear-gradient(135deg, #e6c98a 0%, #b8893b 45%, #f1dda8 70%, #c9a45c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility bg-gold-metal {
+  background: linear-gradient(135deg, #e6c98a 0%, #b8893b 45%, #f1dda8 70%, #c9a45c 100%);
+}
+
+@utility eyebrow {
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-mist);
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    background: var(--color-ink-950);
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--color-ink-950);
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  ::selection {
+    background: var(--color-crimson);
+    color: var(--color-paper);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  ruby {
+    ruby-position: over;
+  }
+
+  rt {
+    font-size: 0.42em;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    color: var(--color-mist);
+    user-select: none;
+  }
+
+  /* Glyph style chosen in settings (Tofugu's sans / serif toggle). */
+  [data-glyph="mincho"] .jp {
+    font-family: var(--font-mincho);
+  }
+  [data-glyph="sans"] .jp {
+    font-family: var(--font-jp);
+  }
+
+  input[type="range"] {
+    accent-color: var(--color-crimson);
+  }
 }
