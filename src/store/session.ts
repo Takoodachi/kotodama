@@ -1,7 +1,16 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import { itemsByIds, ITEMS_BY_ID } from "@/data/library";
 import type { Direction, Mode } from "@/lib/quiz/directions";
-import { makeQuestion, MAX_RETRIES, pickItems, retryIndex, type Question } from "@/lib/quiz/session";
+import {
+  makeQuestion,
+  MAX_RETRIES,
+  pickItems,
+  retryIndex,
+  type Question,
+  type SessionConfig,
+} from "@/lib/quiz/session";
+import { ALL_SCRIPTS, type Script } from "@/lib/writing";
 import { useProgress } from "./progress";
 
 export interface AnswerResult {
@@ -11,7 +20,12 @@ export interface AnswerResult {
   correct: boolean;
   given: string;
   attempt: number;
+  /** True when this was the first time the item was ever answered. */
+  firstSeen: boolean;
 }
+
+/** Ghost mode: a session built from the items answered worst so far. */
+export type SessionLabel = "ghost";
 
 interface StartOptions {
   itemIds: string[];
@@ -19,6 +33,8 @@ interface StartOptions {
   directions: Direction[];
   /** 0 means endless. */
   length: number;
+  label?: SessionLabel;
+  writing?: Script[];
 }
 
 interface SessionState {
@@ -26,6 +42,8 @@ interface SessionState {
   mode: Mode;
   directions: Direction[];
   length: number;
+  label: SessionLabel | null;
+  writing: Script[];
   poolIds: string[];
   queue: Question[];
   index: number;
@@ -41,87 +59,105 @@ interface SessionState {
 const ENDLESS_BATCH = 15;
 const rng = Math.random;
 
-function buildQuestions(poolIds: string[], count: number, mode: Mode, directions: Direction[]): Question[] {
+function buildQuestions(poolIds: string[], count: number, config: SessionConfig): Question[] {
   const pool = itemsByIds(poolIds);
   const records = useProgress.getState().records;
-  return pickItems(pool, count, records, Date.now(), rng).map((item) =>
-    makeQuestion(item, pool, { mode, directions }, rng),
-  );
+  return pickItems(pool, count, records, Date.now(), rng).map((item) => makeQuestion(item, pool, config, rng));
 }
 
-/** The live quiz. Kept in memory only: reloading the quiz page returns to the picker. */
-export const useSession = create<SessionState>()((set, get) => ({
-  status: "idle",
-  mode: "choice",
-  directions: [],
-  length: 0,
-  poolIds: [],
-  queue: [],
-  index: 0,
-  results: [],
-
-  start: ({ itemIds, mode, directions, length }) => {
-    const poolIds = itemIds.filter((id) => ITEMS_BY_ID.has(id));
-    if (!poolIds.length) return false;
-    const count = length || ENDLESS_BATCH;
-    set({
-      status: "active",
-      mode,
-      directions,
-      length,
-      poolIds,
-      queue: buildQuestions(poolIds, count, mode, directions),
+/**
+ * The live quiz. Saved to sessionStorage (this tab only), so a reload, or an
+ * offline navigation that falls back to a full page load, resumes the session.
+ */
+export const useSession = create<SessionState>()(
+  persist(
+    (set, get) => ({
+      status: "idle",
+      mode: "choice",
+      directions: [],
+      length: 0,
+      label: null,
+      writing: ALL_SCRIPTS,
+      poolIds: [],
+      queue: [],
       index: 0,
       results: [],
-    });
-    return true;
-  },
 
-  answer: (given, correct) => {
-    const { queue, index, results, poolIds, mode, directions } = get();
-    const question = queue[index];
-    if (!question || results.at(-1)?.questionKey === question.key) return;
+      start: ({ itemIds, mode, directions, length, label, writing = ALL_SCRIPTS }) => {
+        const poolIds = itemIds.filter((id) => ITEMS_BY_ID.has(id));
+        if (!poolIds.length) return false;
+        const count = length || ENDLESS_BATCH;
+        set({
+          status: "active",
+          mode,
+          directions,
+          length,
+          label: label ?? null,
+          writing,
+          poolIds,
+          queue: buildQuestions(poolIds, count, { mode, directions, writing }),
+          index: 0,
+          results: [],
+        });
+        return true;
+      },
 
-    useProgress.getState().record(question.itemId, correct, question.attempt === 0);
+      answer: (given, correct) => {
+        const { queue, index, results, poolIds, mode, directions, writing } = get();
+        const question = queue[index];
+        if (!question || results.at(-1)?.questionKey === question.key) return;
 
-    let nextQueue = queue;
-    if (!correct && question.attempt < MAX_RETRIES) {
-      const item = ITEMS_BY_ID.get(question.itemId)!;
-      const retry = makeQuestion(item, itemsByIds(poolIds), { mode, directions }, rng, question.attempt + 1);
-      nextQueue = [...queue];
-      nextQueue.splice(retryIndex(index, queue.length, rng), 0, retry);
-    }
+        const firstSeen = !useProgress.getState().records[question.itemId];
+        useProgress.getState().record(question.itemId, correct, question.attempt === 0);
 
-    set({
-      queue: nextQueue,
-      results: [
-        ...results,
-        {
-          questionKey: question.key,
-          itemId: question.itemId,
-          direction: question.direction,
-          correct,
-          given,
-          attempt: question.attempt,
-        },
-      ],
-    });
-  },
+        let nextQueue = queue;
+        if (!correct && question.attempt < MAX_RETRIES) {
+          const item = ITEMS_BY_ID.get(question.itemId)!;
+          const retry = makeQuestion(item, itemsByIds(poolIds), { mode, directions, writing }, rng, question.attempt + 1);
+          nextQueue = [...queue];
+          nextQueue.splice(retryIndex(index, queue.length, rng), 0, retry);
+        }
 
-  advance: () => {
-    const { index, queue, length, poolIds, mode, directions } = get();
-    const next = index + 1;
-    if (length === 0 && next + 3 >= queue.length) {
-      set({ queue: [...queue, ...buildQuestions(poolIds, ENDLESS_BATCH, mode, directions)], index: next });
-      return;
-    }
-    if (next >= queue.length) set({ status: "done", index: next });
-    else set({ index: next });
-  },
+        set({
+          queue: nextQueue,
+          results: [
+            ...results,
+            {
+              questionKey: question.key,
+              itemId: question.itemId,
+              direction: question.direction,
+              correct,
+              given,
+              attempt: question.attempt,
+              firstSeen,
+            },
+          ],
+        });
+      },
 
-  finish: () => set({ status: "done" }),
-  clear: () => set({ status: "idle", queue: [], results: [], index: 0, poolIds: [] }),
-}));
+      advance: () => {
+        const { index, queue, length, poolIds, mode, directions, writing } = get();
+        const next = index + 1;
+        if (length === 0 && next + 3 >= queue.length) {
+          set({ queue: [...queue, ...buildQuestions(poolIds, ENDLESS_BATCH, { mode, directions, writing })], index: next });
+          return;
+        }
+        if (next >= queue.length) set({ status: "done", index: next });
+        else set({ index: next });
+      },
+
+      finish: () => set({ status: "done" }),
+      clear: () =>
+        set({ status: "idle", queue: [], results: [], index: 0, poolIds: [], label: null, writing: ALL_SCRIPTS }),
+    }),
+    {
+      name: "kotodama-session",
+      version: 1,
+      storage: createJSONStorage(() => sessionStorage),
+      skipHydration: true,
+    },
+  ),
+);
 
 export function currentQuestion(state: Pick<SessionState, "queue" | "index">): Question | undefined {
   return state.queue[state.index];

@@ -2,18 +2,22 @@
 
 import { useSyncExternalStore } from "react";
 import { useProgress } from "@/store/progress";
+import { useSession } from "@/store/session";
 import { useSettings } from "@/store/settings";
 
 function subscribe(onChange: () => void) {
   const unsubSettings = useSettings.persist.onFinishHydration(onChange);
   const unsubProgress = useProgress.persist.onFinishHydration(onChange);
+  const unsubSession = useSession.persist.onFinishHydration(onChange);
   return () => {
     unsubSettings();
     unsubProgress();
+    unsubSession();
   };
 }
 
-const isHydrated = () => useSettings.persist.hasHydrated() && useProgress.persist.hasHydrated();
+const isHydrated = () =>
+  useSettings.persist.hasHydrated() && useProgress.persist.hasHydrated() && useSession.persist.hasHydrated();
 
 /**
  * True once saved settings and progress have been read from localStorage.

@@ -4,11 +4,14 @@ import { useEffect, useRef } from "react";
 
 type KeyMap = Record<string, (event: KeyboardEvent) => void>;
 
+/** Keys that work even while a text field has focus. */
+const ALWAYS_ACTIVE = new Set(["Escape"]);
+
 function isTyping(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
-  );
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || target.tagName === "TEXTAREA" || target.tagName === "SELECT") return true;
+  // A read-only field (an answered question) no longer takes typing.
+  return target instanceof HTMLInputElement && !target.readOnly;
 }
 
 /**
@@ -24,9 +27,11 @@ export function useHotkeys(keys: KeyMap, enabled = true) {
   useEffect(() => {
     if (!enabled) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey || event.repeat || isTyping(event.target)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return;
+      if (isTyping(event.target) && !ALWAYS_ACTIVE.has(event.key)) return;
       const handler = latest.current[event.key];
       if (handler) {
+        // Also stops the focused button or form from acting on the same key.
         event.preventDefault();
         handler(event);
       }

@@ -24,6 +24,11 @@ const isStandalone = () =>
 const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 const noSubscription = () => () => {};
 
+/** True when running as the installed app (home-screen icon) rather than in a browser tab. */
+export function useIsStandalone(): boolean {
+  return useSyncExternalStore(subscribeDisplayMode, isStandalone, () => false);
+}
+
 /**
  * Offers installation: the native prompt where the browser supports it
  * (Chrome, Edge, Android), Share → Add to Home Screen steps on iOS, and a
@@ -31,7 +36,7 @@ const noSubscription = () => () => {};
  */
 export function InstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const standalone = useSyncExternalStore(subscribeDisplayMode, isStandalone, () => false);
+  const standalone = useIsStandalone();
   const ios = useSyncExternalStore(noSubscription, isIos, () => false);
 
   useEffect(() => {

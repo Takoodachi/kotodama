@@ -4,7 +4,9 @@ import { ArrowRight, Flame, Layers, Sparkles, Target } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { GhostModeButton } from "@/components/practice/GhostModeButton";
+import { InstallPrompt, useIsStandalone } from "@/components/pwa/InstallPrompt";
+import { StudyHeatmap } from "@/components/stats/StudyHeatmap";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { ITEMS_BY_CATEGORY, ITEMS_BY_ID, itemsForGroups } from "@/data/library";
 import type { Category } from "@/data/types";
@@ -43,10 +45,13 @@ export function HomeScreen() {
   const hydrated = useHydrated();
   const records = useProgress((s) => s.records);
   const streak = useProgress((s) => s.streak);
+  const history = useProgress((s) => s.history);
+  const standalone = useIsStandalone();
   const selected = useSettings((s) => s.selected);
   const startSession = useStartSession();
   // Captured once per visit; the dashboard doesn't need to tick.
   const [now] = useState(() => Date.now());
+  const [today] = useState(() => new Date());
 
   const stats = useMemo(() => {
     const entries = Object.entries(records).filter(([id]) => ITEMS_BY_ID.has(id));
@@ -104,9 +109,9 @@ export function HomeScreen() {
           initial={{ opacity: 0, filter: "blur(12px)" }}
           animate={{ opacity: 1, filter: "blur(0px)" }}
           transition={{ duration: 2, delay: 0.2 }}
-          className="pointer-events-none absolute top-6 right-0 flex gap-3 select-none md:static"
+          className="pointer-events-none absolute top-6 right-0 flex gap-3 overflow-hidden select-none md:static md:overflow-visible"
         >
-          <span className="jp font-mincho text-[7rem] leading-none text-paper/[0.06] [writing-mode:vertical-rl] md:text-[11rem] md:text-paper/90">
+          <span className="jp font-mincho text-[7rem] leading-[1.15] text-paper/[0.06] [writing-mode:vertical-rl] md:text-[11rem] md:text-paper/90">
             言霊
           </span>
           <span className="jp mt-2 hidden text-xs tracking-[0.6em] text-smoke [writing-mode:vertical-rl] md:block">
@@ -122,7 +127,24 @@ export function HomeScreen() {
         <Stat icon={Target} value={show(stats.due)} label="Due now" />
       </motion.section>
 
-      <motion.section {...rise(0.85)} className="mt-14">
+      <motion.section {...rise(0.8)} aria-label="Study activity" className="glass mt-3 rounded-2xl p-4 sm:p-6">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="eyebrow">学習 · Activity</p>
+            <h2 className="mt-1.5 font-mincho text-2xl text-paper">Your study year</h2>
+          </div>
+          <Link href="/progress" className="text-xs tracking-wide text-mist hover:text-paper">
+            Full breakdown →
+          </Link>
+        </div>
+        {hydrated ? <StudyHeatmap history={history} today={today} /> : <div className="h-[140px]" />}
+      </motion.section>
+
+      <motion.div {...rise(0.9)} className="mt-3">
+        <GhostModeButton className="w-full" />
+      </motion.div>
+
+      <motion.section {...rise(0.95)} className="mt-14">
         <div className="mb-4 flex items-end justify-between">
           <div>
             <p className="eyebrow">Library</p>
@@ -148,13 +170,16 @@ export function HomeScreen() {
         </div>
       </motion.section>
 
-      <motion.section {...rise(1)} className="glass mt-14 mb-6 flex flex-col gap-4 rounded-2xl p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-        <div>
-          <p className="eyebrow">Take it with you</p>
-          <p className="mt-1.5 text-sm text-mist">Install Kotodama on your phone. It works offline, like a native app.</p>
-        </div>
-        <InstallPrompt />
-      </motion.section>
+      {/* Already installed: the prompt lives on in Settings only. */}
+      {!standalone && (
+        <motion.section {...rise(1)} className="glass mt-14 mb-6 flex flex-col gap-4 rounded-2xl p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div>
+            <p className="eyebrow">Take it with you</p>
+            <p className="mt-1.5 text-sm text-mist">Install Kotodama on your phone. It works offline, like a native app.</p>
+          </div>
+          <InstallPrompt />
+        </motion.section>
+      )}
     </div>
   );
 }

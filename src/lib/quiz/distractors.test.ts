@@ -27,6 +27,28 @@ describe("buildOptions", () => {
     }
   });
 
+  it("never offers a synonym of the answer as a wrong option", () => {
+    const hajimemashite = ITEMS_BY_ID.get("p-hajimemashite")!;
+    for (let seed = 0; seed < 100; seed++) {
+      const ids = buildOptions(hajimemashite, "jp-en", [hajimemashite], seededRng(seed)).map((o) => o.itemId);
+      expect(ids).not.toContain("p-yoroshiku");
+    }
+  });
+
+  it("writes Japanese options in the chosen scripts", () => {
+    const rng = seededRng(3);
+    const onlyKana = (text: string) => /^[぀-ゟ゠-ヿ。、！？ー\s]+$/.test(text);
+    for (const id of ["v-taberu", "v-koohii", "s-desu-1", "p-kippu"]) {
+      const item = ITEMS_BY_ID.get(id)!;
+      const hira = buildOptions(item, "en-jp", [item], rng, { writing: ["hiragana"] });
+      for (const o of hira) expect(o.label, o.label).toMatch(/^[぀-ゟ。、！？ー\s]+$/);
+      const kata = buildOptions(item, "en-jp", [item], rng, { writing: ["katakana"] });
+      for (const o of kata) expect(o.label, o.label).toMatch(/^[゠-ヿ。、！？ー\s]+$/);
+      const kana = buildOptions(item, "en-jp", [item], rng, { writing: ["hiragana", "katakana"] });
+      for (const o of kana) expect(onlyKana(o.label), o.label).toBe(true);
+    }
+  });
+
   it("keeps distractors in the same category", () => {
     const rng = seededRng(7);
     const pool = ITEMS_BY_GROUP.get("kata-sa")!;

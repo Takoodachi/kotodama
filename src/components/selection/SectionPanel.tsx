@@ -25,7 +25,9 @@ function AllPill({ on, onClick, label }: { on: boolean; onClick: () => void; lab
       onClick={onClick}
       className={cn(
         "h-8 rounded-full border px-3.5 text-[11px] tracking-[0.14em] uppercase transition-colors",
-        on ? "border-crimson/70 bg-crimson/15 text-paper" : "border-line text-mist hover:border-white/25 hover:text-paper",
+        on
+          ? "border-crimson/80 bg-crimson/15 text-paper shadow-[0_0_22px_-4px_rgb(200_16_46/0.85),inset_0_0_0_1px_rgb(200_16_46/0.35)]"
+          : "border-line text-mist hover:border-white/25 hover:text-paper",
       )}
     >
       {label}
@@ -53,7 +55,7 @@ export function SectionPanel({
   const kana = isKanaSection(section.id);
 
   return (
-    <section id={`section-${section.id}`} className="glass scroll-mt-32 rounded-2xl p-4 sm:p-6">
+    <section id={`section-${section.id}`} className="glass scroll-mt-32 rounded-2xl p-4 sm:p-6 md:scroll-mt-36">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{section.title}</p>

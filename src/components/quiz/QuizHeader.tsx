@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, X } from "lucide-react";
+import { Flame, Ghost, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 
@@ -13,10 +13,12 @@ interface QuizHeaderProps {
   correct: number;
   /** Correct answers in a row. */
   streak: number;
+  /** Ghost mode: drilling the weakest items. */
+  ghost?: boolean;
   onClose: () => void;
 }
 
-export function QuizHeader({ position, done, total, endless, correct, streak, onClose }: QuizHeaderProps) {
+export function QuizHeader({ position, done, total, endless, correct, streak, ghost, onClose }: QuizHeaderProps) {
   return (
     <header className="pt-safe">
       <div className="flex h-14 items-center gap-4">
@@ -28,6 +30,11 @@ export function QuizHeader({ position, done, total, endless, correct, streak, on
         >
           <X className="size-5" strokeWidth={1.5} />
         </button>
+        {ghost && (
+          <span className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-1 text-[10px] tracking-[0.18em] text-paper uppercase shadow-[0_0_18px_-4px_rgb(242_239_234/0.5)]">
+            <Ghost className="size-3" /> Ghost
+          </span>
+        )}
         <div className="flex-1">
           <ProgressBar value={endless ? (done ? correct / done : 0) : done / Math.max(total, 1)} />
         </div>

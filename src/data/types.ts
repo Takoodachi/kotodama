@@ -40,8 +40,17 @@ export interface RawItem {
   speech?: string;
 }
 
+/** A short sentence that uses a word or kanji in context. */
+export interface Example {
+  /** Furigana markup, like `jp` on items. */
+  jp: string;
+  en: string;
+}
+
 /** A fully resolved library entry. */
 export interface StudyItem extends RawItem {
+  /** Example sentence (words and kanji only). */
+  example?: Example;
   category: Category;
   /** Every selectable group this item belongs to. */
   groups: string[];

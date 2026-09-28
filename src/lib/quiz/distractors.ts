@@ -1,7 +1,8 @@
-import { ITEMS_BY_CATEGORY } from "@/data/library";
+import { ITEMS_BY_CATEGORY, writtenItem } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import { normalizeEnglish } from "@/lib/japanese";
 import { shuffle, weightedSample, type Rng } from "@/lib/random";
+import { ALL_SCRIPTS, type Script } from "@/lib/writing";
 import { areConfusable } from "./confusables";
 import { answerLabel, answerSide, promptSide, type Direction, type Side } from "./directions";
 
@@ -14,6 +15,12 @@ export interface ChoiceOption {
 
 const labelKey = (label: string) => label.normalize("NFKC").toLowerCase().replace(/[\s.,!?。、！？]/g, "");
 
+/** True when two items share any English meaning ("excuse me" ≈ "excuse me (entering)"). */
+function sharesMeaning(a: StudyItem, b: StudyItem): boolean {
+  const meanings = new Set(a.meaning.map(normalizeEnglish));
+  return b.meaning.some((m) => meanings.has(normalizeEnglish(m)));
+}
+
 function fitsPrompt(item: StudyItem, candidate: StudyItem, prompt: Side): boolean {
   switch (prompt) {
     case "jp":
@@ -22,10 +29,8 @@ function fitsPrompt(item: StudyItem, candidate: StudyItem, prompt: Side): boolea
       const readings = new Set(item.romaji.map(labelKey));
       return candidate.romaji.some((r) => readings.has(labelKey(r)));
     }
-    case "en": {
-      const meanings = new Set(item.meaning.map(normalizeEnglish));
-      return candidate.meaning.some((m) => meanings.has(normalizeEnglish(m)));
-    }
+    case "en":
+      return sharesMeaning(item, candidate);
   }
 }
 
@@ -76,24 +81,29 @@ function plausibility(item: StudyItem, candidate: StudyItem, poolIds: Set<string
  * correct answer (じ and ぢ are both "ji") are never offered.
  */
 export function buildOptions(
-  item: StudyItem,
+  source: StudyItem,
   direction: Direction,
   pool: readonly StudyItem[],
   rng: Rng,
-  count = 4,
+  { count = 4, writing = ALL_SCRIPTS }: { count?: number; writing?: readonly Script[] } = {},
 ): ChoiceOption[] {
+  // Japanese options are shown in the learner's chosen writing.
+  const show = (it: StudyItem) => writtenItem(it, writing);
+  const item = show(source);
   const side = answerSide(direction);
   const correct = { itemId: item.id, ...answerLabel(item, side), correct: true };
   const taken = new Set([labelKey(correct.label)]);
   const poolIds = new Set(pool.map((p) => p.id));
 
   const prompt = promptSide(direction);
-  const candidates = (ITEMS_BY_CATEGORY.get(item.category) ?? []).filter(
+  const candidates = (ITEMS_BY_CATEGORY.get(item.category) ?? []).map(show).filter(
     (c) =>
       c.id !== item.id &&
       (side !== "en" || c.meaning.length > 0) &&
-      // A distractor that also fits the prompt would be a second right answer.
-      !fitsPrompt(item, c, prompt),
+      // A distractor that also fits the prompt would be a second right answer,
+      // and so would a synonym offered as an English answer.
+      !fitsPrompt(item, c, prompt) &&
+      !(side === "en" && sharesMeaning(item, c)),
   );
   // Over-sample, then drop answers that collide with one already chosen.
   const ranked = weightedSample(

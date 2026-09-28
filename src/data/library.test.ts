@@ -1,9 +1,9 @@
 import { isKana, toHiragana } from "wanakana";
 import { describe, expect, it } from "vitest";
-import { isWellFormedFurigana } from "@/lib/furigana";
+import { isWellFormedFurigana, toReading, toSurface } from "@/lib/furigana";
 import { readingKey, stripPunctuation } from "@/lib/japanese";
 import { ALL_GROUPS, SECTIONS } from "./groups";
-import { ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, LIBRARY } from "./library";
+import { EXAMPLES, exampleTarget, ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, ITEMS_BY_ID, LIBRARY } from "./library";
 import type { Category } from "./types";
 
 describe("content library", () => {
@@ -68,6 +68,23 @@ describe("content library", () => {
         expect(key(item.romaji[0]), `${item.id}: ${item.romaji[0]} vs ${item.reading}`).toBe(key(item.reading));
       }
     }
+  });
+
+  it("gives every word and kanji an example sentence that uses it", () => {
+    for (const category of ["vocab", "kanji"] as Category[]) {
+      for (const item of ITEMS_BY_CATEGORY.get(category)!) {
+        const example = item.example;
+        expect(example, `${item.id} has no example`).toBeDefined();
+        expect(isWellFormedFurigana(example!.jp), `${item.id} markup`).toBe(true);
+        expect(isKana(stripPunctuation(toReading(example!.jp))), `${item.id} reading`).toBe(true);
+        expect(toSurface(example!.jp), `${item.id} uses ${exampleTarget(item)}`).toContain(exampleTarget(item));
+        expect(example!.en.length, `${item.id} translation`).toBeGreaterThan(3);
+      }
+    }
+  });
+
+  it("has no example sentences for ids that don't exist", () => {
+    for (const id of Object.keys(EXAMPLES)) expect(ITEMS_BY_ID.has(id), id).toBe(true);
   });
 
   it("has enough distinct answers in each category for four options", () => {

@@ -4,6 +4,7 @@ import { MotionConfig } from "motion/react";
 import { useEffect } from "react";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { useProgress } from "@/store/progress";
+import { useSession } from "@/store/session";
 import { useSettings } from "@/store/settings";
 
 /** Reads saved state from localStorage once the app has mounted. */
@@ -11,6 +12,7 @@ function StoreHydrator() {
   useEffect(() => {
     void useSettings.persist.rehydrate();
     void useProgress.persist.rehydrate();
+    void useSession.persist.rehydrate();
   }, []);
   return null;
 }

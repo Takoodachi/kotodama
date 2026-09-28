@@ -2,8 +2,8 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { ITEMS_BY_ID, speechText } from "@/data/library";
+import { useCallback, useEffect } from "react";
+import { ITEMS_BY_ID, speechText, writtenItem } from "@/data/library";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useSpeech } from "@/hooks/useSpeech";
@@ -22,11 +22,34 @@ import { SessionSummary } from "./SessionSummary";
 
 const ADVANCE_DELAY = { choice: 850, typed: 1000 };
 
+function Key({ children }: { children: React.ReactNode }) {
+  return <kbd className="rounded border border-white/15 px-1.5 py-0.5 font-sans text-[10px] text-mist">{children}</kbd>;
+}
+
+/** Shortcut reminders, only on devices with a mouse and keyboard. */
+function KeyboardHints({ choice, answered }: { choice: boolean; answered: boolean }) {
+  return (
+    <p className="mt-5 hidden items-center justify-center gap-4 text-[11px] text-smoke pointer-fine:flex" aria-hidden>
+      {choice && !answered && (
+        <span className="flex items-center gap-1.5">
+          <Key>1</Key>–<Key>4</Key> answer
+        </span>
+      )}
+      <span className="flex items-center gap-1.5">
+        <Key>Enter</Key> or <Key>Space</Key> {answered ? "next" : choice ? "next, once answered" : "check / next"}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <Key>Esc</Key> end
+      </span>
+    </p>
+  );
+}
+
 export function QuizRunner() {
   const router = useRouter();
   const hydrated = useHydrated();
   const session = useSession();
-  const { status, mode, queue, index, results, length, poolIds, answer, advance, finish, clear } = session;
+  const { status, mode, queue, index, results, length, label, writing, poolIds, answer, advance, finish, clear } = session;
   const furigana = useSettings((s) => s.furigana);
   const autoAdvance = useSettings((s) => s.autoAdvance);
   const autoplay = useSettings((s) => s.audio.autoplay);
@@ -38,17 +61,20 @@ export function QuizRunner() {
   const item = question ? ITEMS_BY_ID.get(question.itemId) : undefined;
   const last = results.at(-1);
   const result = question && last?.questionKey === question.key ? last : undefined;
-  // A correct answer with auto-advance just flashes gold and moves on.
-  const showPanel = !!result && !(result.correct && autoAdvance);
+  // A correct answer with auto-advance just flashes gold and moves on, except
+  // the first time a word is met: then it stays up to show the example sentence.
+  const meetingNewWord = !!result?.firstSeen && !!item?.example;
+  const showPanel = !!result && (!(result.correct && autoAdvance) || meetingNewWord);
 
   let inARow = 0;
   for (let i = results.length - 1; i >= 0 && results[i].correct; i--) inARow++;
   const correctCount = results.filter((r) => r.correct).length;
 
-  // Nothing to show without a session (e.g. after a reload): back to the picker.
+  // Nothing to show without a session: back to the picker. Waits for the
+  // saved session to load first, so a reload mid-quiz resumes instead.
   useEffect(() => {
-    if (status === "idle") router.replace("/practice");
-  }, [status, router]);
+    if (hydrated && status === "idle") router.replace("/practice");
+  }, [hydrated, status, router]);
 
   // "On reveal" audio, only where hearing the word doesn't give the answer away.
   useEffect(() => {
@@ -56,12 +82,22 @@ export function QuizRunner() {
   }, [autoplay, item, question, speak]);
 
   useEffect(() => {
-    if (!result?.correct || !autoAdvance) return;
+    if (!result || showPanel) return;
     const timer = setTimeout(advance, mode === "choice" ? ADVANCE_DELAY.choice : ADVANCE_DELAY.typed);
     return () => clearTimeout(timer);
-  }, [result, autoAdvance, advance, mode]);
+  }, [result, showPanel, advance, mode]);
 
-  useHotkeys({ Enter: advance }, !!result && !showPanel);
+  const onClose = useCallback(() => {
+    if (results.length) finish();
+    else {
+      clear();
+      router.push("/practice");
+    }
+  }, [results.length, finish, clear, router]);
+
+  // Enter or Space moves on once answered; Escape ends the session.
+  useHotkeys({ Enter: advance, " ": advance }, !!result);
+  useHotkeys({ Escape: onClose }, status === "active");
 
   if (!hydrated || status === "idle") return <div className="flex-1" />;
 
@@ -85,14 +121,6 @@ export function QuizRunner() {
   const onChoose = (option: ChoiceOption) => respond(option.label, option.correct);
   const onSubmit = (given: string) => respond(given, !!given && checkTypedAnswer(item, question.direction, given));
 
-  const onClose = () => {
-    if (results.length) finish();
-    else {
-      clear();
-      router.push("/practice");
-    }
-  };
-
   const side = answerSide(question.direction);
   const japaneseOptions = side === "jp" || (side === "romaji" && item.category === "kanji");
 
@@ -105,6 +133,7 @@ export function QuizRunner() {
         endless={length === 0}
         correct={correctCount}
         streak={inARow}
+        ghost={label === "ghost"}
         onClose={onClose}
       />
 
@@ -119,11 +148,12 @@ export function QuizRunner() {
             className="flex flex-col gap-5"
           >
             <PromptCard
-              item={item}
+              item={writtenItem(item, writing)}
               direction={question.direction}
               mode={mode}
               furigana={furigana}
               correct={result ? result.correct : null}
+              ghost={label === "ghost"}
             />
             {question.options ? (
               <MultipleChoice
@@ -144,6 +174,7 @@ export function QuizRunner() {
             )}
           </motion.div>
         </AnimatePresence>
+        <KeyboardHints choice={!!question.options} answered={!!result} />
       </div>
 
       <AnimatePresence>
@@ -151,6 +182,7 @@ export function QuizRunner() {
           <FeedbackPanel
             key={question.key}
             item={item}
+            writing={writing}
             correct={result.correct}
             given={result.given}
             furigana={furigana}

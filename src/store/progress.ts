@@ -8,17 +8,24 @@ interface Streak {
   lastDay: string | null;
 }
 
+export interface DayActivity {
+  answered: number;
+  correct: number;
+}
+
 interface ProgressState {
   records: Record<string, SrsRecord>;
   streak: Streak;
   totals: { answered: number; correct: number };
+  /** Answers per local day (YYYY-MM-DD), for the study heatmap. */
+  history: Record<string, DayActivity>;
 
   /** Records an answer. Only first attempts move an item between SRS boxes. */
   record: (itemId: string, correct: boolean, firstAttempt: boolean) => void;
   reset: () => void;
 }
 
-function localDay(date: Date): string {
+export function localDay(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
@@ -44,6 +51,7 @@ const initial = {
   records: {},
   streak: { count: 0, lastDay: null },
   totals: { answered: 0, correct: 0 },
+  history: {},
 };
 
 export const useProgress = create<ProgressState>()(
@@ -53,6 +61,8 @@ export const useProgress = create<ProgressState>()(
       record: (itemId, correct, firstAttempt) =>
         set((s) => {
           const now = new Date();
+          const day = localDay(now);
+          const today = s.history[day] ?? { answered: 0, correct: 0 };
           return {
             records: firstAttempt
               ? { ...s.records, [itemId]: review(s.records[itemId], correct, now.getTime()) }
@@ -62,15 +72,25 @@ export const useProgress = create<ProgressState>()(
               answered: s.totals.answered + 1,
               correct: s.totals.correct + (correct ? 1 : 0),
             },
+            history: {
+              ...s.history,
+              [day]: { answered: today.answered + 1, correct: today.correct + (correct ? 1 : 0) },
+            },
           };
         }),
       reset: () => set(initial),
     }),
     {
       name: "kotodama-progress",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
+      // v1 had no daily history; start it empty rather than invent past activity.
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<ProgressState>;
+        if (version < 2) return { ...state, history: {} } as ProgressState;
+        return state as ProgressState;
+      },
     },
   ),
 );
