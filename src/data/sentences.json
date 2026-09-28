@@ -1,0 +1,51 @@
+[
+  { "id": "s-desu-1", "group": "sent-desu", "jp": "{私|わたし}は{学生|がくせい}です。", "romaji": ["watashi wa gakusei desu."], "meaning": ["I am a student."] },
+  { "id": "s-desu-2", "group": "sent-desu", "jp": "これは{本|ほん}です。", "romaji": ["kore wa hon desu."], "meaning": ["This is a book."] },
+  { "id": "s-desu-3", "group": "sent-desu", "jp": "{田中|たなか}さんは{先生|せんせい}です。", "romaji": ["tanaka san wa sensei desu."], "meaning": ["Mr. Tanaka is a teacher.", "Ms. Tanaka is a teacher."] },
+  { "id": "s-desu-4", "group": "sent-desu", "jp": "あれは{何|なん}ですか。", "romaji": ["are wa nan desu ka."], "meaning": ["What is that?"] },
+  { "id": "s-desu-5", "group": "sent-desu", "jp": "{今日|きょう}は{月曜日|げつようび}です。", "romaji": ["kyou wa getsuyoubi desu."], "meaning": ["Today is Monday."] },
+
+  { "id": "s-masu-1", "group": "sent-masu", "jp": "{毎朝|まいあさ}コーヒーを{飲|の}みます。", "romaji": ["maiasa koohii o nomimasu."], "meaning": ["I drink coffee every morning."] },
+  { "id": "s-masu-2", "group": "sent-masu", "jp": "{明日|あした}、{東京|とうきょう}へ{行|い}きます。", "romaji": ["ashita, toukyou e ikimasu."], "meaning": ["I will go to Tokyo tomorrow."] },
+  { "id": "s-masu-3", "group": "sent-masu", "jp": "{七時|しちじ}に{起|お}きます。", "romaji": ["shichiji ni okimasu."], "meaning": ["I wake up at seven."] },
+  { "id": "s-masu-4", "group": "sent-masu", "jp": "{友達|ともだち}と{映画|えいが}を{見|み}ます。", "romaji": ["tomodachi to eiga o mimasu."], "meaning": ["I watch a movie with a friend."] },
+  { "id": "s-masu-5", "group": "sent-masu", "jp": "{私|わたし}は{肉|にく}を{食|た}べません。", "romaji": ["watashi wa niku o tabemasen."], "meaning": ["I don't eat meat."] },
+  { "id": "s-masu-6", "group": "sent-masu", "jp": "{図書館|としょかん}で{本|ほん}を{読|よ}みます。", "romaji": ["toshokan de hon o yomimasu."], "meaning": ["I read books at the library."] },
+
+  { "id": "s-past-1", "group": "sent-past", "jp": "{昨日|きのう}、{雨|あめ}が{降|ふ}りました。", "romaji": ["kinou, ame ga furimashita."], "meaning": ["It rained yesterday."] },
+  { "id": "s-past-2", "group": "sent-past", "jp": "{週末|しゅうまつ}、{海|うみ}へ{行|い}きました。", "romaji": ["shuumatsu, umi e ikimashita."], "meaning": ["I went to the sea on the weekend."] },
+  { "id": "s-past-3", "group": "sent-past", "jp": "{晩|ばん}ご{飯|はん}を{食|た}べましたか。", "romaji": ["bangohan o tabemashita ka."], "meaning": ["Did you eat dinner?"] },
+  { "id": "s-past-4", "group": "sent-past", "jp": "{映画|えいが}はとても{面白|おもしろ}かったです。", "romaji": ["eiga wa totemo omoshirokatta desu."], "meaning": ["The movie was very interesting."] },
+  { "id": "s-past-5", "group": "sent-past", "jp": "{駅|えき}で{友達|ともだち}に{会|あ}いました。", "romaji": ["eki de tomodachi ni aimashita."], "meaning": ["I met a friend at the station."] },
+
+  { "id": "s-adj-1", "group": "sent-adj", "jp": "この{部屋|へや}は{広|ひろ}いです。", "romaji": ["kono heya wa hiroi desu."], "meaning": ["This room is spacious."] },
+  { "id": "s-adj-2", "group": "sent-adj", "jp": "{富士山|ふじさん}は{高|たか}くて{綺麗|きれい}です。", "romaji": ["fujisan wa takakute kirei desu."], "meaning": ["Mt. Fuji is tall and beautiful."] },
+  { "id": "s-adj-3", "group": "sent-adj", "jp": "{今日|きょう}はあまり{寒|さむ}くないです。", "romaji": ["kyou wa amari samukunai desu."], "meaning": ["It's not very cold today."] },
+  { "id": "s-adj-4", "group": "sent-adj", "jp": "{東京|とうきょう}はとても{賑|にぎ}やかな{町|まち}です。", "romaji": ["toukyou wa totemo nigiyaka na machi desu."], "meaning": ["Tokyo is a very lively city."] },
+  { "id": "s-adj-5", "group": "sent-adj", "jp": "{私|わたし}は{猫|ねこ}が{好|す}きです。", "romaji": ["watashi wa neko ga suki desu."], "meaning": ["I like cats."] },
+
+  { "id": "s-exist-1", "group": "sent-exist", "jp": "{机|つくえ}の{上|うえ}に{本|ほん}があります。", "romaji": ["tsukue no ue ni hon ga arimasu."], "meaning": ["There is a book on the desk."] },
+  { "id": "s-exist-2", "group": "sent-exist", "jp": "{公園|こうえん}に{子供|こども}がいます。", "romaji": ["kouen ni kodomo ga imasu."], "meaning": ["There are children in the park."] },
+  { "id": "s-exist-3", "group": "sent-exist", "jp": "{近|ちか}くにコンビニがありますか。", "romaji": ["chikaku ni konbini ga arimasu ka."], "meaning": ["Is there a convenience store nearby?"] },
+  { "id": "s-exist-4", "group": "sent-exist", "jp": "{私|わたし}は{兄|あに}が{二人|ふたり}います。", "romaji": ["watashi wa ani ga futari imasu."], "meaning": ["I have two older brothers."] },
+  { "id": "s-exist-5", "group": "sent-exist", "jp": "{冷蔵庫|れいぞうこ}に{何|なに}もありません。", "romaji": ["reizouko ni nani mo arimasen."], "meaning": ["There is nothing in the fridge."] },
+
+  { "id": "s-te-1", "group": "sent-te", "jp": "{窓|まど}を{開|あ}けてください。", "romaji": ["mado o akete kudasai."], "meaning": ["Please open the window."] },
+  { "id": "s-te-2", "group": "sent-te", "jp": "ここで{写真|しゃしん}を{撮|と}ってもいいですか。", "romaji": ["koko de shashin o tottemo ii desu ka."], "meaning": ["May I take a photo here?"] },
+  { "id": "s-te-3", "group": "sent-te", "jp": "{今|いま}、{雨|あめ}が{降|ふ}っています。", "romaji": ["ima, ame ga futte imasu."], "meaning": ["It is raining now."] },
+  { "id": "s-te-4", "group": "sent-te", "jp": "{日本語|にほんご}を{勉強|べんきょう}しています。", "romaji": ["nihongo o benkyou shite imasu."], "meaning": ["I am studying Japanese."] },
+  { "id": "s-te-5", "group": "sent-te", "jp": "{名前|なまえ}を{書|か}いてください。", "romaji": ["namae o kaite kudasai."], "meaning": ["Please write your name."] },
+  { "id": "s-te-6", "group": "sent-te", "jp": "ここでタバコを{吸|す}ってはいけません。", "romaji": ["koko de tabako o sutte wa ikemasen."], "meaning": ["You must not smoke here."] },
+
+  { "id": "s-tai-1", "group": "sent-tai", "jp": "{日本|にほん}へ{行|い}きたいです。", "romaji": ["nihon e ikitai desu."], "meaning": ["I want to go to Japan."] },
+  { "id": "s-tai-2", "group": "sent-tai", "jp": "{新|あたら}しい{靴|くつ}が{欲|ほ}しいです。", "romaji": ["atarashii kutsu ga hoshii desu."], "meaning": ["I want new shoes."] },
+  { "id": "s-tai-3", "group": "sent-tai", "jp": "{何|なに}を{食|た}べたいですか。", "romaji": ["nani o tabetai desu ka."], "meaning": ["What do you want to eat?"] },
+  { "id": "s-tai-4", "group": "sent-tai", "jp": "{今日|きょう}は{何|なに}もしたくないです。", "romaji": ["kyou wa nani mo shitakunai desu."], "meaning": ["I don't want to do anything today."] },
+
+  { "id": "s-n4-1", "group": "sent-n4", "jp": "{雨|あめ}が{降|ふ}っているから、{家|いえ}にいます。", "romaji": ["ame ga futte iru kara, ie ni imasu."], "meaning": ["Because it's raining, I'm staying home."] },
+  { "id": "s-n4-2", "group": "sent-n4", "jp": "{明日|あした}は{晴|は}れると{思|おも}います。", "romaji": ["ashita wa hareru to omoimasu."], "meaning": ["I think it will be sunny tomorrow."] },
+  { "id": "s-n4-3", "group": "sent-n4", "jp": "{私|わたし}は{漢字|かんじ}を{読|よ}むことができます。", "romaji": ["watashi wa kanji o yomu koto ga dekimasu."], "meaning": ["I can read kanji."] },
+  { "id": "s-n4-4", "group": "sent-n4", "jp": "{薬|くすり}を{飲|の}まなければなりません。", "romaji": ["kusuri o nomanakereba narimasen."], "meaning": ["I have to take medicine."] },
+  { "id": "s-n4-5", "group": "sent-n4", "jp": "{富士山|ふじさん}に{登|のぼ}ったことがあります。", "romaji": ["fujisan ni nobotta koto ga arimasu."], "meaning": ["I have climbed Mt. Fuji."] },
+  { "id": "s-n4-6", "group": "sent-n4", "jp": "{日本|にほん}に{着|つ}いたら、{電話|でんわ}します。", "romaji": ["nihon ni tsuitara, denwa shimasu."], "meaning": ["When I arrive in Japan, I'll call."] }
+]
