@@ -18,7 +18,7 @@ export interface SubsectionDef {
   groups: GroupDef[];
 }
 
-export type SectionId = "hiragana" | "katakana" | "kanji" | "vocab" | "phrase" | "sentence";
+export type SectionId = "hiragana" | "katakana" | "kanji" | "vocab" | "phrase" | "sentence" | "grammar";
 
 export interface SectionDef {
   id: SectionId;
@@ -168,6 +168,48 @@ export const SECTIONS: SectionDef[] = [
       },
     ],
   },
+  {
+    id: "grammar",
+    title: "Grammar",
+    jpTitle: "文法",
+    blurb: "Fill in the missing particle, ending or word. Each answer comes with a short explanation.",
+    subsections: [
+      {
+        id: "grammar-particles",
+        title: "Particles",
+        groups: [
+          { id: "gram-wa-ga", label: "は・が", sublabel: "Topic & subject" },
+          { id: "gram-wo-ni", label: "を・に", sublabel: "Objects & targets" },
+          { id: "gram-de-to", label: "で・と", sublabel: "Place, means & with" },
+          { id: "gram-mo-no", label: "も・の・や", sublabel: "Also, of & lists" },
+          { id: "gram-kara-made", label: "から・まで", sublabel: "From, until & than" },
+          { id: "gram-ka-ne-yo", label: "か・ね・よ", sublabel: "Sentence endings" },
+        ],
+      },
+      {
+        id: "grammar-forms",
+        title: "Verb & adjective forms",
+        groups: [
+          { id: "gram-masu", label: "ます", sublabel: "Polite tenses" },
+          { id: "gram-te", label: "て", sublabel: "Te-form" },
+          { id: "gram-nai", label: "ない", sublabel: "Negatives & must" },
+          { id: "gram-adj", label: "い・な", sublabel: "Adjective forms" },
+        ],
+      },
+      {
+        id: "grammar-patterns",
+        title: "Patterns",
+        groups: [
+          { id: "gram-tai", label: "たい", sublabel: "Wanting" },
+          { id: "gram-permission", label: "てもいい", sublabel: "Permission & rules" },
+          { id: "gram-experience", label: "たことがある", sublabel: "Experience & advice" },
+          { id: "gram-giving", label: "あげる", sublabel: "Giving & receiving" },
+          { id: "gram-cond", label: "たら・ば", sublabel: "If & when" },
+          { id: "gram-looks", label: "そう", sublabel: "Looks & seems" },
+        ],
+      },
+    ],
+  },
 ];
 
 export const ALL_GROUPS: GroupDef[] = SECTIONS.flatMap((s) => s.subsections.flatMap((sub) => sub.groups));
@@ -202,6 +244,11 @@ export const PRESETS: Preset[] = [
     id: "n5-starter",
     label: "N5 starter",
     groups: () => ["kanji-n5", "vocab-people", "vocab-time", "vocab-food", "phrase-greetings", "sent-desu"],
+  },
+  {
+    id: "particles",
+    label: "Particles",
+    groups: () => SECTIONS.find((s) => s.id === "grammar")!.subsections[0].groups.map((g) => g.id),
   },
   {
     id: "traveller",

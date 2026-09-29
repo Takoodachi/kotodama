@@ -27,7 +27,7 @@ function TextField(props: React.ComponentProps<"input"> & { label: string }) {
       <input
         {...input}
         className={cn(
-          "h-12 w-full rounded-xl border border-line bg-white/[0.03] px-4 text-sm text-paper outline-none transition-colors placeholder:text-smoke focus:border-white/30",
+          "h-12 w-full rounded-xl border border-line bg-veil/[0.03] px-4 text-sm text-paper outline-none transition-colors placeholder:text-smoke focus:border-veil/30",
           className,
         )}
       />
@@ -205,7 +205,7 @@ function SignedIn() {
           disabled={sync === "syncing"}
           aria-label="Sync now"
           title="Sync now"
-          className="-my-1 -mr-2 flex size-8 shrink-0 items-center justify-center rounded-full text-mist transition-colors hover:bg-white/5 hover:text-paper disabled:opacity-40"
+          className="-my-1 -mr-2 flex size-8 shrink-0 items-center justify-center rounded-full text-mist transition-colors hover:bg-veil/5 hover:text-paper disabled:opacity-40"
         >
           <RefreshCw className={cn("size-4", sync === "syncing" && "animate-spin")} />
         </button>

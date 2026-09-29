@@ -2,14 +2,22 @@
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/cn";
-import { MODE_INFO, type Mode } from "@/lib/quiz/directions";
+import { MODE_INFO, type PracticeMode } from "@/lib/quiz/directions";
 
-const MODES: Mode[] = ["choice", "reading", "typing"];
+interface ModePickerProps {
+  modes: PracticeMode[];
+  value: PracticeMode;
+  onChange: (mode: PracticeMode) => void;
+}
 
-export function ModePicker({ value, onChange }: { value: Mode; onChange: (mode: Mode) => void }) {
+export function ModePicker({ modes, value, onChange }: ModePickerProps) {
   return (
-    <div role="radiogroup" aria-label="Quiz mode" className="grid grid-cols-3 gap-2">
-      {MODES.map((mode) => {
+    <div
+      role="radiogroup"
+      aria-label="Quiz mode"
+      className={cn("grid gap-2", modes.length === 4 ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-2" : "grid-cols-3")}
+    >
+      {modes.map((mode) => {
         const info = MODE_INFO[mode];
         const selected = mode === value;
         return (
@@ -19,10 +27,11 @@ export function ModePicker({ value, onChange }: { value: Mode; onChange: (mode: 
             role="radio"
             aria-checked={selected}
             aria-label={`${info.title}: ${info.description}`}
+            title={info.description}
             onClick={() => onChange(mode)}
             className={cn(
               "relative flex flex-col items-center gap-1 rounded-xl border px-2 py-3.5 text-center transition-colors duration-300",
-              selected ? "border-transparent" : "border-line hover:border-white/20",
+              selected ? "border-transparent" : "border-line hover:border-veil/20",
             )}
           >
             {selected && (

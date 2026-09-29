@@ -23,6 +23,7 @@ const LIBRARY_TILES: { category: Category; jp: string; label: string; section: s
   { category: "vocab", jp: "単語", label: "Words", section: "vocab" },
   { category: "phrase", jp: "表現", label: "Phrases", section: "phrase" },
   { category: "sentence", jp: "文", label: "Sentences", section: "sentence" },
+  { category: "grammar", jp: "文法", label: "Grammar", section: "grammar" },
 ];
 
 const rise = (delay: number) => ({
@@ -154,12 +155,12 @@ export function HomeScreen() {
             Choose sets →
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
           {LIBRARY_TILES.map((tile) => (
             <Link
               key={tile.category}
               href={`/practice#section-${tile.section}`}
-              className="glass group rounded-2xl p-4 transition-colors hover:border-white/20"
+              className="glass group rounded-2xl p-4 transition-colors last:col-span-2 hover:border-veil/20 sm:last:col-span-1"
             >
               <p className="jp text-2xl text-paper transition-colors group-hover:text-gold-bright">{tile.jp}</p>
               <p className="mt-3 text-xs text-mist">

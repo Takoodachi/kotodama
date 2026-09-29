@@ -42,7 +42,7 @@ export function ExampleSentence({ item, writing = ALL_SCRIPTS, furigana, classNa
         speak(spoken);
       }}
       className={cn(
-        "group w-full rounded-2xl border border-line bg-white/[0.025] px-4 py-3 text-left transition-colors hover:border-white/20 hover:bg-white/[0.04]",
+        "group w-full rounded-2xl border border-line bg-veil/[0.025] px-4 py-3 text-left transition-colors hover:border-veil/20 hover:bg-veil/[0.04]",
         className,
       )}
     >

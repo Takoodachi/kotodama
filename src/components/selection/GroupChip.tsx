@@ -28,7 +28,7 @@ export function GroupChip({ label, sublabel, selected, mastery, count, wide, onT
         wide && "items-start px-4",
         selected
           ? "border-crimson/70 bg-crimson/[0.09] shadow-[inset_0_0_0_1px_rgb(200_16_46/0.3),0_0_28px_-10px_rgb(200_16_46/0.8)]"
-          : "border-line bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]",
+          : "border-line bg-veil/[0.02] hover:border-veil/20 hover:bg-veil/[0.04]",
       )}
     >
       <span className={cn("jp leading-tight text-paper", wide ? "text-xl" : "text-2xl")}>{label}</span>
@@ -46,12 +46,12 @@ export function GroupChip({ label, sublabel, selected, mastery, count, wide, onT
             transition={{ type: "spring", stiffness: 500, damping: 26 }}
             className="absolute top-1.5 right-1.5 flex size-4 items-center justify-center rounded-full bg-crimson"
           >
-            <Check className="size-2.5 text-paper" strokeWidth={3} />
+            <Check className="size-2.5 text-on-accent" strokeWidth={3} />
           </motion.span>
         )}
       </AnimatePresence>
 
-      <span className="absolute inset-x-3 bottom-1.5 h-px bg-white/[0.06]">
+      <span className="absolute inset-x-3 bottom-1.5 h-px bg-veil/[0.06]">
         <span
           className="bg-gold-metal absolute inset-y-0 left-0 transition-[width] duration-700"
           style={{ width: `${Math.round(mastery * 100)}%` }}

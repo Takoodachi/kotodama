@@ -1,16 +1,21 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { BELOW_HEADER } from "@/components/layout/nav";
 import { GhostModeButton } from "@/components/practice/GhostModeButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { SECTIONS, groupIdsOfSection } from "@/data/groups";
-import { itemsForGroups } from "@/data/library";
+import { itemsForGroups, WRITTEN_CATEGORIES } from "@/data/library";
+import type { Category } from "@/data/types";
 import { useActiveSection } from "@/hooks/useActiveSection";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useStartSession } from "@/hooks/useStartSession";
+import { useTouchDevice } from "@/hooks/useTouchDevice";
+import { CATEGORY_LABELS } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
+import { availableModes, GRID_CATEGORIES, shownMode } from "@/lib/quiz/directions";
 import { useProgress } from "@/store/progress";
 import { useSettings, type SessionLength } from "@/store/settings";
 import { DirectionPicker } from "./DirectionPicker";
@@ -32,15 +37,30 @@ function Label({ children }: { children: React.ReactNode }) {
   return <h3 className="mb-2.5 text-[11px] tracking-[0.2em] text-smoke uppercase">{children}</h3>;
 }
 
+/** "words, phrases & grammar" */
+function listKinds(categories: Category[]): string {
+  const names = categories.map((c) => CATEGORY_LABELS[c].en.toLowerCase());
+  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} & ${names.at(-1)}`;
+}
+
 export function SelectionScreen() {
   const hydrated = useHydrated();
   const settings = useSettings();
   const records = useProgress((s) => s.records);
   const startSession = useStartSession();
+  const router = useRouter();
+  const touch = useTouchDevice();
+  const mode = shownMode(settings.mode, touch);
 
   const selected = useMemo(() => new Set(settings.selected), [settings.selected]);
   const items = useMemo(() => itemsForGroups(settings.selected), [settings.selected]);
   const categories = useMemo(() => new Set(items.map((i) => i.category)), [items]);
+  // The grid only shows short items with a reading: kana, kanji and words.
+  const gridCount = useMemo(() => items.filter((i) => GRID_CATEGORIES.has(i.category)).length, [items]);
+  // "Written in" only matters when something written with words is selected.
+  const writtenKinds = [...WRITTEN_CATEGORIES].filter(
+    (c) => categories.has(c) && (mode !== "grid" || GRID_CATEGORIES.has(c)),
+  );
 
   const sectionCounts = useMemo(
     () =>
@@ -53,37 +73,58 @@ export function SelectionScreen() {
     [selected],
   );
 
-  const start = () => startSession(items.map((i) => i.id));
+  const start = () => (mode === "grid" ? router.push("/all") : startSession(items.map((i) => i.id)));
   const activeSection = useActiveSection(SECTIONS.map((section) => `section-${section.id}`));
 
   const sessionSetup = (
     <div className="glass space-y-6 rounded-2xl p-4 sm:p-6">
       <div>
         <Label>Mode</Label>
-        <ModePicker value={settings.mode} onChange={settings.setMode} />
+        <ModePicker modes={availableModes(touch)} value={mode} onChange={settings.setMode} />
       </div>
-      <div>
-        <Label>Directions</Label>
-        <DirectionPicker
-          mode={settings.mode}
-          enabled={settings.directions[settings.mode]}
-          onToggle={(d) => settings.toggleDirection(settings.mode, d)}
-          categories={categories}
-        />
-      </div>
-      <div>
-        <Label>Written in · words, phrases & sentences</Label>
-        <WritingPicker value={settings.writing} furigana={settings.furigana} onToggle={settings.toggleWriting} />
-      </div>
-      <div>
-        <Label>Session length</Label>
-        <SegmentedControl
-          label="Session length"
-          value={settings.sessionLength}
-          onChange={settings.setSessionLength}
-          options={LENGTHS}
-        />
-      </div>
+      {mode === "grid" ? (
+        <div>
+          <Label>How it works</Label>
+          <ul className="space-y-1.5 text-xs leading-relaxed text-mist">
+            <li>Every selected card is laid out on one page, shuffled.</li>
+            <li>
+              Type what you know and press Enter: <span className="text-paper">romaji</span> for kana, any{" "}
+              <span className="text-paper">reading or the meaning</span> for kanji and words. Wrong? Try again.
+            </li>
+            <li>Finish whenever you like to see what you missed.</li>
+            {gridCount < items.length && (
+              <li className="text-smoke">Phrases, sentences and grammar are left out: they&apos;re too long for a grid.</li>
+            )}
+          </ul>
+        </div>
+      ) : (
+        <div>
+          <Label>Directions</Label>
+          <DirectionPicker
+            mode={mode}
+            enabled={settings.directions[mode]}
+            onToggle={(d) => settings.toggleDirection(mode, d)}
+            categories={categories}
+          />
+        </div>
+      )}
+      {writtenKinds.length > 0 && (
+        <div>
+          <Label>Written in · {listKinds(writtenKinds)}</Label>
+          <WritingPicker value={settings.writing} furigana={settings.furigana} onToggle={settings.toggleWriting} />
+        </div>
+      )}
+      {mode !== "grid" && (
+        <div>
+          <Label>Session length</Label>
+          <SegmentedControl
+            label="Session length"
+            value={settings.sessionLength}
+            onChange={settings.setSessionLength}
+            options={LENGTHS}
+          />
+        </div>
+      )}
     </div>
   );
 
@@ -121,13 +162,13 @@ export function SelectionScreen() {
                   className={cn(
                     "flex h-8 items-center gap-2 rounded-full border px-3.5 text-xs whitespace-nowrap transition-colors",
                     current
-                      ? "border-white/25 bg-white/[0.08] text-paper"
-                      : "border-line text-mist hover:border-white/20 hover:text-paper",
+                      ? "border-veil/25 bg-veil/[0.08] text-paper"
+                      : "border-line text-mist hover:border-veil/20 hover:text-paper",
                   )}
                 >
                   {section.title}
                   {sectionCounts[section.id] > 0 && (
-                    <span className="rounded-full bg-crimson px-1.5 text-[10px] text-paper tabular-nums shadow-[0_0_10px_rgb(200_16_46/0.6)]">
+                    <span className="rounded-full bg-crimson px-1.5 text-[10px] text-on-accent tabular-nums shadow-[0_0_10px_rgb(200_16_46/0.6)]">
                       {sectionCounts[section.id]}
                     </span>
                   )}
@@ -142,7 +183,13 @@ export function SelectionScreen() {
         <aside className="space-y-4 lg:sticky lg:top-40 lg:order-last lg:self-start">
           {sessionSetup}
           <div className="hidden lg:block">
-            <StartBar docked itemCount={items.length} mode={settings.mode} sessionLength={settings.sessionLength} onStart={start} />
+            <StartBar
+              docked
+              itemCount={mode === "grid" ? gridCount : items.length}
+              mode={mode}
+              sessionLength={settings.sessionLength}
+              onStart={start}
+            />
           </div>
           <GhostModeButton className="w-full" compact />
         </aside>
@@ -163,7 +210,12 @@ export function SelectionScreen() {
         </div>
       </div>
 
-      <StartBar itemCount={items.length} mode={settings.mode} sessionLength={settings.sessionLength} onStart={start} />
+      <StartBar
+        itemCount={mode === "grid" ? gridCount : items.length}
+        mode={mode}
+        sessionLength={settings.sessionLength}
+        onStart={start}
+      />
     </motion.div>
   );
 }

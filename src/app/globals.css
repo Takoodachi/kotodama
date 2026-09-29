@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* `light:` applies a utility only in the light theme. */
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
 @theme {
   --color-ink-950: #0a0a0a;
   --color-ink-900: #121212;
@@ -13,6 +16,10 @@
   --color-crimson-bright: #e0243f;
   --color-gold: #c9a45c;
   --color-gold-bright: #e6c98a;
+  /* Overlays and hairlines: light on the dark theme, dark on the light one. */
+  --color-veil: #ffffff;
+  /* Text on solid crimson and gold, the same in both themes. */
+  --color-on-accent: #fbf8f3;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -37,21 +44,22 @@
 }
 
 @utility glass {
-  background: rgb(255 255 255 / 0.03);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
   border: 1px solid var(--color-line);
   backdrop-filter: blur(18px) saturate(120%);
   -webkit-backdrop-filter: blur(18px) saturate(120%);
 }
 
 @utility text-gold-metal {
-  background: linear-gradient(135deg, #e6c98a 0%, #b8893b 45%, #f1dda8 70%, #c9a45c 100%);
+  background: var(--gold-metal);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 @utility bg-gold-metal {
-  background: linear-gradient(135deg, #e6c98a 0%, #b8893b 45%, #f1dda8 70%, #c9a45c 100%);
+  background: var(--gold-metal);
 }
 
 @utility eyebrow {
@@ -73,6 +81,47 @@
 @layer base {
   :root {
     color-scheme: dark;
+    --glass-bg: rgb(255 255 255 / 0.03);
+    --glass-shadow: none;
+    --gold-metal: linear-gradient(135deg, #e6c98a 0%, #b8893b 45%, #f1dda8 70%, #c9a45c 100%);
+    --vignette: rgb(0 0 0 / 0.65);
+    /* Study heatmap and progress charts: one gold hue, from the surface to full strength. */
+    --heat-0: rgb(255 255 255 / 0.05);
+    --heat-1: #3d311b;
+    --heat-2: #6e5629;
+    --heat-3: #a8843d;
+    --heat-4: #e6c98a;
+    --chart-grid: rgb(255 255 255 / 0.07);
+    --chart-learning: rgb(242 239 234 / 0.28);
+  }
+
+  /* Light theme: warm washi paper with sumi ink, the same crimson and a deeper gold. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --color-ink-950: #f3eee5;
+    --color-ink-900: #faf7f1;
+    --color-ink-800: #ede6da;
+    --color-ink-700: #ded5c6;
+    --color-paper: #1d1914;
+    --color-mist: #5c554c;
+    --color-smoke: #867e73;
+    --color-line: rgb(29 25 20 / 0.13);
+    --color-crimson: #b80f2b;
+    --color-crimson-bright: #9e0c24;
+    --color-gold: #a37a2e;
+    --color-gold-bright: #7a581b;
+    --color-veil: #1d1914;
+    --glass-bg: rgb(255 255 255 / 0.62);
+    --glass-shadow: 0 1px 2px rgb(60 40 20 / 0.05), 0 10px 30px -18px rgb(60 40 20 / 0.28);
+    --gold-metal: linear-gradient(135deg, #9a7128 0%, #6e4f17 45%, #b08638 70%, #7a581b 100%);
+    --vignette: rgb(120 96 64 / 0.14);
+    --heat-0: rgb(29 25 20 / 0.07);
+    --heat-1: #eadcb8;
+    --heat-2: #d7bb7b;
+    --heat-3: #b48c3f;
+    --heat-4: #7a581b;
+    --chart-grid: rgb(29 25 20 / 0.1);
+    --chart-learning: rgb(29 25 20 / 0.22);
   }
 
   html {
@@ -93,7 +142,7 @@
 
   ::selection {
     background: var(--color-crimson);
-    color: var(--color-paper);
+    color: var(--color-on-accent);
   }
 
   :focus-visible {

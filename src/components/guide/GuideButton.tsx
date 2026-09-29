@@ -35,7 +35,7 @@ export function GuideButton({ className }: { className?: string }) {
           "relative flex h-8 items-center gap-1.5 rounded-full border pr-3 pl-1.5 text-[11px] tracking-[0.14em] uppercase transition-colors",
           hint
             ? "border-gold/70 text-gold-bright"
-            : "border-white/15 text-mist hover:border-gold/60 hover:text-gold-bright",
+            : "border-veil/15 text-mist hover:border-gold/60 hover:text-gold-bright",
         )}
       >
         {hint && (

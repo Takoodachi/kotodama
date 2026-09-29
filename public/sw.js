@@ -20,7 +20,7 @@ const ASSETS = `kotodama-${BUILD}-assets`;
 const FONTS = "kotodama-fonts";
 
 const scoped = (path) => new URL(path, self.registration.scope).href;
-const ROUTES = ["", "practice", "quiz", "progress", "settings"];
+const ROUTES = ["", "practice", "quiz", "all", "progress", "settings"];
 const EXTRAS = ["manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon.svg"];
 
 /** Build assets referenced by a page, from its tags and its inlined RSC payload. */

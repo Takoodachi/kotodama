@@ -27,7 +27,7 @@ function AllPill({ on, onClick, label }: { on: boolean; onClick: () => void; lab
         "h-8 rounded-full border px-3.5 text-[11px] tracking-[0.14em] uppercase transition-colors",
         on
           ? "border-crimson/80 bg-crimson/15 text-paper shadow-[0_0_22px_-4px_rgb(200_16_46/0.85),inset_0_0_0_1px_rgb(200_16_46/0.35)]"
-          : "border-line text-mist hover:border-white/25 hover:text-paper",
+          : "border-line text-mist hover:border-veil/25 hover:text-paper",
       )}
     >
       {label}

@@ -3,9 +3,16 @@ import type { Category, StudyItem } from "@/data/types";
 import { pick, type Rng } from "@/lib/random";
 
 export type Mode = "choice" | "reading" | "typing";
+/** A quiz mode, or every card on one page at once (not a quiz session). */
+export type PracticeMode = Mode | "grid";
 
-/** What the card shows → what the learner answers with. */
-export type Direction = "jp-en" | "jp-romaji" | "romaji-jp" | "en-jp";
+/**
+ * What the card shows → what the learner answers with. Grammar cards are
+ * sentences with a gap: "cloze" is answered in Japanese, "cloze-romaji" in romaji.
+ */
+export type Direction = "jp-en" | "jp-romaji" | "romaji-jp" | "en-jp" | "cloze" | "cloze-romaji";
+
+export const isCloze = (direction: Direction) => direction === "cloze" || direction === "cloze-romaji";
 
 export type Side = "jp" | "romaji" | "en";
 
@@ -26,12 +33,17 @@ export const DIRECTION_LABELS: Record<Direction, { from: string; to: string }> =
   "jp-romaji": { from: "日本語", to: "Reading" },
   "romaji-jp": { from: "Romaji", to: "日本語" },
   "en-jp": { from: "English", to: "日本語" },
+  cloze: { from: "文", to: "Gap" },
+  "cloze-romaji": { from: "文", to: "Gap" },
 };
 
 /** What each direction asks, in plain words. */
 export function directionDescription(direction: Direction, mode: Mode): string {
   const typed = mode !== "choice";
   switch (direction) {
+    case "cloze":
+    case "cloze-romaji":
+      return typed ? "Type the missing word" : "Pick the missing word";
     case "jp-en":
       return typed ? "See Japanese, type the meaning in English" : "See Japanese, pick the meaning";
     case "jp-romaji":
@@ -43,17 +55,42 @@ export function directionDescription(direction: Direction, mode: Mode): string {
   }
 }
 
-export const MODE_INFO: Record<Mode, { glyph: string; title: string; description: string }> = {
-  choice: { glyph: "選", title: "Multiple choice", description: "Pick from four options. Best on a phone." },
+export const MODE_INFO: Record<PracticeMode, { glyph: string; title: string; description: string }> = {
+  choice: { glyph: "選", title: "Multiple choice", description: "Pick from four options." },
   reading: { glyph: "読", title: "Reading", description: "See Japanese, type the romaji or meaning." },
-  typing: { glyph: "書", title: "Typing", description: "See English or romaji, type Japanese." },
+  typing: { glyph: "書", title: "Typing", description: "See English or romaji, type Japanese with your keyboard." },
+  grid: { glyph: "覧", title: "All at once", description: "Every card on one page. Type what you know." },
 };
 
+/**
+ * Modes offered on a device. Typing Japanese needs an IME, which phones and
+ * tablets have built in; on a computer it adds little over reading mode.
+ */
+export function availableModes(touch: boolean): PracticeMode[] {
+  return touch ? ["choice", "reading", "typing", "grid"] : ["choice", "reading", "grid"];
+}
+
+/** The quiz mode to run: saved typing falls back to multiple choice on a computer, as does the grid for quizzes. */
+export function quizMode(mode: PracticeMode, touch: boolean): Mode {
+  if (mode === "grid" || (mode === "typing" && !touch)) return "choice";
+  return mode;
+}
+
+/** The practice mode shown as selected, given what this device offers. */
+export function shownMode(mode: PracticeMode, touch: boolean): PracticeMode {
+  return mode === "typing" && !touch ? "choice" : mode;
+}
+
+/** Kinds of item the all-at-once grid can show: short ones with a reading to type. */
+export const GRID_CATEGORIES = new Set<Category>(["hiragana", "katakana", "kanji", "vocab"]);
+
 export function promptSide(direction: Direction): Side {
+  if (isCloze(direction)) return "jp";
   return direction.split("-")[0] as Side;
 }
 
 export function answerSide(direction: Direction): Side {
+  if (direction === "cloze") return "jp";
   return direction.split("-")[1] as Side;
 }
 
@@ -61,6 +98,8 @@ const isKana = (item: Pick<StudyItem, "category">) => item.category === "hiragan
 
 /** Which directions make sense for an item in a mode. */
 export function supportedDirections(item: Pick<StudyItem, "category">, mode: Mode): Direction[] {
+  // Grammar is always fill-in-the-gap; reading mode answers it in romaji.
+  if (item.category === "grammar") return [mode === "reading" ? "cloze-romaji" : "cloze"];
   if (isKana(item)) return mode === "typing" ? ["romaji-jp"] : mode === "reading" ? ["jp-romaji"] : ["jp-romaji", "romaji-jp"];
   switch (mode) {
     case "choice":
@@ -118,6 +157,10 @@ export function pickDirection(item: StudyItem, mode: Mode, enabled: readonly Dir
 export function questionHint(item: StudyItem, direction: Direction, mode: Mode): string {
   const typed = mode !== "choice";
   switch (direction) {
+    case "cloze":
+      return typed ? "Type the missing word" : "Fill in the gap";
+    case "cloze-romaji":
+      return "Type the missing word in romaji";
     case "jp-en":
       return typed ? "Type the meaning in English" : "What does it mean?";
     case "jp-romaji":

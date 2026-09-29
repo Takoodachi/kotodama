@@ -29,11 +29,14 @@ const supportedSnapshot = () => speechSupported();
 
 export function useSpeech() {
   const { rate, voiceURI } = useSettings((s) => s.audio);
+  const muted = useSettings((s) => s.muted);
   const supported = useSyncExternalStore(subscribe, supportedSnapshot, () => false);
   const [speaking, setSpeaking] = useState(false);
 
+  // Muted: nothing plays, and `onDone` never fires (callers check `muted` before waiting on it).
   const speak = useCallback(
     (text: string, onDone?: () => void) =>
+      !muted &&
       speakJapanese(text, {
         rate,
         voiceURI,
@@ -43,8 +46,8 @@ export function useSpeech() {
           onDone?.();
         },
       }),
-    [rate, voiceURI],
+    [rate, voiceURI, muted],
   );
 
-  return { supported, speaking, speak };
+  return { supported, speaking, speak, muted };
 }

@@ -14,8 +14,8 @@ const TOP = 18;
 /** Rows above this show their tooltip below the cell instead of above it. */
 const FLIP_BELOW_ROW = 3;
 
-/** One hue, dark → bright on the dark surface: more answers read as more light. */
-const LEVEL_FILL = ["rgb(255 255 255 / 0.05)", "#3d311b", "#6e5629", "#a8843d", "#e6c98a"];
+/** One gold hue from the surface to full strength (see --heat-* in globals.css): more answers, more gold. */
+const LEVEL_FILL = ["var(--heat-0)", "var(--heat-1)", "var(--heat-2)", "var(--heat-3)", "var(--heat-4)"];
 const LEVEL_LABEL = ["No study", "1–9 answers", "10–24 answers", "25–49 answers", "50+ answers"];
 
 function level(answered: number): number {
@@ -154,7 +154,7 @@ export function StudyHeatmap({ history, today }: StudyHeatmapProps) {
                   height={CELL}
                   rx={2.5}
                   fill={LEVEL_FILL[level(cell.answered)]}
-                  stroke={hovered ? "#f2efea" : isToday ? "rgb(200 16 46 / 0.9)" : "none"}
+                  stroke={hovered ? "var(--color-paper)" : isToday ? "rgb(200 16 46 / 0.9)" : "none"}
                   strokeWidth={hovered || isToday ? 1.5 : 0}
                   onPointerEnter={() => setHover({ cell, x: x + CELL / 2, y })}
                 />

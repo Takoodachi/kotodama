@@ -25,14 +25,14 @@ export function GhostModeButton({ className, compact }: { className?: string; co
       onClick={startGhost}
       disabled={!available}
       className={cn(
-        "group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-white/15 bg-white/[0.03] text-left transition-[border-color,box-shadow,background-color] duration-500",
-        "hover:border-white/30 hover:bg-white/[0.06] hover:shadow-[0_0_40px_-12px_rgb(242_239_234/0.45)]",
-        "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-white/15 disabled:hover:shadow-none",
+        "group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-veil/15 bg-veil/[0.03] text-left transition-[border-color,box-shadow,background-color] duration-500",
+        "hover:border-veil/30 hover:bg-veil/[0.06] hover:shadow-[0_0_40px_-12px_rgb(242_239_234/0.45)]",
+        "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-veil/15 disabled:hover:shadow-none",
         compact ? "px-4 py-2.5" : "p-4 sm:p-5",
         className,
       )}
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.05] transition-transform duration-500 group-enabled:group-hover:-translate-y-0.5">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-veil/15 bg-veil/[0.05] transition-transform duration-500 group-enabled:group-hover:-translate-y-0.5">
         <Ghost className="size-5 text-paper" strokeWidth={1.5} />
       </span>
       <span className="min-w-0">

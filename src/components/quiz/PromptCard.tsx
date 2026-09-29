@@ -3,11 +3,12 @@
 import { AnimatePresence, motion } from "motion/react";
 import { JpText, type RubyDisplay } from "@/components/japanese/Furigana";
 import { SpeakButton } from "@/components/japanese/SpeakButton";
-import { speechText } from "@/data/library";
+import { GAP, speechText } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import { cn } from "@/lib/cn";
 import {
   answerSide,
+  isCloze,
   promptSide,
   promptText,
   questionHint,
@@ -55,20 +56,46 @@ function rubyFor(furigana: FuriganaMode, direction: Direction, answered: boolean
   return furigana === "after" || direction === "jp-romaji" ? "reserve" : "show";
 }
 
+/** Holds the empty slot open at the height of a Japanese character. */
+const IDEOGRAPHIC_SPACE = String.fromCharCode(0x3000);
+
+/** A grammar sentence with its gap: an empty slot until answered, then the right word in gold. */
+function GapSentence({ item, ruby, answered }: { item: StudyItem; ruby: RubyDisplay; answered: boolean }) {
+  const [before, after] = item.cloze!.split(GAP);
+  return (
+    <span lang="ja" className={cn("jp text-paper", jpSize(item.surface))}>
+      <JpText text={before} ruby={ruby} />
+      <span
+        aria-label={answered ? undefined : "blank"}
+        className={cn(
+          "mx-1 inline-block min-w-[2.2em] border-b-2 px-1 text-center",
+          answered ? "border-gold/70 text-gold-bright" : "border-mist/70 text-transparent",
+        )}
+      >
+        {answered ? item.answer : IDEOGRAPHIC_SPACE}
+      </span>
+      <JpText text={after} ruby={ruby} />
+    </span>
+  );
+}
+
 export function PromptCard({ item, direction, mode, furigana, correct, ghost, review = false }: PromptCardProps) {
   const side = promptSide(direction);
   const answered = correct !== null;
+  const gap = isCloze(direction) && !!item.cloze;
   // The meaning appears once answered, unless it is the question or the answer itself.
+  // A grammar gap shows it from the start: it says which word fits.
   const meaning =
     side !== "en" && answerSide(direction) !== "en" && item.meaning.length ? promptText(item, "en") : null;
-  // Hearing the word would give away a reading question, so the button waits for the answer.
-  const canSpeak = side === "jp" ? direction !== "jp-romaji" || answered : answered;
+  const meaningShown = answered || gap;
+  // Hearing the word would give away a reading question or a gap, so the button waits for the answer.
+  const canSpeak = gap ? answered : side === "jp" ? direction !== "jp-romaji" || answered : answered;
 
   return (
     <div
       className={cn(
         "glass relative overflow-hidden rounded-3xl px-5 pt-5 pb-10 text-center sm:px-10",
-        ghost && "border-white/20 shadow-[0_0_60px_-20px_rgb(242_239_234/0.35),inset_0_0_40px_-20px_rgb(242_239_234/0.25)]",
+        ghost && "border-veil/20 shadow-[0_0_60px_-20px_rgb(242_239_234/0.35),inset_0_0_40px_-20px_rgb(242_239_234/0.25)]",
       )}
     >
       <AnimatePresence initial={!review}>
@@ -100,7 +127,9 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
         animate={correct === true && !review ? { scale: [1, 1.06, 1] } : { scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
-        {side === "jp" ? (
+        {gap ? (
+          <GapSentence item={item} ruby={rubyFor(furigana, direction, answered)} answered={answered} />
+        ) : side === "jp" ? (
           <JpText
             text={item.jp}
             ruby={rubyFor(furigana, direction, answered)}
@@ -120,10 +149,10 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
       {/* Space is kept from the start, so revealing the meaning doesn't move the options below. */}
       {meaning && (
         <p
-          aria-hidden={!answered}
+          aria-hidden={!meaningShown}
           className={cn(
             "relative mx-auto mt-3 -mb-4 max-w-md text-sm leading-relaxed text-mist transition-opacity duration-500",
-            answered ? "opacity-100" : "invisible opacity-0",
+            meaningShown ? "opacity-100" : "invisible opacity-0",
           )}
         >
           {meaning}

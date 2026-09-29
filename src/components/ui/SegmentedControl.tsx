@@ -31,7 +31,7 @@ export function SegmentedControl<T extends string | number>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn("relative flex rounded-full border border-line bg-white/[0.02] p-1", className)}
+      className={cn("relative flex rounded-full border border-line bg-veil/[0.02] p-1", className)}
     >
       {options.map((option) => {
         const selected = option.value === value;
@@ -52,7 +52,7 @@ export function SegmentedControl<T extends string | number>({
               <motion.span
                 layoutId={`segment-${id}`}
                 transition={{ type: "spring", stiffness: 500, damping: 38 }}
-                className="absolute inset-0 -z-10 rounded-full border border-white/10 bg-white/[0.08]"
+                className="absolute inset-0 -z-10 rounded-full border border-veil/10 bg-veil/[0.08]"
               />
             )}
             {option.label}

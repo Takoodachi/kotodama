@@ -40,7 +40,7 @@ const SLIDE = {
 };
 
 function Key({ children }: { children: React.ReactNode }) {
-  return <kbd className="rounded border border-white/15 px-1.5 py-0.5 font-sans text-[10px] text-mist">{children}</kbd>;
+  return <kbd className="rounded border border-veil/15 px-1.5 py-0.5 font-sans text-[10px] text-mist">{children}</kbd>;
 }
 
 /** Shortcut reminders, only on devices with a mouse and keyboard. */
@@ -103,7 +103,7 @@ export function QuizRunner() {
   const autoAdvance = useSettings((s) => s.autoAdvance);
   const autoplay = useSettings((s) => s.audio.autoplay);
   const kanaConverter = useSettings((s) => s.builtInIme);
-  const { supported: speechSupported, speak } = useSpeech();
+  const { supported: speechSupported, speak, muted } = useSpeech();
   // The card whose answer is being read aloud, and whether the reading has finished.
   const [spoken, setSpoken] = useState<{ key: string; done: boolean } | null>(null);
   // An earlier card being looked at again, by question key.
@@ -208,7 +208,7 @@ export function QuizRunner() {
 
   const respond = (given: string, correct: boolean) => {
     answer(given, correct);
-    if (autoplay === "off" || !speechSupported) return;
+    if (autoplay === "off" || !speechSupported || muted) return;
     const key = question.key;
     setSpoken({ key, done: false });
     speak(speechText(item), () => setSpoken((s) => (s?.key === key ? { key, done: true } : s)));

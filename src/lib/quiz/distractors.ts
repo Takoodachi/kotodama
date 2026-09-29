@@ -4,7 +4,7 @@ import { normalizeEnglish } from "@/lib/japanese";
 import { shuffle, weightedSample, type Rng } from "@/lib/random";
 import { ALL_SCRIPTS, type Script } from "@/lib/writing";
 import { areConfusable } from "./confusables";
-import { answerLabel, answerSide, primaryMeaning, promptSide, type Direction, type Side } from "./directions";
+import { answerLabel, answerSide, isCloze, primaryMeaning, promptSide, type Direction, type Side } from "./directions";
 
 export interface ChoiceOption {
   itemId: string;
@@ -89,6 +89,15 @@ function plausibility(item: StudyItem, candidate: StudyItem, poolIds: Set<string
   return score;
 }
 
+/** A grammar gap: the right filler and hand-picked wrong ones, which don't fit the sentence. */
+function gapOptions(item: StudyItem, rng: Rng, count: number): ChoiceOption[] {
+  const wrong = shuffle([...new Set(item.wrong ?? [])], rng).slice(0, count - 1);
+  return shuffle(
+    [item.answer!, ...wrong].map((label, i) => ({ itemId: item.id, label, correct: i === 0 })),
+    rng,
+  );
+}
+
 /**
  * Builds the options for a multiple-choice question: the correct answer plus
  * up to `count - 1` distractors from the same category. Candidates come from
@@ -106,6 +115,7 @@ export function buildOptions(
   // Japanese options are shown in the learner's chosen writing.
   const show = (it: StudyItem) => writtenItem(it, writing);
   const item = show(source);
+  if (isCloze(direction)) return gapOptions(item, rng, count);
   const side = answerSide(direction);
   // Meanings teach what the other options say too. A kanji's reading options
   // belong to other kanji, so theirs would only confuse.

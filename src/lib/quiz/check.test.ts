@@ -1,13 +1,38 @@
 import { toKatakana } from "wanakana";
 import { describe, expect, it } from "vitest";
 import { ITEMS_BY_ID } from "@/data/library";
-import { checkJapanese, checkMeaning, checkReading } from "./check";
+import { checkGap, checkJapanese, checkMeaning, checkReading } from "./check";
 
 const item = (id: string) => {
   const found = ITEMS_BY_ID.get(id);
   if (!found) throw new Error(`missing ${id}`);
   return found;
 };
+
+describe("checkGap", () => {
+  it("wants the right spelling in Japanese", () => {
+    expect(checkGap(item("g-waga-1"), "は", "jp")).toBe(true);
+    expect(checkGap(item("g-waga-1"), "わ", "jp")).toBe(false);
+    expect(checkGap(item("g-waga-1"), "が", "jp")).toBe(false);
+    expect(checkGap(item("g-waga-1"), "wa", "jp")).toBe(false);
+  });
+
+  it("takes particles in romaji as said or as spelled", () => {
+    expect(checkGap(item("g-waga-1"), "wa", "romaji")).toBe(true);
+    expect(checkGap(item("g-waga-1"), "ha", "romaji")).toBe(true);
+    expect(checkGap(item("g-woni-1"), "o", "romaji")).toBe(true);
+    expect(checkGap(item("g-woni-1"), "wo", "romaji")).toBe(true);
+    expect(checkGap(item("g-exp-3"), "hō", "romaji")).toBe(true);
+    expect(checkGap(item("g-adj-5"), "nai desu", "romaji")).toBe(true);
+    expect(checkGap(item("g-waga-1"), "ga", "romaji")).toBe(false);
+  });
+
+  it("accepts the other correct fillers", () => {
+    expect(checkGap(item("g-woni-3"), "へ", "jp")).toBe(true);
+    expect(checkGap(item("g-woni-3"), "e", "romaji")).toBe(true);
+    expect(checkGap(item("g-adj-5"), "ありません", "jp")).toBe(true);
+  });
+});
 
 describe("checkReading", () => {
   it("accepts common romanizations of kana", () => {

@@ -35,7 +35,7 @@ export function WritingPicker({ value, furigana, onToggle }: WritingPickerProps)
               onClick={() => onToggle(script)}
               className={cn(
                 "relative flex h-14 flex-col items-center justify-center gap-0.5 rounded-lg border transition-colors",
-                on ? "border-gold/50 bg-gold/[0.07] text-gold-bright" : "border-line text-mist hover:border-white/20",
+                on ? "border-gold/50 bg-gold/[0.07] text-gold-bright" : "border-line text-mist hover:border-veil/20",
               )}
             >
               {on && <Check className="absolute top-1 right-1 size-3" strokeWidth={3} />}
@@ -47,7 +47,7 @@ export function WritingPicker({ value, furigana, onToggle }: WritingPickerProps)
           );
         })}
       </div>
-      <div className="mt-2.5 rounded-xl border border-line bg-white/[0.02] px-3 py-2 text-center">
+      <div className="mt-2.5 rounded-xl border border-line bg-veil/[0.02] px-3 py-2 text-center">
         <JpText
           text={writeAs(SAMPLE, value)}
           ruby={furigana === "hide" ? "none" : "show"}

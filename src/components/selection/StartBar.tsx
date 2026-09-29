@@ -3,11 +3,11 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
-import { MODE_INFO, type Mode } from "@/lib/quiz/directions";
+import { MODE_INFO, type PracticeMode } from "@/lib/quiz/directions";
 
 interface StartBarProps {
   itemCount: number;
-  mode: Mode;
+  mode: PracticeMode;
   sessionLength: number;
   onStart: () => void;
   /** Docked in the sidebar on wide screens, floating above the tab bar otherwise. */
@@ -17,15 +17,19 @@ interface StartBarProps {
 export function StartBar({ itemCount, mode, sessionLength, onStart, docked }: StartBarProps) {
   const empty = itemCount === 0;
   const summary = empty
-    ? "Select at least one set"
-    : `${MODE_INFO[mode].title} · ${sessionLength ? `${sessionLength} questions` : "endless"}`;
+    ? mode === "grid"
+      ? "Select kana, kanji or words"
+      : "Select at least one set"
+    : mode === "grid"
+      ? `${MODE_INFO.grid.title} · every card`
+      : `${MODE_INFO[mode].title} · ${sessionLength ? `${sessionLength} questions` : "endless"}`;
 
   const bar = (
     <div
       className={cn(
         "glass flex items-center justify-between gap-4 rounded-2xl p-3 pl-5",
         // Floating over scrolling content, the bar needs a solid backing to stay legible.
-        !docked && "bg-ink-900/95 shadow-2xl shadow-black/60",
+        !docked && "bg-ink-900/95 shadow-2xl shadow-black/60 light:shadow-black/15",
       )}
     >
       <div className="min-w-0">

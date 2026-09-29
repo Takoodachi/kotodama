@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, Volume2 } from "lucide-react";
+import { Lock, Volume2, VolumeX } from "lucide-react";
 import { motion } from "motion/react";
 import { useSpeech } from "@/hooks/useSpeech";
 import { cn } from "@/lib/cn";
@@ -17,13 +17,13 @@ interface SpeakButtonProps {
 }
 
 export function SpeakButton({ text, className, size = "md", locked = false }: SpeakButtonProps) {
-  const { supported, speaking, speak } = useSpeech();
+  const { supported, speaking, speak, muted } = useSpeech();
   if (!supported) return null;
-  const label = locked ? "Pronunciation plays after you answer" : "Play pronunciation";
+  const label = muted ? "Sound is muted" : locked ? "Pronunciation plays after you answer" : "Play pronunciation";
   return (
     <button
       type="button"
-      disabled={locked}
+      disabled={locked || muted}
       onClick={(e) => {
         e.stopPropagation();
         speak(text);
@@ -31,10 +31,10 @@ export function SpeakButton({ text, className, size = "md", locked = false }: Sp
       aria-label={label}
       title={label}
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center rounded-full border border-line text-mist transition-colors hover:border-white/25 hover:text-paper",
+        "relative inline-flex shrink-0 items-center justify-center rounded-full border border-line text-mist transition-colors hover:border-veil/25 hover:text-paper",
         size === "md" ? "size-11" : "size-9",
         speaking && "border-gold/60 text-gold-bright",
-        locked && "cursor-not-allowed opacity-40 hover:border-line hover:text-mist",
+        (locked || muted) && "cursor-not-allowed opacity-40 hover:border-line hover:text-mist",
         className,
       )}
     >
@@ -46,8 +46,12 @@ export function SpeakButton({ text, className, size = "md", locked = false }: Sp
           transition={{ duration: 1.1, repeat: Infinity, ease: "easeOut" }}
         />
       )}
-      <Volume2 className={size === "md" ? "size-[18px]" : "size-4"} strokeWidth={1.6} />
-      {locked && (
+      {muted ? (
+        <VolumeX className={size === "md" ? "size-[18px]" : "size-4"} strokeWidth={1.6} />
+      ) : (
+        <Volume2 className={size === "md" ? "size-[18px]" : "size-4"} strokeWidth={1.6} />
+      )}
+      {locked && !muted && (
         <span className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full bg-ink-800">
           <Lock className="size-2.5" strokeWidth={2.2} />
         </span>

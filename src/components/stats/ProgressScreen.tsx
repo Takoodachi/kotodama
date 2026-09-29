@@ -23,6 +23,7 @@ const SECTION_CATEGORY: Record<string, Category> = {
   vocab: "vocab",
   phrase: "phrase",
   sentence: "sentence",
+  grammar: "grammar",
 };
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {

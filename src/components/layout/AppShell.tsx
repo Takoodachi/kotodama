@@ -8,8 +8,9 @@ import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  // The quiz is full-screen: no header or tab bar competing with the card.
-  const immersive = usePathname().startsWith("/quiz");
+  // The quiz and the all-at-once grid are full-screen: no header or tab bar competing with the cards.
+  const pathname = usePathname();
+  const immersive = pathname.startsWith("/quiz") || pathname.startsWith("/all");
   return (
     <>
       <Backdrop />

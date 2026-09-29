@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { SyncBadge } from "@/components/account/SyncStatus";
 import { GuideButton } from "@/components/guide/GuideButton";
 import { LogoMark } from "@/components/ui/LogoMark";
+import { MuteButton } from "@/components/ui/MuteButton";
 import { useScrolled } from "@/hooks/useScrolled";
 import { cn } from "@/lib/cn";
 import { HEADER_HEIGHT, isActive, NAV_ITEMS } from "./nav";
@@ -53,6 +54,7 @@ export function Header() {
           </nav>
           <div className="flex items-center gap-2">
             <SyncBadge />
+            <MuteButton />
             <GuideButton />
           </div>
         </div>

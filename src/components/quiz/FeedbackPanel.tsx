@@ -36,6 +36,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export function FeedbackPanel({ item: source, writing, correct, given, furigana, onContinue }: FeedbackPanelProps) {
   const item = writtenItem(source, writing);
   const isKana = item.category === "hiragana" || item.category === "katakana";
+  const long = [...item.surface].length > 6;
 
   return (
     <motion.section
@@ -68,11 +69,12 @@ export function FeedbackPanel({ item: source, writing, correct, given, furigana,
           <SpeakButton text={speechText(item)} />
         </div>
 
-        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
+        {/* Short items sit beside their details; sentences get the full width above them. */}
+        <div className={cn("mt-4 flex flex-col gap-4", !long && "sm:flex-row sm:items-center sm:gap-8")}>
           <JpText
             text={item.jp}
             ruby={furigana === "hide" ? "none" : "show"}
-            className={cn("shrink-0 text-paper", [...item.surface].length > 6 ? "text-2xl leading-[1.9]" : "text-5xl")}
+            className={cn("shrink-0 text-paper", long ? "text-2xl leading-[1.9]" : "text-5xl")}
           />
           <dl className="min-w-0 space-y-1.5">
             {!isKana && item.reading !== item.surface && item.category !== "kanji" && (
@@ -105,7 +107,7 @@ export function FeedbackPanel({ item: source, writing, correct, given, furigana,
 
         <Button variant="primary" size="lg" className="mt-5 w-full" onClick={onContinue}>
           Continue <ArrowRight className="size-4" />
-          <kbd className="ml-1 hidden rounded border border-white/25 px-1.5 py-0.5 font-sans text-[10px] tracking-wide text-paper/80 pointer-fine:inline">
+          <kbd className="ml-1 hidden rounded border border-veil/25 px-1.5 py-0.5 font-sans text-[10px] tracking-wide text-paper/80 pointer-fine:inline">
             Enter
           </kbd>
         </Button>
