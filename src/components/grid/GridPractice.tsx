@@ -3,12 +3,13 @@
 import { ArrowRight, RotateCcw, Target, X } from "lucide-react";
 import { motion, useAnimate } from "motion/react";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { MuteButton } from "@/components/ui/MuteButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { itemsForGroups, speechText, writtenItem } from "@/data/library";
 import type { StudyItem } from "@/data/types";
+import { useHotkeys } from "@/hooks/useHotkeys";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useStartSession } from "@/hooks/useStartSession";
@@ -163,6 +164,8 @@ export function GridPractice() {
   const rightCount = items.filter((i) => stateOf(i.id).status === "right").length;
   const firstTryCount = items.filter((i) => stateOf(i.id).firstTry === true).length;
   const retriedCount = rightCount - firstTryCount;
+  const untriedCount = items.filter((i) => stateOf(i.id).tries === 0).length;
+  const perfect = items.length > 0 && rightCount === items.length;
 
   /** Moves to the next card still waiting for an answer, wrapping around. */
   const focusNext = (fromId: string) => {
@@ -201,6 +204,11 @@ export function GridPractice() {
     setCards((all) => ({ ...all, [item.id]: next }));
     const correct = next.status === "right";
     if (correct && autoplay !== "off") speak(speechText(item));
+    // The last card right: that's everything, so show the result.
+    if (correct && items.every((i) => i.id === item.id || stateOf(i.id).status === "right")) {
+      finish();
+      return correct;
+    }
     if (how === "enter") {
       if (correct) focusNext(item.id);
       else input.select();
@@ -218,8 +226,22 @@ export function GridPractice() {
     }
     setCards((all) => ({ ...all, ...late }));
     setFinished(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // The result sits above what may be hundreds of cards: bring it into view.
+  useEffect(() => {
+    if (finished) window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [finished]);
+
+  // Esc finishes, as it ends a quiz; not while a Japanese keyboard is converting (Esc cancels that).
+  useHotkeys(
+    {
+      Escape: (event) => {
+        if (!event.isComposing) finish();
+      },
+    },
+    hydrated && !finished && items.length > 0,
+  );
 
   const restart = () => {
     setSeed(newSeed());
@@ -273,14 +295,14 @@ export function GridPractice() {
               className="glass mt-6 flex flex-col gap-5 rounded-2xl p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
             >
               <div>
-                <p className="eyebrow">Result</p>
+                <p className="eyebrow">{perfect ? "Perfect" : "Result"}</p>
                 <p className="mt-1 font-mincho text-4xl text-paper tabular-nums">
                   {rightCount} <span className="text-2xl text-mist">/ {items.length}</span>
                 </p>
                 <p className="mt-1 text-xs text-mist">
-                  {firstTryCount} right first time
-                  {retriedCount > 0 && ` · ${retriedCount} after another try`} · {items.length - rightCount} to learn.
-                  Missed cards show their answers in red.
+                  {perfect
+                    ? `Every card right${retriedCount > 0 ? `, ${firstTryCount} of them first time` : " first time"}.`
+                    : `${firstTryCount} right first time${retriedCount > 0 ? ` · ${retriedCount} after another try` : ""} · ${items.length - rightCount} to learn. Missed cards show their answers in red.`}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -289,7 +311,8 @@ export function GridPractice() {
                     variant="primary"
                     onClick={() => startSession(toPractise, { length: Math.min(20, toPractise.length * 2) })}
                   >
-                    <Target className="size-4" /> Quiz the {toPractise.length} I missed
+                    <Target className="size-4" />
+                    {perfect ? `Review the ${toPractise.length} I got wrong first` : `Quiz the ${toPractise.length} I missed`}
                   </Button>
                 )}
                 <Button onClick={restart}>
@@ -303,7 +326,7 @@ export function GridPractice() {
               <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-mist marker:text-smoke">
                 <li>Type the romaji for kana, or a reading or the meaning for kanji and words.</li>
                 <li>Press Enter, or just move to another card, to check. Right cards turn gold; wrong ones can be tried again.</li>
-                <li>Skip any you don&apos;t know, and press Finish when you&apos;re done.</li>
+                <li>Skip any you don&apos;t know, and press Finish (or Esc) when you&apos;re done.</li>
               </ul>
             </section>
           )}
@@ -326,18 +349,41 @@ export function GridPractice() {
             ))}
           </div>
 
-          {!finished && (
-            <div className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-ink-950/85 backdrop-blur-xl">
-              <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-                <p className="text-xs text-mist tabular-nums">
-                  {rightCount} of {items.length} right
-                </p>
-                <Button variant="primary" onClick={finish}>
-                  Finish <ArrowRight className="size-4" />
-                </Button>
-              </div>
+          {/* Always in reach at the bottom, however far down the grid you are. */}
+          <div className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-ink-950/85 backdrop-blur-xl">
+            <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
+              <p className="min-w-0 text-xs text-mist tabular-nums">
+                {rightCount} of {items.length} right
+                {!finished && untriedCount === 0 && !perfect && (
+                  <span className="block text-paper sm:inline"> · every card tried: fix the red ones or finish</span>
+                )}
+              </p>
+              {finished ? (
+                <div className="flex shrink-0 gap-2">
+                  {toPractise.length > 0 && (
+                    <Button
+                      variant="primary"
+                      onClick={() => startSession(toPractise, { length: Math.min(20, toPractise.length * 2) })}
+                    >
+                      <Target className="size-4" /> {perfect ? "Review" : "Quiz missed"}
+                    </Button>
+                  )}
+                  <Button onClick={restart}>
+                    <RotateCcw className="size-4" /> Try again
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex shrink-0 items-center gap-3">
+                  <kbd className="hidden rounded border border-veil/15 px-1.5 py-0.5 font-sans text-[10px] text-mist pointer-fine:inline">
+                    Esc
+                  </kbd>
+                  <Button variant="primary" onClick={finish}>
+                    Finish <ArrowRight className="size-4" />
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </>
       )}
     </div>
