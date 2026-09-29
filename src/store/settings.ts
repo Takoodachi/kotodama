@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { DEFAULT_DIRECTIONS, type Direction, type Mode } from "@/lib/quiz/directions";
+import { DEFAULT_DIRECTIONS, type Direction, type Mode, type PracticeMode } from "@/lib/quiz/directions";
+import { stopSpeaking } from "@/lib/speech";
 import { ALL_SCRIPTS, type Script } from "@/lib/writing";
 
 export type FuriganaMode = "show" | "after" | "hide";
@@ -8,6 +9,7 @@ export type GlyphStyle = "sans" | "mincho";
 export type Autoplay = "off" | "answer" | "reveal";
 /** Number of questions; 0 means endless. */
 export type SessionLength = 10 | 20 | 30 | 50 | 0;
+export type Theme = "dark" | "light" | "system";
 
 export interface AudioSettings {
   autoplay: Autoplay;
@@ -17,7 +19,7 @@ export interface AudioSettings {
 
 interface SettingsState {
   selected: string[];
-  mode: Mode;
+  mode: PracticeMode;
   directions: Record<Mode, Direction[]>;
   sessionLength: SessionLength;
   kanjiGrouping: "jlpt" | "grade";
@@ -30,11 +32,14 @@ interface SettingsState {
   writing: Script[];
   /** Whether the practice guide has been shown (it opens by itself on the first visit). */
   guideSeen: boolean;
+  /** Silences every pronunciation, everywhere. */
+  muted: boolean;
+  theme: Theme;
 
   toggleGroup: (id: string) => void;
   setGroups: (ids: string[], on: boolean) => void;
   setSelection: (ids: string[]) => void;
-  setMode: (mode: Mode) => void;
+  setMode: (mode: PracticeMode) => void;
   toggleDirection: (mode: Mode, direction: Direction) => void;
   setSessionLength: (length: SessionLength) => void;
   setKanjiGrouping: (grouping: "jlpt" | "grade") => void;
@@ -45,6 +50,8 @@ interface SettingsState {
   setAutoAdvance: (on: boolean) => void;
   toggleWriting: (script: Script) => void;
   setGuideSeen: (seen: boolean) => void;
+  setMuted: (muted: boolean) => void;
+  setTheme: (theme: Theme) => void;
 }
 
 export const useSettings = create<SettingsState>()(
@@ -62,6 +69,8 @@ export const useSettings = create<SettingsState>()(
       autoAdvance: true,
       writing: ALL_SCRIPTS,
       guideSeen: false,
+      muted: false,
+      theme: "dark",
 
       toggleGroup: (id) =>
         set((s) => ({
@@ -97,6 +106,12 @@ export const useSettings = create<SettingsState>()(
           return next.length ? { writing: next } : s;
         }),
       setGuideSeen: (guideSeen) => set({ guideSeen }),
+      setMuted: (muted) => {
+        // Muting also cuts off anything playing right now.
+        if (muted) stopSpeaking();
+        set({ muted });
+      },
+      setTheme: (theme) => set({ theme }),
     }),
     {
       name: "kotodama-settings",

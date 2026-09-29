@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Trash2 } from "lucide-react";
+import { Monitor, Moon, Play, Sun, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { AccountPanel } from "@/components/account/AccountPanel";
@@ -89,7 +89,19 @@ export function SettingsScreen() {
 
       <AccountPanel />
 
-      <Panel eyebrow="Display" title="Reading aids">
+      <Panel eyebrow="Display" title="Look & reading aids">
+        <Field label="Theme" hint="Dark ink or light paper. Auto follows your device.">
+          <SegmentedControl
+            label="Theme"
+            value={settings.theme}
+            onChange={settings.setTheme}
+            options={[
+              { value: "dark", label: <span className="flex items-center justify-center gap-1.5"><Moon className="size-3.5" /> Dark</span> },
+              { value: "light", label: <span className="flex items-center justify-center gap-1.5"><Sun className="size-3.5" /> Light</span> },
+              { value: "system", label: <span className="flex items-center justify-center gap-1.5"><Monitor className="size-3.5" /> Auto</span> },
+            ]}
+          />
+        </Field>
         <Field label="Furigana" hint="Small kana over kanji in words, phrases and sentences.">
           <SegmentedControl
             label="Furigana"
@@ -123,6 +135,14 @@ export function SettingsScreen() {
           <p className="text-sm text-mist">This browser doesn&apos;t support speech synthesis.</p>
         ) : (
           <>
+            <div className="-my-3">
+              <Toggle
+                checked={settings.muted}
+                onChange={settings.setMuted}
+                label="Mute all pronunciation"
+                description="Same as the speaker button at the top of every screen."
+              />
+            </div>
             <Field label="Play automatically">
               <SegmentedControl
                 label="Play automatically"

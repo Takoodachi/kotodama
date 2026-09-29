@@ -59,7 +59,7 @@ export function MultipleChoice({ options, japanese, chosen, onChoose, review = f
             whileTap={answered ? undefined : { scale: 0.97 }}
             className={cn(
               "relative flex min-h-[4.5rem] flex-col items-center justify-center rounded-2xl border px-4 py-3 text-center transition-[border-color,background-color,box-shadow] duration-300",
-              !answered && "border-line bg-white/[0.025] hover:border-white/25 hover:bg-white/[0.05]",
+              !answered && "border-line bg-veil/[0.025] hover:border-veil/25 hover:bg-veil/[0.05]",
               reveal && "border-gold/80 bg-gold/[0.1] shadow-[0_0_36px_-10px_rgb(201_164_92/0.9)]",
               wrongPick && "border-crimson/80 bg-crimson/[0.12]",
               answered && !reveal && !wrongPick && "border-line",

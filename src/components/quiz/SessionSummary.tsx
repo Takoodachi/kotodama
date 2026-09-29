@@ -26,11 +26,11 @@ function AccuracyRing({ value }: { value: number }) {
   return (
     <div className="relative size-40">
       <svg viewBox="0 0 120 120" className="size-full -rotate-90">
-        <circle cx="60" cy="60" r={radius} fill="none" stroke="rgb(255 255 255 / 0.06)" strokeWidth="3" />
+        <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--chart-grid)" strokeWidth="3" />
         <defs>
           <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#c8102e" />
-            <stop offset="100%" stopColor="#e6c98a" />
+            <stop offset="0%" style={{ stopColor: "var(--color-crimson)" }} />
+            <stop offset="100%" style={{ stopColor: "var(--heat-4)" }} />
           </linearGradient>
         </defs>
         <motion.circle

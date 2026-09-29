@@ -39,7 +39,7 @@ export function SyncBadge() {
       href="/settings#account"
       aria-label={`Account: ${label}`}
       title={label}
-      className="flex size-9 items-center justify-center rounded-full border border-line transition-colors hover:border-white/25"
+      className="flex size-9 items-center justify-center rounded-full border border-line transition-colors hover:border-veil/25"
     >
       <SyncStatusIcon className="size-4" />
     </Link>

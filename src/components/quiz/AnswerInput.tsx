@@ -85,11 +85,11 @@ export function AnswerInput({
           spellCheck={false}
           enterKeyHint={answered ? "next" : "done"}
           className={cn(
-            "h-16 w-full rounded-2xl border bg-white/[0.03] px-5 text-center text-2xl text-paper outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-smoke",
+            "h-16 w-full rounded-2xl border bg-veil/[0.03] px-5 text-center text-2xl text-paper outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-smoke",
             side === "jp" && "jp",
             correct === true && "border-gold/80 shadow-[0_0_36px_-10px_rgb(201_164_92/0.9)]",
             correct === false && "border-crimson/80",
-            correct === null && "border-line focus:border-white/30",
+            correct === null && "border-line focus:border-veil/30",
           )}
         />
       </motion.div>

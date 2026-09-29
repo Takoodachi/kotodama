@@ -1,4 +1,4 @@
-export type Category = "hiragana" | "katakana" | "kanji" | "vocab" | "phrase" | "sentence";
+export type Category = "hiragana" | "katakana" | "kanji" | "vocab" | "phrase" | "sentence" | "grammar";
 
 export type PartOfSpeech =
   | "noun"
@@ -44,6 +44,15 @@ export interface RawItem {
   pos?: PartOfSpeech;
   /** Text sent to speech synthesis when it differs from the default. */
   speech?: string;
+
+  /**
+   * Grammar only. `jp` is the sentence with ＿ where a word is missing;
+   * `answer` fills it (kana), `alsoRight` lists other correct fillers, and
+   * `wrong` holds believable wrong ones for multiple choice.
+   */
+  answer?: string;
+  alsoRight?: string[];
+  wrong?: string[];
 }
 
 /** A short sentence that uses a word or kanji in context. */
@@ -64,6 +73,8 @@ export interface StudyItem extends RawItem {
   surface: string;
   reading: string;
   romaji: string[];
+  /** Grammar only: the sentence with ＿ for the gap (furigana markup). `jp` is the whole sentence. */
+  cloze?: string;
 }
 
 export type KanaKind = "main" | "dakuten" | "handakuten" | "combo" | "extended";

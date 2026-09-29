@@ -1,8 +1,9 @@
 import { toHiragana, toRomaji } from "wanakana";
 import { cleanKanjiReading } from "@/lib/japanese";
 import { toReading, toSurface } from "@/lib/furigana";
-import { ALL_SCRIPTS, isStandardWriting, writeAs, type Script } from "@/lib/writing";
+import { ALL_SCRIPTS, isStandardWriting, writeAs, writeSurfaceAs, type Script } from "@/lib/writing";
 import examplesJson from "./examples.json";
+import grammarJson from "./grammar.json";
 import { HIRAGANA_ROWS, KATAKANA_ROWS } from "./kana";
 import kanjiJson from "./kanji.json";
 import phrasesJson from "./phrases.json";
@@ -27,20 +28,27 @@ function resolve(raw: RawItem, category: Category): StudyItem {
       example,
     };
   }
-  const reading = raw.reading ?? toReading(raw.jp);
+  // Grammar: `jp` arrives with ＿ for the gap; the item keeps the whole sentence.
+  const jp = category === "grammar" ? raw.jp.replace(GAP, raw.answer!) : raw.jp;
+  const reading = raw.reading ?? toReading(jp);
   return {
     ...raw,
     category,
     groups: [raw.group!],
-    surface: toSurface(raw.jp),
+    jp,
+    surface: toSurface(jp),
     reading,
     romaji: raw.romaji ?? [toRomaji(reading)],
     example,
+    ...(category === "grammar" && { cloze: raw.jp }),
   };
 }
 
+/** Marks the missing word in a grammar sentence. */
+export const GAP = "＿";
+
 /** Categories whose writing (hiragana / katakana / kanji) the learner can choose. */
-const WRITTEN_CATEGORIES = new Set<Category>(["vocab", "phrase", "sentence"]);
+export const WRITTEN_CATEGORIES = new Set<Category>(["vocab", "phrase", "sentence", "grammar"]);
 
 /**
  * The part of an item to find (and highlight) inside its example sentence:
@@ -66,6 +74,12 @@ export function writtenItem(item: StudyItem, scripts: readonly Script[] = ALL_SC
     surface: toSurface(jp),
     speech: speechText(item),
     example: item.example && { ...item.example, jp: writeAs(item.example.jp, scripts) },
+    ...(item.cloze && {
+      cloze: writeAs(item.cloze, scripts),
+      answer: writeSurfaceAs(item.answer!, scripts),
+      alsoRight: item.alsoRight?.map((a) => writeSurfaceAs(a, scripts)),
+      wrong: item.wrong?.map((w) => writeSurfaceAs(w, scripts)),
+    }),
   };
 }
 
@@ -100,6 +114,7 @@ export const LIBRARY: StudyItem[] = [
   ...(vocabJson as RawItem[]).map((raw) => resolve(raw, "vocab")),
   ...(phrasesJson as RawItem[]).map((raw) => resolve(raw, "phrase")),
   ...(sentencesJson as RawItem[]).map((raw) => resolve(raw, "sentence")),
+  ...(grammarJson as RawItem[]).map((raw) => resolve(raw, "grammar")),
 ];
 
 /**

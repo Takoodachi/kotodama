@@ -1,3 +1,4 @@
+import { toHiragana } from "wanakana";
 import { kanjiReadings } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import {
@@ -8,7 +9,7 @@ import {
   normalizeRomaji,
   readingKey,
 } from "@/lib/japanese";
-import { answerSide, type Direction } from "./directions";
+import { answerSide, isCloze, type Direction, type Side } from "./directions";
 
 /**
  * Reading answers. Kana are checked against their listed romaji exactly (so
@@ -61,7 +62,25 @@ export function checkJapanese(item: StudyItem, input: string): boolean {
   return accepted.some((a) => japaneseKey(a, strict) === answer);
 }
 
+/** は, へ and を as particles are said wa, e and o; either spelling counts. */
+const foldParticles = (kana: string) => kana.replace(/は/g, "わ").replace(/へ/g, "え").replace(/を/g, "お");
+
+/**
+ * The missing word in a grammar sentence. In Japanese it must be spelled
+ * right (は, not わ); in romaji, particles can be typed as said or as spelled.
+ */
+export function checkGap(item: StudyItem, input: string, side: Side): boolean {
+  const accepted = [item.answer!, ...(item.alsoRight ?? [])];
+  if (side === "romaji") {
+    const key = readingKey(foldParticles(toHiragana(normalizeRomaji(input), { passRomaji: false })));
+    return !!key && accepted.some((a) => readingKey(foldParticles(toHiragana(a))) === key);
+  }
+  const answer = japaneseKey(input);
+  return !!answer && accepted.some((a) => japaneseKey(a) === answer);
+}
+
 export function checkTypedAnswer(item: StudyItem, direction: Direction, input: string): boolean {
+  if (isCloze(direction)) return checkGap(item, input, answerSide(direction));
   switch (answerSide(direction)) {
     case "romaji":
       return checkReading(item, input);

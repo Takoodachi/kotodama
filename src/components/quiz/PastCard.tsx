@@ -67,7 +67,7 @@ function TypedAnswer({
     <div className="space-y-3 text-center">
       <p
         className={cn(
-          "flex h-16 items-center justify-center rounded-2xl border bg-white/[0.03] px-5 text-2xl text-paper",
+          "flex h-16 items-center justify-center rounded-2xl border bg-veil/[0.03] px-5 text-2xl text-paper",
           side === "jp" && "jp",
           result.correct ? "border-gold/80" : "border-crimson/80",
         )}
@@ -77,7 +77,11 @@ function TypedAnswer({
       {!result.correct && (
         <p className="text-sm text-mist">
           Answer:{" "}
-          {side === "jp" ? (
+          {item.cloze ? (
+            <span lang="ja" className="jp text-xl text-paper">
+              {item.answer}
+            </span>
+          ) : side === "jp" ? (
             <JpText text={item.jp} ruby={furigana === "hide" ? "none" : "show"} className="text-xl text-paper" />
           ) : (
             <span className="text-paper">
@@ -105,7 +109,7 @@ interface ReviewNavProps {
 }
 
 const navButton =
-  "flex size-9 items-center justify-center rounded-full border border-line text-mist transition-colors hover:border-white/25 hover:text-paper disabled:pointer-events-none disabled:opacity-30";
+  "flex size-9 items-center justify-center rounded-full border border-line text-mist transition-colors hover:border-veil/25 hover:text-paper disabled:pointer-events-none disabled:opacity-30";
 
 /** Steps back through the cards answered so far, and back to the current one. */
 export function ReviewNav({ at, current, onBack, onForward, onReturn }: ReviewNavProps) {
@@ -116,7 +120,7 @@ export function ReviewNav({ at, current, onBack, onForward, onReturn }: ReviewNa
           type="button"
           onClick={onBack}
           disabled={current === 0}
-          className="-ml-2 flex h-9 items-center gap-1 rounded-full pr-3 pl-2 text-xs text-mist transition-colors hover:bg-white/5 hover:text-paper disabled:invisible"
+          className="-ml-2 flex h-9 items-center gap-1 rounded-full pr-3 pl-2 text-xs text-mist transition-colors hover:bg-veil/5 hover:text-paper disabled:invisible"
         >
           <ChevronLeft className="size-4" />
           Previous card

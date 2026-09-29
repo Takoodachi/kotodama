@@ -27,13 +27,13 @@ export function Toggle({ checked, onChange, label, description }: ToggleProps) {
       <span
         className={cn(
           "relative flex h-7 w-12 shrink-0 items-center rounded-full border p-0.5 transition-colors duration-300",
-          checked ? "border-crimson bg-crimson/80" : "border-line bg-white/[0.04]",
+          checked ? "border-crimson bg-crimson/80" : "border-line bg-veil/[0.04]",
         )}
       >
         <motion.span
           layout
           transition={{ type: "spring", stiffness: 600, damping: 34 }}
-          className={cn("size-5.5 rounded-full bg-paper shadow", checked ? "ml-auto" : "ml-0")}
+          className={cn("size-5.5 rounded-full shadow", checked ? "ml-auto bg-on-accent" : "ml-0 bg-paper")}
         />
       </span>
     </button>

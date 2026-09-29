@@ -11,7 +11,7 @@ export function Backdrop() {
       <div className="absolute -right-1/4 -bottom-1/3 h-[70vmax] w-[70vmax] animate-drift-b rounded-full bg-[radial-gradient(closest-side,rgb(200_16_46/0.09),transparent)] blur-3xl" />
       <div className="absolute top-1/4 left-1/3 h-[50vmax] w-[50vmax] animate-drift-b rounded-full bg-[radial-gradient(closest-side,rgb(201_164_92/0.045),transparent)] blur-3xl" />
       <div className="absolute inset-0 opacity-[0.08] mix-blend-overlay" style={{ backgroundImage: GRAIN }} />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgb(0_0_0/0.65))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,var(--vignette))]" />
     </div>
   );
 }

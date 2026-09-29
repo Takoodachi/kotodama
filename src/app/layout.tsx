@@ -29,16 +29,27 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#0a0a0a",
-  colorScheme: "dark",
 };
+
+/**
+ * Applies the saved theme and glyph style before the first paint, so a light
+ * theme never flashes dark (see Next's "Preventing flash before hydration").
+ * ThemeSync keeps them up to date afterwards.
+ */
+const PREFERENCES_SCRIPT = `(function(){try{var s=(JSON.parse(localStorage.getItem("kotodama-settings")||"{}").state)||{};var t=s.theme||"dark";if(t==="system")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";var d=document.documentElement;d.setAttribute("data-theme",t);if(s.glyph)d.setAttribute("data-glyph",s.glyph)}catch(e){}})()`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-theme="dark"
       data-glyph="mincho"
+      suppressHydrationWarning
       className={`${inter.variable} ${cinzel.variable} ${notoJp.variable} ${shippori.variable} h-full`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PREFERENCES_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <Providers>
           <AppShell>{children}</AppShell>

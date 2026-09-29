@@ -64,6 +64,7 @@ export const CATEGORY_LABELS: Record<Category, { en: string; jp: string }> = {
   vocab: { en: "Words", jp: "単語" },
   phrase: { en: "Phrases", jp: "表現" },
   sentence: { en: "Sentences", jp: "文" },
+  grammar: { en: "Grammar", jp: "文法" },
 };
 
-export const CATEGORIES: Category[] = ["hiragana", "katakana", "kanji", "vocab", "phrase", "sentence"];
+export const CATEGORIES: Category[] = ["hiragana", "katakana", "kanji", "vocab", "phrase", "sentence", "grammar"];

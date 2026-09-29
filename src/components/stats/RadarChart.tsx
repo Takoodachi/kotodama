@@ -49,13 +49,13 @@ export function RadarChart({ data, title }: { data: RadarDatum[]; title: string 
             key={ring}
             points={data.map((_, i) => point(i, n, ring * R).join(",")).join(" ")}
             fill="none"
-            stroke="rgb(255 255 255 / 0.07)"
+            stroke="var(--chart-grid)"
             strokeWidth={1}
           />
         ))}
         {data.map((d, i) => {
           const [x, y] = point(i, n, R);
-          return <line key={d.key} x1={0} y1={0} x2={x} y2={y} stroke="rgb(255 255 255 / 0.07)" strokeWidth={1} />;
+          return <line key={d.key} x1={0} y1={0} x2={x} y2={y} stroke="var(--chart-grid)" strokeWidth={1} />;
         })}
         <text x={3} y={-R * 0.5 - 3} className="fill-smoke text-[8px]">50%</text>
         <text x={3} y={-R - 3} className="fill-smoke text-[8px]">100%</text>
@@ -63,7 +63,7 @@ export function RadarChart({ data, title }: { data: RadarDatum[]; title: string 
         <motion.polygon
           points={polygon}
           fill="rgb(201 164 92 / 0.16)"
-          stroke="#e6c98a"
+          stroke="var(--heat-4)"
           strokeWidth={2}
           strokeLinejoin="round"
           initial={{ opacity: 0, scale: 0.6 }}
@@ -85,7 +85,7 @@ export function RadarChart({ data, title }: { data: RadarDatum[]; title: string 
                 {Math.round(d.value * 100)}%
               </text>
               {/* Marker, with a 24px transparent hit area around it. */}
-              <circle cx={x} cy={y} r={hovered ? 5.5 : 4} fill="#e6c98a" stroke="#121212" strokeWidth={2} />
+              <circle cx={x} cy={y} r={hovered ? 5.5 : 4} fill="var(--heat-4)" stroke="var(--color-ink-900)" strokeWidth={2} />
               <circle
                 cx={x}
                 cy={y}

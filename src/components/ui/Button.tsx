@@ -12,10 +12,10 @@ const BASE =
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-crimson text-paper hover:bg-crimson-bright " +
+    "bg-crimson text-on-accent hover:bg-crimson-bright " +
     "shadow-[0_0_0_1px_rgb(255_255_255/0.06),0_12px_40px_-12px_rgb(200_16_46/0.75)]",
   gold: "border border-gold/45 text-gold-bright hover:border-gold hover:bg-gold/10",
-  ghost: "border border-line text-paper hover:border-white/25 hover:bg-white/[0.04]",
+  ghost: "border border-line text-paper hover:border-veil/25 hover:bg-veil/[0.04]",
 };
 
 const SIZES: Record<Size, string> = {

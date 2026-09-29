@@ -4,6 +4,13 @@ A dark, minimal Japanese practice app that runs on the web and installs as a PWA
 hiragana and katakana rows, kanji levels, words, phrases and sentences, then drill them with
 multiple choice, reading or typing quizzes. Spaced repetition brings back whatever you miss.
 
+- **All at once:** Tofugu-style: every selected kana, kanji and word on one page. Type what you
+  know, press Enter to check, retry wrong ones, then Finish to see what you missed.
+- **Grammar:** 127 fill-in-the-gap drills in 16 sets (particles, verb and adjective forms, common
+  patterns), each with a hand-picked set of wrong options and a short explanation.
+- **Light and dark themes** (Settings → Theme, or Auto to follow the device), and a **mute**
+  button on every screen.
+- **Typing mode** (typing Japanese with an IME) is offered on phones and tablets only.
 - **Practice guide:** a four-step walkthrough opens on the first visit, then lives behind the
   **ⓘ Guide** button in the header.
 - **Written in:** choose whether words, phrases and sentences appear in hiragana, katakana,

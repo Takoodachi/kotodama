@@ -50,7 +50,7 @@ export function DirectionPicker({ mode, enabled, onToggle, categories }: Directi
               onClick={() => onToggle(direction)}
               className={cn(
                 "flex flex-col items-start gap-1 rounded-lg border px-3 py-2.5 text-left transition-colors",
-                on ? "border-gold/50 bg-gold/[0.07]" : "border-line hover:border-white/20",
+                on ? "border-gold/50 bg-gold/[0.07]" : "border-line hover:border-veil/20",
               )}
             >
               <span className={cn("text-xs", on ? "text-gold-bright" : "text-paper")}>
@@ -65,6 +65,11 @@ export function DirectionPicker({ mode, enabled, onToggle, categories }: Directi
       <p className="mt-2.5 text-[11px] leading-relaxed text-smoke">
         Turn on one or more. Each card is asked one of the ways that are on, picked at random.
       </p>
+      {[...categories].includes("grammar") && (
+        <p className="mt-1.5 text-[11px] leading-relaxed text-smoke">
+          <span className="text-mist">Grammar</span> is always fill-in-the-gap, with the translation as a hint.
+        </p>
+      )}
       {limits.length > 0 && (
         <ul className="mt-1.5 space-y-1 text-[11px] leading-relaxed text-smoke">
           {limits.map(({ label, used, reason }) => (

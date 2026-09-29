@@ -12,7 +12,7 @@ import { useSettings } from "@/store/settings";
 
 function Key({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="inline-flex min-w-6 justify-center rounded border border-white/20 px-1.5 py-0.5 font-sans text-[11px] text-paper">
+    <kbd className="inline-flex min-w-6 justify-center rounded border border-veil/20 px-1.5 py-0.5 font-sans text-[11px] text-paper">
       {children}
     </kbd>
   );
@@ -25,12 +25,12 @@ function Chip({ jp, en, on }: { jp: string; en: string; on?: boolean }) {
         "relative flex h-14 w-16 flex-col items-center justify-center rounded-xl border",
         on
           ? "border-crimson/70 bg-crimson/[0.09] shadow-[0_0_24px_-8px_rgb(200_16_46/0.8)]"
-          : "border-line bg-white/[0.02]",
+          : "border-line bg-veil/[0.02]",
       )}
     >
       {on && (
         <span className="absolute top-1 right-1 flex size-3.5 items-center justify-center rounded-full bg-crimson">
-          <Check className="size-2 text-paper" strokeWidth={3} />
+          <Check className="size-2 text-on-accent" strokeWidth={3} />
         </span>
       )}
       <span lang="ja" className="jp text-xl leading-tight text-paper">{jp}</span>
@@ -89,8 +89,8 @@ const STEPS: Step[] = [
     ),
     points: [
       <>
-        <b className="font-medium text-paper">Mode:</b> pick from four options, type the reading or meaning, or
-        type the Japanese.
+        <b className="font-medium text-paper">Mode:</b> pick from four options, type the reading or meaning,
+        see every card at once, or (on a phone) type the Japanese.
       </>,
       <>
         <b className="font-medium text-paper">Directions:</b> what the card shows and what you answer with.
@@ -241,7 +241,7 @@ export function PracticeGuide() {
                   type="button"
                   onClick={() => close()}
                   aria-label="Close the guide"
-                  className="-mt-1 -mr-1 flex size-9 items-center justify-center rounded-full text-mist transition-colors hover:bg-white/5 hover:text-paper"
+                  className="-mt-1 -mr-1 flex size-9 items-center justify-center rounded-full text-mist transition-colors hover:bg-veil/5 hover:text-paper"
                 >
                   <X className="size-5" strokeWidth={1.5} />
                 </button>
@@ -259,7 +259,7 @@ export function PracticeGuide() {
                     <span lang="ja" className="jp text-4xl text-gold-bright">{current.glyph}</span>
                     <span className="font-mincho text-2xl text-paper sm:text-3xl">{current.title}</span>
                   </h2>
-                  <div className="mt-5 flex min-h-16 items-center justify-center rounded-2xl border border-line bg-white/[0.02] px-3 py-4">
+                  <div className="mt-5 flex min-h-16 items-center justify-center rounded-2xl border border-line bg-veil/[0.02] px-3 py-4">
                     {current.visual}
                   </div>
                   <ul className="mt-5 space-y-2.5">
@@ -285,7 +285,7 @@ export function PracticeGuide() {
                       key={s.glyph}
                       className={cn(
                         "h-1.5 rounded-full transition-all duration-300",
-                        i === step ? "w-5 bg-crimson" : "w-1.5 bg-white/20",
+                        i === step ? "w-5 bg-crimson" : "w-1.5 bg-veil/20",
                       )}
                     />
                   ))}

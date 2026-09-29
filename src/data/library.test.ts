@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { isWellFormedFurigana, toReading, toSurface } from "@/lib/furigana";
 import { readingKey, stripPunctuation } from "@/lib/japanese";
 import { ALL_GROUPS, SECTIONS } from "./groups";
-import { EXAMPLES, exampleTarget, ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, ITEMS_BY_ID, LIBRARY } from "./library";
+import { EXAMPLES, exampleTarget, GAP, ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, ITEMS_BY_ID, LIBRARY } from "./library";
 import type { Category } from "./types";
 
 describe("content library", () => {
@@ -63,7 +63,7 @@ describe("content library", () => {
     // は, へ and を are pronounced wa, e and o as particles; fold them on both sides.
     const fold = (kana: string) => kana.replace(/は/g, "わ").replace(/へ/g, "え").replace(/を/g, "お");
     const key = (text: string) => readingKey(fold(toHiragana(text.toLowerCase())));
-    for (const category of ["vocab", "phrase", "sentence"] as Category[]) {
+    for (const category of ["vocab", "phrase", "sentence", "grammar"] as Category[]) {
       for (const item of ITEMS_BY_CATEGORY.get(category)!) {
         expect(key(item.romaji[0]), `${item.id}: ${item.romaji[0]} vs ${item.reading}`).toBe(key(item.reading));
       }
@@ -80,6 +80,22 @@ describe("content library", () => {
         expect(toSurface(example!.jp), `${item.id} uses ${exampleTarget(item)}`).toContain(exampleTarget(item));
         expect(example!.en.length, `${item.id} translation`).toBeGreaterThan(3);
       }
+    }
+  });
+
+  it("gives every grammar item one gap, a kana answer, three wrong options and an explanation", () => {
+    for (const item of ITEMS_BY_CATEGORY.get("grammar")!) {
+      const where = item.id;
+      expect(item.cloze!.split(GAP), where).toHaveLength(2);
+      expect(isWellFormedFurigana(item.cloze!), where).toBe(true);
+      expect(toSurface(item.cloze!.replace(GAP, item.answer!)), where).toBe(item.surface);
+      const right = [item.answer!, ...(item.alsoRight ?? [])];
+      for (const answer of right) expect(isKana(answer), `${where}: ${answer}`).toBe(true);
+      const wrong = item.wrong ?? [];
+      expect(new Set(wrong).size, `${where} wrong options`).toBeGreaterThanOrEqual(3);
+      for (const w of wrong) expect(right, `${where}: ${w} is marked wrong and right`).not.toContain(w);
+      expect(item.meaning.length, where).toBeGreaterThan(0);
+      expect(item.note?.length ?? 0, `${where} note`).toBeGreaterThan(10);
     }
   });
 
@@ -108,5 +124,6 @@ describe("content library", () => {
     expect(count("vocab")).toBeGreaterThanOrEqual(470);
     expect(count("phrase")).toBeGreaterThanOrEqual(120);
     expect(count("sentence")).toBeGreaterThanOrEqual(95);
+    expect(count("grammar")).toBeGreaterThanOrEqual(120);
   });
 });

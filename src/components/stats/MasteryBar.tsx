@@ -2,9 +2,9 @@ import { proficiency, type Breakdown } from "@/lib/analytics";
 
 /** Mastered → known → learning, one hue stepping down in brightness, on a track of the same family. */
 export const STATE_STYLE = {
-  mastered: { fill: "#e6c98a", label: "Mastered" },
-  known: { fill: "#a8843d", label: "Known" },
-  learning: { fill: "rgb(242 239 234 / 0.28)", label: "Learning" },
+  mastered: { fill: "var(--heat-4)", label: "Mastered" },
+  known: { fill: "var(--heat-3)", label: "Known" },
+  learning: { fill: "var(--chart-learning)", label: "Learning" },
 } as const;
 
 const ORDER = ["mastered", "known", "learning"] as const;
