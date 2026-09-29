@@ -2,6 +2,7 @@
 
 import { MotionConfig } from "motion/react";
 import { useEffect } from "react";
+import { AccountSync } from "@/components/account/AccountSync";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { useProgress } from "@/store/progress";
 import { useSession } from "@/store/session";
@@ -32,6 +33,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <StoreHydrator />
       <GlyphSync />
       <ServiceWorkerRegister />
+      <AccountSync />
       {children}
     </MotionConfig>
   );

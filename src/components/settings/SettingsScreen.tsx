@@ -3,6 +3,7 @@
 import { Play, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { AccountPanel } from "@/components/account/AccountPanel";
 import { JpText } from "@/components/japanese/Furigana";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Toggle } from "@/components/ui/Toggle";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useJapaneseVoices, useSpeech } from "@/hooks/useSpeech";
+import { useAccount } from "@/store/account";
 import { useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
 
@@ -35,11 +37,15 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-/** Two taps to erase: the first arms the button for a few seconds. */
+/**
+ * Two taps to erase: the first arms the button for a few seconds. Signed in,
+ * it erases progress on every device; signed out, only on this one.
+ */
 function ResetProgress() {
   const [armed, setArmed] = useState(false);
   const count = useProgress((s) => Object.keys(s.records).length);
-  const reset = useProgress((s) => s.reset);
+  const signedIn = useAccount((s) => s.status === "signed-in");
+  const reset = useProgress((s) => (signedIn ? s.reset : s.clearLocal));
 
   useEffect(() => {
     if (!armed) return;
@@ -57,7 +63,7 @@ function ResetProgress() {
       }}
     >
       <Trash2 className="size-4" />
-      {armed ? `Tap again to erase ${count} records` : "Reset all progress"}
+      {armed ? `Tap again to erase ${count} records${signedIn ? " everywhere" : ""}` : "Reset all progress"}
     </Button>
   );
 }
@@ -66,6 +72,7 @@ export function SettingsScreen() {
   const hydrated = useHydrated();
   const settings = useSettings();
   const totals = useProgress((s) => s.totals);
+  const account = useAccount((s) => s.status);
   const voices = useJapaneseVoices();
   const { supported, speak } = useSpeech();
 
@@ -79,6 +86,8 @@ export function SettingsScreen() {
         <p className="eyebrow">設定 · Settings</p>
         <h1 className="mt-2 font-mincho text-3xl text-paper md:text-5xl">Make it yours</h1>
       </header>
+
+      <AccountPanel />
 
       <Panel eyebrow="Display" title="Reading aids">
         <Field label="Furigana" hint="Small kana over kanji in words, phrases and sentences.">
@@ -192,7 +201,9 @@ export function SettingsScreen() {
       <Panel eyebrow="Data" title="Progress">
         <p className="text-sm text-mist tabular-nums">
           {totals.answered} answers so far, {totals.answered ? Math.round((totals.correct / totals.answered) * 100) : 0}% correct.
-          Progress is stored on this device only.
+          {account === "signed-in"
+            ? " Progress is saved to your account; resetting erases it on all your devices."
+            : " Progress is stored on this device only."}
         </p>
         <ResetProgress />
       </Panel>
