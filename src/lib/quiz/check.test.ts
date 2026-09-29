@@ -1,6 +1,6 @@
 import { toKatakana } from "wanakana";
 import { describe, expect, it } from "vitest";
-import { ITEMS_BY_ID } from "@/data/library";
+import { ITEMS_BY_CATEGORY, ITEMS_BY_ID } from "@/data/library";
 import { checkGap, checkJapanese, checkMeaning, checkReading } from "./check";
 
 const item = (id: string) => {
@@ -69,6 +69,20 @@ describe("checkReading", () => {
     expect(checkJapanese(item("k-ジ"), "ぢ")).toBe(false);
     expect(checkJapanese(item("h-ぢ"), "じ")).toBe(false);
     expect(checkJapanese(item("h-づ"), "ず")).toBe(false);
+  });
+
+  it("reads kana typed with a Japanese keyboard as the romaji that produced it", () => {
+    expect(checkReading(item("h-か"), "か")).toBe(true);
+    expect(checkReading(item("k-カ"), "か")).toBe(true);
+    expect(checkReading(item("h-しゃ"), "しゃ")).toBe(true);
+    expect(checkReading(item("h-を"), "を")).toBe(true);
+    expect(checkReading(item("h-ん"), "ん")).toBe(true);
+    expect(checkReading(item("h-さ"), "し")).toBe(false);
+    for (const kana of ["hiragana", "katakana"] as const) {
+      for (const it of ITEMS_BY_CATEGORY.get(kana)!.filter((i) => !i.groups.some((g) => g.startsWith("kata-ext")))) {
+        expect(checkReading(it, it.surface), it.surface).toBe(true);
+      }
+    }
   });
 
   it("rejects wrong kana readings", () => {

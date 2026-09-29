@@ -88,7 +88,7 @@ export function SelectionScreen() {
           <ul className="space-y-1.5 text-xs leading-relaxed text-mist">
             <li>Every selected card is laid out on one page, shuffled.</li>
             <li>
-              Type what you know and press Enter: <span className="text-paper">romaji</span> for kana, any{" "}
+              Type what you know and press Enter (or move on): <span className="text-paper">romaji</span> for kana, any{" "}
               <span className="text-paper">reading or the meaning</span> for kanji and words. Wrong? Try again.
             </li>
             <li>Finish whenever you like to see what you missed.</li>
