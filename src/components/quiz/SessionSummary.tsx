@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { JpText } from "@/components/japanese/Furigana";
 import { SpeakButton } from "@/components/japanese/SpeakButton";
 import { Button, LinkButton } from "@/components/ui/Button";
-import { ITEMS_BY_ID, speechText } from "@/data/library";
+import { ITEMS_BY_ID, romajiLabel, speechText } from "@/data/library";
 import type { AnswerResult } from "@/store/session";
 
 interface SessionSummaryProps {
@@ -113,8 +113,8 @@ export function SessionSummary({ results, onPracticeMissed, onRepeat }: SessionS
                 >
                   <JpText text={item.jp} className="min-w-14 text-2xl text-paper" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-paper">{item.meaning.join("; ") || item.romaji[0]}</p>
-                    <p className="truncate text-xs text-mist">{item.romaji[0]}</p>
+                    <p className="truncate text-sm text-paper">{item.meaning.join("; ") || romajiLabel(item)}</p>
+                    <p className="truncate text-xs text-mist">{romajiLabel(item)}</p>
                   </div>
                   <SpeakButton text={speechText(item)} size="sm" />
                 </motion.li>

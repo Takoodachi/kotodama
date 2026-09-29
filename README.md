@@ -16,7 +16,10 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
 - **Study heatmap:** the home page shows a year of daily study, GitHub-style.
 - **Progress page:** a radar of known share per category, plus mastery bars for every set
   (N5 kanji, each kana group, each word theme…).
-- **Keyboard:** `1`–`4` answer, `Enter` or `Space` continue, `Esc` ends the session.
+- **Accounts:** sign in (Settings → Account) to keep progress in sync across devices. Practice on
+  several devices adds up, even offline; see [Accounts and sync](#accounts-and-sync).
+- **Look back:** "Previous card" (or `←`) shows earlier cards in a session and plays them again.
+- **Keyboard:** `1`–`4` answer, `Enter` or `Space` continue, `←` look back, `Esc` ends the session.
 - **Offline:** after one visit, every page, the content library and the Japanese font slices it
   needs are cached. Audio uses the device's speech voices; when offline, the app picks an on-device voice.
 
@@ -43,11 +46,36 @@ Setting `PAGES_BASE_PATH` (the workflow does this) switches `next.config.ts` to
 security and service-worker headers. To try the Pages build locally, run
 `PAGES_BASE_PATH=/kotodama npm run build` and serve `out/` under `/kotodama/`.
 
+## Accounts and sync
+
+Accounts use [Supabase](https://supabase.com) (free tier) for email + password sign-in and one
+table. Without the two environment variables below, the app works as before and keeps progress
+on the device only.
+
+1. **Table:** run [`supabase/migrations/20260929000000_kotodama_progress.sql`](supabase/migrations/20260929000000_kotodama_progress.sql)
+   in Supabase → SQL Editor. It only adds `kotodama_progress`, so it can share a project with
+   other apps (accounts are then shared too).
+2. **Keys:** in GitHub → Settings → Secrets and variables → Actions, add the secrets
+   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (Supabase → Project Settings →
+   API). For local development, copy `.env.example` to `.env.local` and fill it in.
+3. **Email links:** in Supabase → Authentication → URL Configuration, add
+   `https://takoodachi.github.io/kotodama/**` (and `http://localhost:3000/**` for development) to
+   the Redirect URLs, so confirmation and password-reset emails lead back to the app.
+
+How syncing works ([`src/lib/sync`](src/lib/sync)): each account has one progress document. A
+device pulls it, merges its own progress in and saves the result: 15 seconds after answering, right
+away when the app is put away, and it pulls again when the app comes back into view or online.
+The merge keeps the latest answer per item, keeps each device's answer counts apart (so practice
+on two devices adds up instead of overwriting), and carries streaks across devices. A save only
+succeeds if nobody saved since it read; otherwise it merges again. Resetting progress while signed
+in resets it on every device; signing out clears it from that device.
+
 ## How it's built
 
 - **Next.js 16** (App Router, Turbopack), **React 19**, **TypeScript**, **Tailwind CSS v4**
 - **motion** (Framer Motion) for transitions and answer feedback
 - **zustand** with `persist` for settings and SRS progress in `localStorage`
+- **Supabase** (optional) for accounts and cross-device sync, loaded only when used
 - **wanakana** for romaji ↔ kana, spelling-tolerant answer checking, and the built-in kana converter
 - **PWA:** `src/app/manifest.ts`, plus a hand-written `public/sw.js` registered in production.
   `next-pwa` is unmaintained and needs webpack, so it isn't used.
@@ -60,6 +88,7 @@ src/
 │  ├─ quiz/             QuizRunner, PromptCard, MultipleChoice, AnswerInput, FeedbackPanel, summary
 │  ├─ japanese/         JpText (furigana ruby, highlighting), ExampleSentence, SpeakButton
 │  ├─ stats/            StudyHeatmap, RadarChart, MasteryBar, ProgressScreen
+│  ├─ account/          sign-in panel, sync status, background sync
 │  ├─ layout/ ui/ pwa/ home/ practice/ settings/
 ├─ data/                the content library
 │  ├─ kana.ts           hiragana/katakana row tables (with accepted romaji variants)
@@ -70,11 +99,12 @@ src/
 │  └─ library.ts        resolves everything into StudyItems and indexes them
 ├─ lib/
 │  ├─ quiz/             directions, distractors, look-alike clusters, answer checking, session building
+│  ├─ sync/             progress document, merge rules, Supabase client and sync
 │  ├─ srs.ts            Leitner boxes 0–5, review scheduling and priority weighting
 │  ├─ analytics.ts      learning states (new / learning / known / mastered), weakest items
 │  ├─ furigana.ts       `{漢字|かんじ}` markup → ruby segments / surface text / reading
 │  └─ japanese.ts       romaji/kana/English normalization
-├─ store/               settings and progress (localStorage), live session (sessionStorage)
+├─ store/               settings and progress (localStorage), live session (sessionStorage), account
 └─ hooks/               useHydrated, useSpeech, useHotkeys, useStartSession, useScrolled…
 ```
 

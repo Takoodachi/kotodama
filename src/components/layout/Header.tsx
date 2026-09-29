@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SyncBadge } from "@/components/account/SyncStatus";
 import { GuideButton } from "@/components/guide/GuideButton";
 import { LogoMark } from "@/components/ui/LogoMark";
 import { useScrolled } from "@/hooks/useScrolled";
@@ -50,7 +51,10 @@ export function Header() {
               );
             })}
           </nav>
-          <GuideButton />
+          <div className="flex items-center gap-2">
+            <SyncBadge />
+            <GuideButton />
+          </div>
         </div>
       </div>
     </header>

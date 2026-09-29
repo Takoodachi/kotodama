@@ -6,7 +6,14 @@ import { SpeakButton } from "@/components/japanese/SpeakButton";
 import { speechText } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import { cn } from "@/lib/cn";
-import { promptSide, promptText, questionHint, type Direction, type Mode } from "@/lib/quiz/directions";
+import {
+  answerSide,
+  promptSide,
+  promptText,
+  questionHint,
+  type Direction,
+  type Mode,
+} from "@/lib/quiz/directions";
 import type { FuriganaMode } from "@/store/settings";
 
 interface PromptCardProps {
@@ -18,6 +25,8 @@ interface PromptCardProps {
   correct: boolean | null;
   /** Ghost mode gets a pale, spectral edge. */
   ghost?: boolean;
+  /** A card answered earlier, shown again: nothing to animate. */
+  review?: boolean;
 }
 
 function jpSize(text: string): string {
@@ -46,9 +55,12 @@ function rubyFor(furigana: FuriganaMode, direction: Direction, answered: boolean
   return furigana === "after" || direction === "jp-romaji" ? "reserve" : "show";
 }
 
-export function PromptCard({ item, direction, mode, furigana, correct, ghost }: PromptCardProps) {
+export function PromptCard({ item, direction, mode, furigana, correct, ghost, review = false }: PromptCardProps) {
   const side = promptSide(direction);
   const answered = correct !== null;
+  // The meaning appears once answered, unless it is the question or the answer itself.
+  const meaning =
+    side !== "en" && answerSide(direction) !== "en" && item.meaning.length ? promptText(item, "en") : null;
   // Hearing the word would give away a reading question, so the button waits for the answer.
   const canSpeak = side === "jp" ? direction !== "jp-romaji" || answered : answered;
 
@@ -59,7 +71,7 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost }: 
         ghost && "border-white/20 shadow-[0_0_60px_-20px_rgb(242_239_234/0.35),inset_0_0_40px_-20px_rgb(242_239_234/0.25)]",
       )}
     >
-      <AnimatePresence>
+      <AnimatePresence initial={!review}>
         {answered && (
           <motion.div
             key={correct ? "right" : "wrong"}
@@ -85,7 +97,7 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost }: 
 
       <motion.div
         className="relative mt-6 flex min-h-[9rem] items-center justify-center sm:min-h-[11rem]"
-        animate={correct === true ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+        animate={correct === true && !review ? { scale: [1, 1.06, 1] } : { scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
         {side === "jp" ? (
@@ -104,6 +116,19 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost }: 
           </span>
         )}
       </motion.div>
+
+      {/* Space is kept from the start, so revealing the meaning doesn't move the options below. */}
+      {meaning && (
+        <p
+          aria-hidden={!answered}
+          className={cn(
+            "relative mx-auto mt-3 -mb-4 max-w-md text-sm leading-relaxed text-mist transition-opacity duration-500",
+            answered ? "opacity-100" : "invisible opacity-0",
+          )}
+        >
+          {meaning}
+        </p>
+      )}
     </div>
   );
 }

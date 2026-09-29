@@ -27,6 +27,35 @@ describe("buildOptions", () => {
     }
   });
 
+  it("labels ぢ as 'ji (di)' and never offers a spelling it also accepts", () => {
+    const di = ITEMS_BY_ID.get("h-ぢ")!;
+    for (let seed = 0; seed < 50; seed++) {
+      const options = buildOptions(di, "jp-romaji", [di], seededRng(seed));
+      expect(options.find((o) => o.correct)!.label).toBe("ji (di)");
+      expect(options.map((o) => o.label)).not.toContain("ji");
+    }
+  });
+
+  it("tests ぢ against じ when the prompt names the d-row", () => {
+    const di = ITEMS_BY_ID.get("h-ぢ")!;
+    let offered = 0;
+    for (let seed = 0; seed < 100; seed++) {
+      if (buildOptions(di, "romaji-jp", [di], seededRng(seed)).some((o) => o.label === "じ")) offered++;
+    }
+    expect(offered).toBeGreaterThan(30);
+  });
+
+  it("gives Japanese and romaji options their meaning, but not English options or kana", () => {
+    const rng = seededRng(5);
+    const taberu = ITEMS_BY_ID.get("v-taberu")!;
+    for (const o of buildOptions(taberu, "en-jp", [taberu], rng)) expect(o.meaning, o.label).toBeTruthy();
+    for (const o of buildOptions(taberu, "jp-en", [taberu], rng)) expect(o.meaning, o.label).toBeUndefined();
+    const sentence = ITEMS_BY_ID.get("s-desu-1")!;
+    for (const o of buildOptions(sentence, "jp-romaji", [sentence], rng)) expect(o.meaning, o.label).toBeTruthy();
+    const a = ITEMS_BY_ID.get("h-あ")!;
+    for (const o of buildOptions(a, "jp-romaji", [a], rng)) expect(o.meaning, o.label).toBeUndefined();
+  });
+
   it("never offers a synonym of the answer as a wrong option", () => {
     const hajimemashite = ITEMS_BY_ID.get("p-hajimemashite")!;
     for (let seed = 0; seed < 100; seed++) {

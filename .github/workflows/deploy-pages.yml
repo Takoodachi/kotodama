@@ -34,9 +34,12 @@ jobs:
       - run: npm run lint
 
       # Static export to out/, served from https://<user>.github.io/<repo>/
+      # Accounts are on when the Supabase secrets are set (Settings → Secrets and variables → Actions).
       - run: npm run build
         env:
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - uses: actions/upload-pages-artifact@v5
         with:

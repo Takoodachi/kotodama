@@ -26,6 +26,12 @@ export interface RawItem {
   reading?: string;
   /** Accepted romanizations; the first is shown. Derived from the reading when omitted. */
   romaji?: string[];
+  /** Romaji to show instead of the first accepted one, e.g. "ji (di)" for ぢ. */
+  romajiLabel?: string;
+  /** A short tip shown with the answer. */
+  note?: string;
+  /** Kana that sounds the same and is also accepted when this one is typed from its romaji (ぢ for "ji"). */
+  sameSound?: string;
   /** English meanings; the first is the primary one. Empty for kana. */
   meaning: string[];
   /** Kanji only: on'yomi in katakana. */

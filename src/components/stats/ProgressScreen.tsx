@@ -7,7 +7,7 @@ import { SpeakButton } from "@/components/japanese/SpeakButton";
 import { GhostModeButton } from "@/components/practice/GhostModeButton";
 import { LinkButton } from "@/components/ui/Button";
 import { SECTIONS } from "@/data/groups";
-import { ITEMS_BY_CATEGORY, ITEMS_BY_ID, itemsForGroups, speechText } from "@/data/library";
+import { ITEMS_BY_CATEGORY, ITEMS_BY_ID, itemsForGroups, romajiLabel, speechText } from "@/data/library";
 import type { Category } from "@/data/types";
 import { useHydrated } from "@/hooks/useHydrated";
 import { plural } from "@/lib/plural";
@@ -165,8 +165,8 @@ export function ProgressScreen() {
               <li key={item.id} className="flex items-center gap-4 py-2.5">
                 <JpText text={item.jp} className="w-20 shrink-0 truncate text-xl text-paper" ruby="none" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-paper">{item.meaning[0] ?? item.romaji[0]}</p>
-                  <p className="truncate text-xs text-mist">{item.romaji[0]}</p>
+                  <p className="truncate text-sm text-paper">{item.meaning[0] ?? romajiLabel(item)}</p>
+                  <p className="truncate text-xs text-mist">{romajiLabel(item)}</p>
                 </div>
                 <div className="text-right text-xs text-mist tabular-nums">
                   <span className="text-paper">{Math.round(accuracy(record) * 100)}%</span>

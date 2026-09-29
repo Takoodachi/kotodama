@@ -1,3 +1,4 @@
+import { toKatakana } from "wanakana";
 import { describe, expect, it } from "vitest";
 import { ITEMS_BY_ID } from "@/data/library";
 import { checkJapanese, checkMeaning, checkReading } from "./check";
@@ -17,6 +18,32 @@ describe("checkReading", () => {
     expect(checkReading(item("h-ん"), "nn")).toBe(true);
     expect(checkReading(item("h-ぢ"), "di")).toBe(true);
     expect(checkReading(item("h-じゃ"), "jya")).toBe(true);
+  });
+
+  it("accepts the same j spellings for ぢ and づ as for じ and ず, and d spellings only for the d-row", () => {
+    const twins = [["じ", "ぢ"], ["ず", "づ"], ["じゃ", "ぢゃ"], ["じゅ", "ぢゅ"], ["じょ", "ぢょ"]];
+    for (const [z, d] of twins) {
+      for (const prefix of ["h", "k"]) {
+        const kana = (k: string) => item(`${prefix}-${prefix === "k" ? toKatakana(k) : k}`);
+        for (const romaji of kana(z).romaji.filter((r) => !r.startsWith("z"))) {
+          expect(checkReading(kana(d), romaji), `${d} ${romaji}`).toBe(true);
+        }
+      }
+    }
+    expect(checkReading(item("h-ぢゃ"), "jya")).toBe(true);
+    expect(checkReading(item("h-づ"), "du")).toBe(true);
+    expect(checkReading(item("h-じ"), "di")).toBe(false);
+    expect(checkReading(item("h-ず"), "du")).toBe(false);
+  });
+
+  it("takes either twin when typing a plain 'ji' or 'zu' card, but only the d-row for 'ji (di)'", () => {
+    expect(checkJapanese(item("h-じ"), "ぢ")).toBe(true);
+    expect(checkJapanese(item("h-ず"), "づ")).toBe(true);
+    expect(checkJapanese(item("h-じゃ"), "ぢゃ")).toBe(true);
+    expect(checkJapanese(item("k-ジ"), "ヂ")).toBe(true);
+    expect(checkJapanese(item("k-ジ"), "ぢ")).toBe(false);
+    expect(checkJapanese(item("h-ぢ"), "じ")).toBe(false);
+    expect(checkJapanese(item("h-づ"), "ず")).toBe(false);
   });
 
   it("rejects wrong kana readings", () => {

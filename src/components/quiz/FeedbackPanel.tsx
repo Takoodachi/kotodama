@@ -97,6 +97,7 @@ export function FeedbackPanel({ item: source, writing, correct, given, furigana,
               <Row label="Romaji">{item.romaji.join(" / ")}</Row>
             )}
             {!!item.meaning.length && <Row label="Meaning">{item.meaning.join("; ")}</Row>}
+            {item.note && <Row label="Note">{item.note}</Row>}
           </dl>
         </div>
 

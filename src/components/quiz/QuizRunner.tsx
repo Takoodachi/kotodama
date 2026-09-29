@@ -9,13 +9,14 @@ import { useHydrated } from "@/hooks/useHydrated";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useStartSession } from "@/hooks/useStartSession";
 import { checkTypedAnswer } from "@/lib/quiz/check";
-import { answerSide } from "@/lib/quiz/directions";
+import { answersInJapanese } from "@/lib/quiz/directions";
 import type { ChoiceOption } from "@/lib/quiz/distractors";
 import { useSession } from "@/store/session";
 import { useSettings } from "@/store/settings";
 import { AnswerInput } from "./AnswerInput";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { MultipleChoice } from "./MultipleChoice";
+import { PastCard, ReviewNav } from "./PastCard";
 import { PromptCard } from "./PromptCard";
 import { QuizHeader } from "./QuizHeader";
 import { SessionSummary } from "./SessionSummary";
@@ -31,25 +32,64 @@ function readingTime(text: string): number {
   return Math.min(2000, Math.max(0, [...text].length - 6) * 50);
 }
 
+/** Cards slide in from the right going forward, and from the left going back. */
+const SLIDE = {
+  enter: (dir: number) => ({ opacity: 0, x: 48 * dir }),
+  center: { opacity: 1, x: 0 },
+  exit: (dir: number) => ({ opacity: 0, x: -48 * dir }),
+};
+
 function Key({ children }: { children: React.ReactNode }) {
   return <kbd className="rounded border border-white/15 px-1.5 py-0.5 font-sans text-[10px] text-mist">{children}</kbd>;
 }
 
 /** Shortcut reminders, only on devices with a mouse and keyboard. */
-function KeyboardHints({ choice, answered }: { choice: boolean; answered: boolean }) {
+function KeyboardHints({
+  choice,
+  answered,
+  reviewing,
+  canGoBack,
+}: {
+  choice: boolean;
+  answered: boolean;
+  reviewing: boolean;
+  canGoBack: boolean;
+}) {
   return (
-    <p className="mt-5 hidden items-center justify-center gap-4 text-[11px] text-smoke pointer-fine:flex" aria-hidden>
-      {choice && !answered && (
-        <span className="flex items-center gap-1.5">
-          <Key>1</Key>–<Key>4</Key> answer
-        </span>
+    <p
+      className="mt-5 hidden flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-smoke pointer-fine:flex"
+      aria-hidden
+    >
+      {reviewing ? (
+        <>
+          <span className="flex items-center gap-1.5">
+            <Key>←</Key>
+            <Key>→</Key> earlier / later
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Key>Enter</Key> back to the question
+          </span>
+        </>
+      ) : (
+        <>
+          {choice && !answered && (
+            <span className="flex items-center gap-1.5">
+              <Key>1</Key>–<Key>4</Key> answer
+            </span>
+          )}
+          <span className="flex items-center gap-1.5">
+            <Key>Enter</Key> or <Key>Space</Key> {answered ? "next" : choice ? "next, once answered" : "check / next"}
+          </span>
+          {canGoBack && (
+            <span className="flex items-center gap-1.5">
+              <Key>←</Key> previous card
+            </span>
+          )}
+          <span className="flex items-center gap-1.5">
+            <Key>Esc</Key> end
+          </span>
+        </>
       )}
-      <span className="flex items-center gap-1.5">
-        <Key>Enter</Key> or <Key>Space</Key> {answered ? "next" : choice ? "next, once answered" : "check / next"}
-      </span>
-      <span className="flex items-center gap-1.5">
-        <Key>Esc</Key> end
-      </span>
     </p>
   );
 }
@@ -66,12 +106,26 @@ export function QuizRunner() {
   const { supported: speechSupported, speak } = useSpeech();
   // The card whose answer is being read aloud, and whether the reading has finished.
   const [spoken, setSpoken] = useState<{ key: string; done: boolean } | null>(null);
+  // An earlier card being looked at again, by question key.
+  const [reviewKey, setReviewKey] = useState<string | null>(null);
+  // 1 going forward, -1 going back: which way cards slide.
+  const [navDir, setNavDir] = useState(1);
+  // Half-typed answer, kept while looking at an earlier card.
+  const [draft, setDraft] = useState<{ key: string; text: string } | null>(null);
   const startSession = useStartSession();
 
   const question = status === "active" ? queue[index] : undefined;
   const item = question ? ITEMS_BY_ID.get(question.itemId) : undefined;
   const last = results.at(-1);
   const result = question && last?.questionKey === question.key ? last : undefined;
+
+  // Every card gets exactly one answer before the next, so results[i] is queue[i].
+  const reviewAt = reviewKey === null ? -1 : results.findIndex((r) => r.questionKey === reviewKey);
+  const reviewing = reviewAt >= 0 && reviewAt < index;
+  const reviewed = reviewing ? results[reviewAt] : undefined;
+  const reviewedQuestion = reviewed && queue[reviewAt];
+  const reviewedItem = reviewed && ITEMS_BY_ID.get(reviewed.itemId);
+
   // A correct answer with auto-advance just flashes gold and moves on, except
   // the first time a word is met: then it stays up to show the example sentence.
   const meetingNewWord = !!result?.firstSeen && !!item?.example;
@@ -94,14 +148,15 @@ export function QuizRunner() {
 
   // Auto-advance after a correct answer, but never over the pronunciation:
   // while the answer is being read aloud, wait for it to finish first.
+  // Paused while looking at an earlier card.
   useEffect(() => {
-    if (!result || showPanel || !question || !item) return;
+    if (!result || showPanel || reviewing || !question || !item) return;
     const base = (mode === "choice" ? ADVANCE_DELAY.choice : ADVANCE_DELAY.typed) + readingTime(item.surface);
     const reading = spoken?.key === question.key;
     const delay = !reading ? base : spoken.done ? AFTER_SPEECH : MAX_SPEECH_WAIT;
     const timer = setTimeout(advance, delay);
     return () => clearTimeout(timer);
-  }, [result, showPanel, question, item, spoken, advance, mode]);
+  }, [result, showPanel, reviewing, question, item, spoken, advance, mode]);
 
   const onClose = useCallback(() => {
     if (results.length) finish();
@@ -111,9 +166,31 @@ export function QuizRunner() {
     }
   }, [results.length, finish, clear, router]);
 
-  // Enter or Space moves on once answered; Escape ends the session.
-  useHotkeys({ Enter: advance, " ": advance }, !!result);
-  useHotkeys({ Escape: onClose }, status === "active");
+  /** Shows an earlier card (by position) and reads it aloud, or returns to the question with null. */
+  const lookAt = (at: number | null, dir: 1 | -1) => {
+    setNavDir(dir);
+    setReviewKey(at === null ? null : results[at].questionKey);
+    // The earlier card is read instead, so stop waiting on the current answer's audio.
+    setSpoken((s) => (s ? { ...s, done: true } : s));
+    const earlier = at === null ? undefined : ITEMS_BY_ID.get(results[at].itemId);
+    if (earlier && autoplay !== "off" && speechSupported) speak(speechText(earlier));
+  };
+  const goBack = () => {
+    const from = reviewing ? reviewAt : index;
+    if (from > 0) lookAt(from - 1, -1);
+  };
+  const goForward = () => {
+    if (reviewing) lookAt(reviewAt + 1 < index ? reviewAt + 1 : null, 1);
+  };
+  const returnToQuestion = () => lookAt(null, 1);
+
+  // Enter or Space moves on once answered; Escape ends the session; ← looks back.
+  useHotkeys({ Enter: advance, " ": advance }, !!result && !reviewing);
+  useHotkeys({ Escape: onClose, ArrowLeft: goBack }, status === "active" && !reviewing);
+  useHotkeys(
+    { ArrowLeft: goBack, ArrowRight: goForward, Enter: returnToQuestion, " ": returnToQuestion, Escape: returnToQuestion },
+    status === "active" && reviewing,
+  );
 
   if (!hydrated || status === "idle") return <div className="flex-1" />;
 
@@ -140,9 +217,6 @@ export function QuizRunner() {
   const onChoose = (option: ChoiceOption) => respond(option.label, option.correct);
   const onSubmit = (given: string) => respond(given, !!given && checkTypedAnswer(item, question.direction, given));
 
-  const side = answerSide(question.direction);
-  const japaneseOptions = side === "jp" || (side === "romaji" && item.category === "kanji");
-
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4">
       <QuizHeader
@@ -155,49 +229,74 @@ export function QuizRunner() {
         ghost={label === "ghost"}
         onClose={onClose}
       />
+      <ReviewNav
+        at={reviewing ? reviewAt : null}
+        current={index}
+        onBack={goBack}
+        onForward={goForward}
+        onReturn={returnToQuestion}
+      />
 
-      <div className="flex flex-1 flex-col justify-center py-6">
-        <AnimatePresence mode="wait" initial={false}>
+      <div className="flex flex-1 flex-col justify-center pt-2 pb-6">
+        <AnimatePresence mode="wait" initial={false} custom={navDir}>
           <motion.div
-            key={question.key}
-            initial={{ opacity: 0, x: 48 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -48 }}
+            key={reviewed ? reviewed.questionKey : question.key}
+            custom={navDir}
+            variants={SLIDE}
+            initial="enter"
+            animate="center"
+            exit="exit"
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="flex flex-col gap-5"
           >
-            <PromptCard
-              item={writtenItem(item, writing)}
-              direction={question.direction}
-              mode={mode}
-              furigana={furigana}
-              correct={result ? result.correct : null}
-              ghost={label === "ghost"}
-            />
-            {question.options ? (
-              <MultipleChoice
-                options={question.options}
-                japanese={japaneseOptions}
-                chosen={result ? result.given : null}
-                onChoose={onChoose}
+            {reviewed && reviewedQuestion && reviewedItem ? (
+              <PastCard
+                item={reviewedItem}
+                question={reviewedQuestion}
+                result={reviewed}
+                mode={mode}
+                writing={writing}
+                furigana={furigana}
+                ghost={label === "ghost"}
               />
             ) : (
-              <AnswerInput
-                item={item}
-                direction={question.direction}
-                kanaConverter={kanaConverter}
-                correct={result ? result.correct : null}
-                onSubmit={onSubmit}
-                onContinue={advance}
-              />
+              <>
+                <PromptCard
+                  item={writtenItem(item, writing)}
+                  direction={question.direction}
+                  mode={mode}
+                  furigana={furigana}
+                  correct={result ? result.correct : null}
+                  ghost={label === "ghost"}
+                />
+                {question.options ? (
+                  <MultipleChoice
+                    options={question.options}
+                    japanese={answersInJapanese(item, question.direction)}
+                    chosen={result ? result.given : null}
+                    onChoose={onChoose}
+                  />
+                ) : (
+                  <AnswerInput
+                    item={item}
+                    direction={question.direction}
+                    kanaConverter={kanaConverter}
+                    correct={result ? result.correct : null}
+                    onSubmit={onSubmit}
+                    onContinue={advance}
+                    draft={draft?.key === question.key ? draft.text : undefined}
+                    onDraft={(text) => setDraft({ key: question.key, text })}
+                  />
+                )}
+              </>
             )}
           </motion.div>
         </AnimatePresence>
-        <KeyboardHints choice={!!question.options} answered={!!result} />
+        <KeyboardHints choice={!!question.options} answered={!!result} reviewing={reviewing} canGoBack={index > 0} />
       </div>
 
       <AnimatePresence>
-        {showPanel && result && (
+        {showPanel && result && !reviewing && (
           <FeedbackPanel
             key={question.key}
             item={item}
