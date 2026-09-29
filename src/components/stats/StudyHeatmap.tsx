@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/cn";
 import { plural } from "@/lib/plural";
 import { localDay, type DayActivity } from "@/store/progress";
 
@@ -10,6 +11,8 @@ const GAP = 3;
 const STEP = CELL + GAP;
 const LEFT = 30;
 const TOP = 18;
+/** Rows above this show their tooltip below the cell instead of above it. */
+const FLIP_BELOW_ROW = 3;
 
 /** One hue, dark → bright on the dark surface: more answers read as more light. */
 const LEVEL_FILL = ["rgb(255 255 255 / 0.05)", "#3d311b", "#6e5629", "#a8843d", "#e6c98a"];
@@ -160,8 +163,15 @@ export function StudyHeatmap({ history, today }: StudyHeatmapProps) {
           </svg>
           {hover && (
             <div
-              className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-line bg-ink-800 px-2.5 py-1.5 text-xs whitespace-nowrap shadow-xl"
-              style={{ left: Math.min(Math.max(hover.x, 70), width - 70), top: hover.y - 6 }}
+              className={cn(
+                "pointer-events-none absolute z-10 -translate-x-1/2 rounded-lg border border-line bg-ink-800 px-2.5 py-1.5 text-xs whitespace-nowrap shadow-xl",
+                // The scroll box clips anything above the grid, so the top rows show their tooltip below the cell.
+                hover.cell.row >= FLIP_BELOW_ROW && "-translate-y-full",
+              )}
+              style={{
+                left: Math.min(Math.max(hover.x, 70), width - 70),
+                top: hover.cell.row < FLIP_BELOW_ROW ? hover.y + CELL + 6 : hover.y - 6,
+              }}
             >
               <span className="font-medium text-paper tabular-nums">
                 {hover.cell.answered ? plural(hover.cell.answered, "answer") : "No study"}

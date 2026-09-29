@@ -99,10 +99,14 @@ describe("content library", () => {
     // 46 main + 20 dakuten + 5 handakuten + 36 combinations; katakana adds 24 extended sounds.
     expect(count("hiragana")).toBe(107);
     expect(count("katakana")).toBe(131);
-    expect(ITEMS_BY_GROUP.get("kanji-n5")!.length).toBeGreaterThanOrEqual(80);
-    for (const level of [4, 3, 2, 1]) expect(ITEMS_BY_GROUP.get(`kanji-n${level}`)!.length).toBeGreaterThanOrEqual(25);
-    expect(count("vocab")).toBeGreaterThanOrEqual(150);
-    expect(count("phrase")).toBeGreaterThanOrEqual(50);
-    expect(count("sentence")).toBeGreaterThanOrEqual(40);
+    const kanjiAt = (level: number) => ITEMS_BY_GROUP.get(`kanji-n${level}`)!.length;
+    expect(kanjiAt(5)).toBeGreaterThanOrEqual(100);
+    expect(kanjiAt(4)).toBeGreaterThanOrEqual(140);
+    expect(kanjiAt(3)).toBeGreaterThanOrEqual(160);
+    expect(kanjiAt(2)).toBeGreaterThanOrEqual(55);
+    expect(kanjiAt(1)).toBeGreaterThanOrEqual(50);
+    expect(count("vocab")).toBeGreaterThanOrEqual(470);
+    expect(count("phrase")).toBeGreaterThanOrEqual(120);
+    expect(count("sentence")).toBeGreaterThanOrEqual(95);
   });
 });

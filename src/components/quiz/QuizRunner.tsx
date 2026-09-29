@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ITEMS_BY_ID, speechText, writtenItem } from "@/data/library";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { useHydrated } from "@/hooks/useHydrated";
@@ -21,6 +21,15 @@ import { QuizHeader } from "./QuizHeader";
 import { SessionSummary } from "./SessionSummary";
 
 const ADVANCE_DELAY = { choice: 850, typed: 1000 };
+/** Pause after the pronunciation finishes before the next card. */
+const AFTER_SPEECH = 700;
+/** Moves on anyway if the browser never reports the end of speech. */
+const MAX_SPEECH_WAIT = 12_000;
+
+/** Extra time to take in a longer answer (a sentence, not a single kana). */
+function readingTime(text: string): number {
+  return Math.min(2000, Math.max(0, [...text].length - 6) * 50);
+}
 
 function Key({ children }: { children: React.ReactNode }) {
   return <kbd className="rounded border border-white/15 px-1.5 py-0.5 font-sans text-[10px] text-mist">{children}</kbd>;
@@ -54,7 +63,9 @@ export function QuizRunner() {
   const autoAdvance = useSettings((s) => s.autoAdvance);
   const autoplay = useSettings((s) => s.audio.autoplay);
   const kanaConverter = useSettings((s) => s.builtInIme);
-  const { speak } = useSpeech();
+  const { supported: speechSupported, speak } = useSpeech();
+  // The card whose answer is being read aloud, and whether the reading has finished.
+  const [spoken, setSpoken] = useState<{ key: string; done: boolean } | null>(null);
   const startSession = useStartSession();
 
   const question = status === "active" ? queue[index] : undefined;
@@ -81,11 +92,16 @@ export function QuizRunner() {
     if (autoplay === "reveal" && item && question?.direction === "jp-en") speak(speechText(item));
   }, [autoplay, item, question, speak]);
 
+  // Auto-advance after a correct answer, but never over the pronunciation:
+  // while the answer is being read aloud, wait for it to finish first.
   useEffect(() => {
-    if (!result || showPanel) return;
-    const timer = setTimeout(advance, mode === "choice" ? ADVANCE_DELAY.choice : ADVANCE_DELAY.typed);
+    if (!result || showPanel || !question || !item) return;
+    const base = (mode === "choice" ? ADVANCE_DELAY.choice : ADVANCE_DELAY.typed) + readingTime(item.surface);
+    const reading = spoken?.key === question.key;
+    const delay = !reading ? base : spoken.done ? AFTER_SPEECH : MAX_SPEECH_WAIT;
+    const timer = setTimeout(advance, delay);
     return () => clearTimeout(timer);
-  }, [result, showPanel, advance, mode]);
+  }, [result, showPanel, question, item, spoken, advance, mode]);
 
   const onClose = useCallback(() => {
     if (results.length) finish();
@@ -115,7 +131,10 @@ export function QuizRunner() {
 
   const respond = (given: string, correct: boolean) => {
     answer(given, correct);
-    if (autoplay !== "off") speak(speechText(item));
+    if (autoplay === "off" || !speechSupported) return;
+    const key = question.key;
+    setSpoken({ key, done: false });
+    speak(speechText(item), () => setSpoken((s) => (s?.key === key ? { key, done: true } : s)));
   };
 
   const onChoose = (option: ChoiceOption) => respond(option.label, option.correct);

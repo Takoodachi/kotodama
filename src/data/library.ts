@@ -76,15 +76,21 @@ export function kanjiReadings(item: Pick<RawItem, "on" | "kun">): string[] {
   return [...new Set([...kun, ...on])];
 }
 
-/** Compact reading label for a kanji: on'yomi in katakana, then kun'yomi. */
+const readingLabelCache = new Map<string, { label: string; sublabel: string }>();
+
+/** Compact reading label for a kanji: on'yomi in katakana, then kun'yomi. Cached per kanji. */
 export function kanjiReadingLabel(item: StudyItem): { label: string; sublabel: string } {
+  const cached = readingLabelCache.get(item.id);
+  if (cached) return cached;
   const on = (item.on ?? []).slice(0, 2);
   const kun = (item.kun ?? []).slice(0, 2).map(cleanKanjiReading);
   const parts = [...on, ...kun];
-  return {
+  const result = {
     label: parts.join("、"),
     sublabel: parts.map((p) => toRomaji(p)).join(", "),
   };
+  readingLabelCache.set(item.id, result);
+  return result;
 }
 
 export const LIBRARY: StudyItem[] = [
@@ -95,6 +101,21 @@ export const LIBRARY: StudyItem[] = [
   ...(phrasesJson as RawItem[]).map((raw) => resolve(raw, "phrase")),
   ...(sentencesJson as RawItem[]).map((raw) => resolve(raw, "sentence")),
 ];
+
+/**
+ * Kanji without a hand-written example borrow the shortest sentence in the
+ * library that uses them: a word's example sentence or a grammar sentence.
+ */
+(function borrowKanjiExamples() {
+  const pool: Example[] = [
+    ...LIBRARY.filter((i) => i.category === "vocab" && i.example).map((i) => i.example!),
+    ...LIBRARY.filter((i) => i.category === "sentence").map((i) => ({ jp: i.jp, en: i.meaning[0] })),
+  ].sort((a, b) => toSurface(a.jp).length - toSurface(b.jp).length);
+  for (const item of LIBRARY) {
+    if (item.category !== "kanji" || item.example) continue;
+    item.example = pool.find((ex) => toSurface(ex.jp).includes(item.surface));
+  }
+})();
 
 export const ITEMS_BY_ID = new Map(LIBRARY.map((item) => [item.id, item]));
 

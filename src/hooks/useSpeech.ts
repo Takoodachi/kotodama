@@ -33,12 +33,15 @@ export function useSpeech() {
   const [speaking, setSpeaking] = useState(false);
 
   const speak = useCallback(
-    (text: string) =>
+    (text: string, onDone?: () => void) =>
       speakJapanese(text, {
         rate,
         voiceURI,
         onStart: () => setSpeaking(true),
-        onEnd: () => setSpeaking(false),
+        onEnd: () => {
+          setSpeaking(false);
+          onDone?.();
+        },
       }),
     [rate, voiceURI],
   );

@@ -16,9 +16,22 @@ export interface ChoiceOption {
 const labelKey = (label: string) => label.normalize("NFKC").toLowerCase().replace(/[\s.,!?。、！？]/g, "");
 
 /** True when two items share any English meaning ("excuse me" ≈ "excuse me (entering)"). */
+// Normalized English meanings per item id, computed once: every question
+// compares the answer against hundreds of candidates.
+const meaningCache = new Map<string, Set<string>>();
+function meaningsOf(item: StudyItem): Set<string> {
+  let set = meaningCache.get(item.id);
+  if (!set) {
+    set = new Set(item.meaning.map(normalizeEnglish));
+    meaningCache.set(item.id, set);
+  }
+  return set;
+}
+
 function sharesMeaning(a: StudyItem, b: StudyItem): boolean {
-  const meanings = new Set(a.meaning.map(normalizeEnglish));
-  return b.meaning.some((m) => meanings.has(normalizeEnglish(m)));
+  const meanings = meaningsOf(a);
+  for (const m of meaningsOf(b)) if (meanings.has(m)) return true;
+  return false;
 }
 
 function fitsPrompt(item: StudyItem, candidate: StudyItem, prompt: Side): boolean {

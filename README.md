@@ -63,7 +63,7 @@ src/
 │  ├─ layout/ ui/ pwa/ home/ practice/ settings/
 ├─ data/                the content library
 │  ├─ kana.ts           hiragana/katakana row tables (with accepted romaji variants)
-│  ├─ kanji.json        N5 (103) + N4–N1 samples, with on/kun readings, JLPT level and school grade
+│  ├─ kanji.json        524 kanji (N5 103, N4 143, N3 167, N2 57, N1 54) with readings, JLPT level, grade
 │  ├─ vocab.json  phrases.json  sentences.json
 │  ├─ examples.json     an example sentence for every word and kanji
 │  ├─ groups.ts         sections and selectable sets that drive the picker, plus presets
