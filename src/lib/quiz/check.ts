@@ -1,4 +1,4 @@
-import { toHiragana } from "wanakana";
+import { isKana, toHiragana, toRomaji } from "wanakana";
 import { kanjiReadings } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import {
@@ -13,7 +13,9 @@ import { answerSide, isCloze, type Direction, type Side } from "./directions";
 
 /**
  * Reading answers. Kana are checked against their listed romaji exactly (so
- * "chi" is not accepted for ティ). Everything else is compared by reading key,
+ * "chi" is not accepted for ティ). A Japanese keyboard left on turns typed
+ * romaji into kana ("ka" → か), so kana typed in are read back as romaji.
+ * Everything else is compared by reading key,
  * which accepts any common romanization, and against the listed romaji, which
  * covers particles written as pronounced (は → wa).
  */
@@ -22,8 +24,8 @@ export function checkReading(item: StudyItem, input: string): boolean {
   if (!literal && !input.trim()) return false;
 
   if (item.category === "hiragana" || item.category === "katakana") {
-    const answer = normalizeRomaji(input).replace(/\s+/g, "");
-    return item.romaji.includes(answer);
+    const typed = normalizeRomaji(input).replace(/\s+/g, "");
+    return item.romaji.includes(isKana(typed) ? toRomaji(typed) : typed);
   }
 
   if (literal && item.romaji.some((r) => literalRomajiKey(r) === literal)) return true;

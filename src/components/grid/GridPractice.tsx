@@ -24,6 +24,8 @@ interface CardState {
   tries: number;
   /** Whether the first try was right; null until tried. */
   firstTry: boolean | null;
+  /** The last answer checked. */
+  given?: string;
 }
 
 const UNTRIED: CardState = { status: "open", tries: 0, firstTry: null };
@@ -42,14 +44,18 @@ interface CardProps {
   shown: StudyItem;
   state: CardState;
   finished: boolean;
-  /** Checks the typed answer; returns whether it was right. */
-  onSubmit: (input: HTMLInputElement) => boolean | null;
+  /**
+   * Checks the typed answer, on Enter or when leaving the field; returns
+   * whether it was right, or null if there was nothing new to check.
+   */
+  onCheck: (input: HTMLInputElement, how: "enter" | "leave") => boolean | null;
   inputRef: (el: HTMLInputElement | null) => void;
   onPlay: () => void;
 }
 
-function GridCard({ item, shown, state, finished, onSubmit, inputRef, onPlay }: CardProps) {
+function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: CardProps) {
   const [scope, animate] = useAnimate<HTMLDivElement>();
+  const shake = () => void animate(scope.current, { x: [0, -7, 7, -4, 4, 0] }, { duration: 0.4 });
   const right = state.status === "right";
   const revealed = right || finished;
   const missed = finished && !right;
@@ -88,6 +94,11 @@ function GridCard({ item, shown, state, finished, onSubmit, inputRef, onPlay }: 
             {answer.reading}
           </p>
           {answer.meaning && <p className="text-[11px] text-mist">{answer.meaning}</p>}
+          {missed && state.given && (
+            <p className="mt-0.5 text-[10px] text-smoke">
+              you: <span className="line-through">{state.given}</span>
+            </p>
+          )}
         </div>
       ) : (
         <input
@@ -101,11 +112,14 @@ function GridCard({ item, shown, state, finished, onSubmit, inputRef, onPlay }: 
           spellCheck={false}
           enterKeyHint="next"
           onKeyDown={(event) => {
-            if (event.key !== "Enter") return;
+            // The Enter that confirms a Japanese keyboard's conversion isn't a submit.
+            if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
             event.preventDefault();
-            if (onSubmit(event.currentTarget) === false) {
-              void animate(scope.current, { x: [0, -7, 7, -4, 4, 0] }, { duration: 0.4 });
-            }
+            if (onCheck(event.currentTarget, "enter") === false) shake();
+          }}
+          // Tab, or tapping another card, checks the answer too.
+          onBlur={(event) => {
+            if (onCheck(event.currentTarget, "leave") === false) shake();
           }}
           className={cn(
             "h-9 w-full min-w-0 rounded-lg border bg-veil/[0.04] px-2 text-center text-sm text-paper outline-none transition-colors placeholder:text-[10px] placeholder:text-smoke focus:border-gold/60",
@@ -135,6 +149,10 @@ export function GridPractice() {
   const [cards, setCards] = useState<Record<string, CardState>>({});
   const [finished, setFinished] = useState(false);
   const inputs = useRef(new Map<string, HTMLInputElement>());
+  // What was last checked on each card, so leaving a field doesn't check the same text twice.
+  const checked = useRef(new Map<string, string>());
+  // Cards tried at least once: like a quiz, only the first try counts toward spaced repetition.
+  const tried = useRef(new Set<string>());
 
   const items = useMemo(
     () => shuffle(itemsForGroups(selected).filter((i) => GRID_CATEGORIES.has(i.category)), seededRng(seed)),
@@ -156,33 +174,49 @@ export function GridPractice() {
     }
   };
 
-  const submit = (item: StudyItem, input: HTMLInputElement): boolean | null => {
-    const state = stateOf(item.id);
-    if (!input.value.trim()) {
-      focusNext(item.id);
+  /** Grades an answer, records a first try, and returns the card's new state. */
+  const grade = (item: StudyItem, value: string, prev: CardState): CardState => {
+    const correct = checkGridAnswer(item, value);
+    if (!tried.current.has(item.id)) {
+      tried.current.add(item.id);
+      record(item.id, correct, true);
+    }
+    checked.current.set(item.id, value);
+    return {
+      status: correct ? "right" : "open",
+      tries: prev.tries + 1,
+      firstTry: prev.firstTry ?? correct,
+      given: value,
+    };
+  };
+
+  const check = (item: StudyItem, input: HTMLInputElement, how: "enter" | "leave"): boolean | null => {
+    const value = input.value.trim();
+    // Nothing new to check: Enter moves on, as a skip.
+    if (!value || checked.current.get(item.id) === value) {
+      if (how === "enter") focusNext(item.id);
       return null;
     }
-    const correct = checkGridAnswer(item, input.value);
-    // Like a quiz, only the first try counts toward spaced repetition.
-    if (state.tries === 0) record(item.id, correct, true);
-    setCards((all) => ({
-      ...all,
-      [item.id]: {
-        status: correct ? "right" : "open",
-        tries: state.tries + 1,
-        firstTry: state.firstTry ?? correct,
-      },
-    }));
-    if (correct) {
-      if (autoplay !== "off") speak(speechText(item));
-      focusNext(item.id);
-    } else {
-      input.select();
+    const next = grade(item, value, stateOf(item.id));
+    setCards((all) => ({ ...all, [item.id]: next }));
+    const correct = next.status === "right";
+    if (correct && autoplay !== "off") speak(speechText(item));
+    if (how === "enter") {
+      if (correct) focusNext(item.id);
+      else input.select();
     }
     return correct;
   };
 
   const finish = () => {
+    // Answers typed but never checked (no Enter, no leaving the field) still count.
+    const late: Record<string, CardState> = {};
+    for (const item of items) {
+      const value = inputs.current.get(item.id)?.value.trim();
+      if (!value || checked.current.get(item.id) === value || stateOf(item.id).status === "right") continue;
+      late[item.id] = grade(item, value, stateOf(item.id));
+    }
+    setCards((all) => ({ ...all, ...late }));
     setFinished(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -190,6 +224,8 @@ export function GridPractice() {
   const restart = () => {
     setSeed(newSeed());
     setCards({});
+    checked.current.clear();
+    tried.current.clear();
     setFinished(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -266,7 +302,7 @@ export function GridPractice() {
               <h1 className="font-mincho text-3xl text-paper">Type what you know</h1>
               <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-mist marker:text-smoke">
                 <li>Type the romaji for kana, or a reading or the meaning for kanji and words.</li>
-                <li>Press Enter to check. Right cards turn gold; wrong ones can be tried again.</li>
+                <li>Press Enter, or just move to another card, to check. Right cards turn gold; wrong ones can be tried again.</li>
                 <li>Skip any you don&apos;t know, and press Finish when you&apos;re done.</li>
               </ul>
             </section>
@@ -280,7 +316,7 @@ export function GridPractice() {
                 shown={writtenItem(item, writing)}
                 state={stateOf(item.id)}
                 finished={finished}
-                onSubmit={(input) => submit(item, input)}
+                onCheck={(input, how) => check(item, input, how)}
                 inputRef={(el) => {
                   if (el) inputs.current.set(item.id, el);
                   else inputs.current.delete(item.id);
