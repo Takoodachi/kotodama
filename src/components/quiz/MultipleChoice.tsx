@@ -12,9 +12,11 @@ interface MultipleChoiceProps {
   /** Label of the option picked, once answered. */
   chosen: string | null;
   onChoose: (option: ChoiceOption) => void;
+  /** A card answered earlier, shown again: nothing to animate. */
+  review?: boolean;
 }
 
-export function MultipleChoice({ options, japanese, chosen, onChoose }: MultipleChoiceProps) {
+export function MultipleChoice({ options, japanese, chosen, onChoose, review = false }: MultipleChoiceProps) {
   const answered = chosen !== null;
   const longest = Math.max(...options.map((o) => o.label.length));
   const singleColumn = longest > (japanese ? 9 : 22);
@@ -36,11 +38,17 @@ export function MultipleChoice({ options, japanese, chosen, onChoose }: Multiple
             type="button"
             disabled={answered}
             onClick={() => onChoose(option)}
-            initial={{ opacity: 0, y: 14 }}
+            initial={review ? false : { opacity: 0, y: 14 }}
             animate={
-              wrongPick
+              wrongPick && !review
                 ? { opacity: 1, y: 0, x: [0, -10, 10, -7, 7, -3, 0] }
-                : { opacity: answered && !reveal ? 0.35 : 1, y: 0, x: 0, scale: reveal ? [1, 1.04, 1] : 1 }
+                : {
+                    // Dimmed less when there's a meaning to read.
+                    opacity: answered && !reveal && !wrongPick ? (option.meaning ? 0.55 : 0.35) : 1,
+                    y: 0,
+                    x: 0,
+                    scale: reveal && !review ? [1, 1.04, 1] : 1,
+                  }
             }
             transition={{
               opacity: { duration: 0.3, delay: answered ? 0 : 0.05 * i },
@@ -64,6 +72,18 @@ export function MultipleChoice({ options, japanese, chosen, onChoose }: Multiple
               {option.label}
             </span>
             {option.sublabel && <span className="mt-0.5 text-xs text-mist">{option.sublabel}</span>}
+            {/* Space is kept for the meaning from the start, so revealing it doesn't move the options. */}
+            {option.meaning && (
+              <span
+                aria-hidden={!answered}
+                className={cn(
+                  "mt-1 text-xs leading-snug text-mist transition-opacity duration-500",
+                  answered ? "opacity-100" : "invisible opacity-0",
+                )}
+              >
+                {option.meaning}
+              </span>
+            )}
           </motion.button>
         );
       })}

@@ -1,5 +1,5 @@
-import { kanjiReadingLabel } from "@/data/library";
-import type { StudyItem } from "@/data/types";
+import { kanjiReadingLabel, romajiLabel } from "@/data/library";
+import type { Category, StudyItem } from "@/data/types";
 import { pick, type Rng } from "@/lib/random";
 
 export type Mode = "choice" | "reading" | "typing";
@@ -28,6 +28,21 @@ export const DIRECTION_LABELS: Record<Direction, { from: string; to: string }> =
   "en-jp": { from: "English", to: "日本語" },
 };
 
+/** What each direction asks, in plain words. */
+export function directionDescription(direction: Direction, mode: Mode): string {
+  const typed = mode !== "choice";
+  switch (direction) {
+    case "jp-en":
+      return typed ? "See Japanese, type the meaning in English" : "See Japanese, pick the meaning";
+    case "jp-romaji":
+      return typed ? "See Japanese, type how it's read in romaji" : "See Japanese, pick how it's read";
+    case "romaji-jp":
+      return typed ? "See romaji, type it in Japanese" : "See romaji, pick the Japanese";
+    case "en-jp":
+      return typed ? "See English, type it in Japanese" : "See English, pick the Japanese";
+  }
+}
+
 export const MODE_INFO: Record<Mode, { glyph: string; title: string; description: string }> = {
   choice: { glyph: "選", title: "Multiple choice", description: "Pick from four options. Best on a phone." },
   reading: { glyph: "読", title: "Reading", description: "See Japanese, type the romaji or meaning." },
@@ -42,10 +57,10 @@ export function answerSide(direction: Direction): Side {
   return direction.split("-")[1] as Side;
 }
 
-const isKana = (item: StudyItem) => item.category === "hiragana" || item.category === "katakana";
+const isKana = (item: Pick<StudyItem, "category">) => item.category === "hiragana" || item.category === "katakana";
 
 /** Which directions make sense for an item in a mode. */
-export function supportedDirections(item: StudyItem, mode: Mode): Direction[] {
+export function supportedDirections(item: Pick<StudyItem, "category">, mode: Mode): Direction[] {
   if (isKana(item)) return mode === "typing" ? ["romaji-jp"] : mode === "reading" ? ["jp-romaji"] : ["jp-romaji", "romaji-jp"];
   switch (mode) {
     case "choice":
@@ -57,6 +72,39 @@ export function supportedDirections(item: StudyItem, mode: Mode): Direction[] {
     case "typing":
       return item.category === "kanji" ? ["en-jp"] : MODE_DIRECTIONS.typing;
   }
+}
+
+export interface DirectionLimit {
+  /** "Kana", "Kanji" or "Sentences". */
+  label: string;
+  /** The directions these cards are asked in. */
+  used: Direction[];
+  reason: string;
+}
+
+const LIMITED: { label: string; categories: Category[]; reason: string }[] = [
+  { label: "Kana", categories: ["hiragana", "katakana"], reason: "they have no English meaning" },
+  { label: "Kanji", categories: ["kanji"], reason: "many kanji share a reading, so romaji can't point to one" },
+  { label: "Sentences", categories: ["sentence"], reason: "a typed English translation can't be checked reliably" },
+];
+
+/**
+ * Kinds of item in the selection that can't be asked some of the ways turned
+ * on: which directions they're asked in instead, and why.
+ */
+export function directionLimits(
+  categories: Iterable<Category>,
+  mode: Mode,
+  enabled: readonly Direction[],
+): DirectionLimit[] {
+  const present = new Set(categories);
+  return LIMITED.flatMap(({ label, categories: kinds, reason }) => {
+    if (!kinds.some((c) => present.has(c))) return [];
+    const supported = supportedDirections({ category: kinds[0] }, mode);
+    if (enabled.every((d) => supported.includes(d))) return [];
+    const allowed = supported.filter((d) => enabled.includes(d));
+    return [{ label, used: allowed.length ? allowed : supported, reason }];
+  });
 }
 
 /** A direction the learner enabled and the item supports, or the item's first option. */
@@ -89,8 +137,14 @@ export function primaryMeaning(item: StudyItem): string {
 
 /** Text of an item as a prompt, for the romaji and English sides. */
 export function promptText(item: StudyItem, side: Exclude<Side, "jp">): string {
-  if (side === "romaji") return item.romaji[0];
+  if (side === "romaji") return romajiLabel(item);
   return item.meaning.slice(0, 3).join("; ");
+}
+
+/** Whether answer options are written in Japanese (a kanji's readings are, in kana). */
+export function answersInJapanese(item: StudyItem, direction: Direction): boolean {
+  const side = answerSide(direction);
+  return side === "jp" || (side === "romaji" && item.category === "kanji");
 }
 
 /** How an item appears as a multiple-choice option. */
@@ -100,7 +154,7 @@ export function answerLabel(item: StudyItem, side: Side): { label: string; subla
       return { label: primaryMeaning(item) };
     case "romaji":
       if (item.category === "kanji") return kanjiReadingLabel(item);
-      return { label: item.romaji[0] };
+      return { label: romajiLabel(item) };
     case "jp":
       return { label: item.surface };
   }

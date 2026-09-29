@@ -40,6 +40,7 @@ export function SelectionScreen() {
 
   const selected = useMemo(() => new Set(settings.selected), [settings.selected]);
   const items = useMemo(() => itemsForGroups(settings.selected), [settings.selected]);
+  const categories = useMemo(() => new Set(items.map((i) => i.category)), [items]);
 
   const sectionCounts = useMemo(
     () =>
@@ -67,10 +68,8 @@ export function SelectionScreen() {
           mode={settings.mode}
           enabled={settings.directions[settings.mode]}
           onToggle={(d) => settings.toggleDirection(settings.mode, d)}
+          categories={categories}
         />
-        <p className="mt-2 text-[11px] leading-relaxed text-smoke">
-          Kana always quiz reading. Each card uses a direction that suits it.
-        </p>
       </div>
       <div>
         <Label>Written in · words, phrases & sentences</Label>

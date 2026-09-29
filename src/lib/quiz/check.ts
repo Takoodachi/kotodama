@@ -48,13 +48,15 @@ export function checkMeaning(item: StudyItem, input: string): boolean {
 /**
  * Japanese answers typed with an IME. The written form or the kana reading are
  * both accepted, and katakana/hiragana are treated as equal, except for the
- * katakana set itself, where the script is the point.
+ * katakana set itself, where the script is the point. A kana asked as plain
+ * "ji" or "zu" also takes its twin (ぢ, づ), which sounds the same.
  */
 export function checkJapanese(item: StudyItem, input: string): boolean {
   const strict = item.category === "katakana";
   const answer = japaneseKey(input, strict);
   if (!answer) return false;
   const accepted = [item.surface, item.reading];
+  if (item.sameSound) accepted.push(item.sameSound);
   if (item.category === "kanji") accepted.push(...kanjiReadings(item));
   return accepted.some((a) => japaneseKey(a, strict) === answer);
 }

@@ -93,8 +93,8 @@ const STEPS: Step[] = [
         type the Japanese.
       </>,
       <>
-        <b className="font-medium text-paper">Directions:</b> what the card shows and what you answer with, like
-        日本語 → English.
+        <b className="font-medium text-paper">Directions:</b> what the card shows and what you answer with.
+        日本語 → English shows Japanese and asks what it means. Turn on several to mix them.
       </>,
       <>
         <b className="font-medium text-paper">Written in:</b> show words, phrases and sentences in hiragana,
@@ -113,7 +113,8 @@ const STEPS: Step[] = [
     points: [
       "Press Begin. Anything you miss comes back a few cards later.",
       "New words show an example sentence. Tap it to hear it and see the translation.",
-      "On a computer, use the number keys to answer and Enter or Space to move on.",
+      "Tap “Previous card” to look back at earlier cards and hear them again.",
+      "On a computer, use the number keys to answer, Enter or Space to move on, and ← to look back.",
     ],
   },
   {

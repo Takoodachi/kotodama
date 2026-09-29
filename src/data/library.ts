@@ -169,6 +169,11 @@ export function itemsByIds(ids: Iterable<string>): StudyItem[] {
   return items;
 }
 
+/** The romaji shown for an item: its label ("ji (di)" for ぢ), else its first accepted spelling. */
+export function romajiLabel(item: StudyItem): string {
+  return item.romajiLabel ?? item.romaji[0];
+}
+
 /** What speech synthesis should say for an item. */
 export function speechText(item: StudyItem): string {
   if (item.speech) return item.speech;

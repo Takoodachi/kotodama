@@ -17,11 +17,23 @@ interface AnswerInputProps {
   correct: boolean | null;
   onSubmit: (given: string) => void;
   onContinue: () => void;
+  /** Text typed before the field was last closed, e.g. to look back at an earlier card. */
+  draft?: string;
+  onDraft?: (text: string) => void;
 }
 
 const PLACEHOLDERS = { romaji: "romaji…", en: "English…", jp: "日本語…" } as const;
 
-export function AnswerInput({ item, direction, kanaConverter, correct, onSubmit, onContinue }: AnswerInputProps) {
+export function AnswerInput({
+  item,
+  direction,
+  kanaConverter,
+  correct,
+  onSubmit,
+  onContinue,
+  draft,
+  onDraft,
+}: AnswerInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const side = answerSide(direction);
   const answered = correct !== null;
@@ -33,6 +45,18 @@ export function AnswerInput({ item, direction, kanaConverter, correct, onSubmit,
     bind(input, { IMEMode: item.category === "katakana" ? "toKatakana" : "toHiragana" });
     return () => unbind(input);
   }, [convert, item.category]);
+
+  // Keep what was typed when the field closes, so it's still there on return.
+  const saveDraft = useRef(onDraft);
+  useEffect(() => {
+    saveDraft.current = onDraft;
+  });
+  useEffect(() => {
+    const input = inputRef.current;
+    return () => {
+      if (input) saveDraft.current?.(input.value);
+    };
+  }, []);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -50,6 +74,7 @@ export function AnswerInput({ item, direction, kanaConverter, correct, onSubmit,
         <input
           ref={inputRef}
           autoFocus
+          defaultValue={draft}
           readOnly={answered}
           lang={side === "jp" ? "ja" : "en"}
           aria-label={`Your answer in ${side === "jp" ? "Japanese" : side === "en" ? "English" : "romaji"}`}

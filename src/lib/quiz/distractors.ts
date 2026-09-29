@@ -1,21 +1,22 @@
-import { ITEMS_BY_CATEGORY, writtenItem } from "@/data/library";
+import { ITEMS_BY_CATEGORY, romajiLabel, writtenItem } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import { normalizeEnglish } from "@/lib/japanese";
 import { shuffle, weightedSample, type Rng } from "@/lib/random";
 import { ALL_SCRIPTS, type Script } from "@/lib/writing";
 import { areConfusable } from "./confusables";
-import { answerLabel, answerSide, promptSide, type Direction, type Side } from "./directions";
+import { answerLabel, answerSide, primaryMeaning, promptSide, type Direction, type Side } from "./directions";
 
 export interface ChoiceOption {
   itemId: string;
   label: string;
   sublabel?: string;
   correct: boolean;
+  /** English meaning, shown once answered, for options written in Japanese or romaji. */
+  meaning?: string;
 }
 
 const labelKey = (label: string) => label.normalize("NFKC").toLowerCase().replace(/[\s.,!?。、！？]/g, "");
 
-/** True when two items share any English meaning ("excuse me" ≈ "excuse me (entering)"). */
 // Normalized English meanings per item id, computed once: every question
 // compares the answer against hundreds of candidates.
 const meaningCache = new Map<string, Set<string>>();
@@ -28,6 +29,7 @@ function meaningsOf(item: StudyItem): Set<string> {
   return set;
 }
 
+/** True when two items share any English meaning ("excuse me" ≈ "excuse me (entering)"). */
 function sharesMeaning(a: StudyItem, b: StudyItem): boolean {
   const meanings = meaningsOf(a);
   for (const m of meaningsOf(b)) if (meanings.has(m)) return true;
@@ -39,8 +41,9 @@ function fitsPrompt(item: StudyItem, candidate: StudyItem, prompt: Side): boolea
     case "jp":
       return candidate.surface === item.surface;
     case "romaji": {
-      const readings = new Set(item.romaji.map(labelKey));
-      return candidate.romaji.some((r) => readings.has(labelKey(r)));
+      // The card shows one spelling: "ji" fits both じ and ぢ, "ji (di)" only ぢ.
+      const shown = labelKey(romajiLabel(item));
+      return candidate.romaji.some((r) => labelKey(r) === shown);
     }
     case "en":
       return sharesMeaning(item, candidate);
@@ -104,7 +107,18 @@ export function buildOptions(
   const show = (it: StudyItem) => writtenItem(it, writing);
   const item = show(source);
   const side = answerSide(direction);
-  const correct = { itemId: item.id, ...answerLabel(item, side), correct: true };
+  // Meanings teach what the other options say too. A kanji's reading options
+  // belong to other kanji, so theirs would only confuse.
+  const withMeaning = side !== "en" && !(side === "romaji" && item.category === "kanji");
+  const toOption = (it: StudyItem, correct: boolean): ChoiceOption => ({
+    itemId: it.id,
+    ...answerLabel(it, side),
+    correct,
+    ...(withMeaning && it.meaning.length ? { meaning: primaryMeaning(it) } : {}),
+  });
+  const correct = toOption(item, true);
+  // Spellings the answer accepts: an option showing one of them would be right too ("ji" for ぢ).
+  const accepted = new Set(item.romaji.map(labelKey));
   const taken = new Set([labelKey(correct.label)]);
   const poolIds = new Set(pool.map((p) => p.id));
 
@@ -116,7 +130,8 @@ export function buildOptions(
       // A distractor that also fits the prompt would be a second right answer,
       // and so would a synonym offered as an English answer.
       !fitsPrompt(item, c, prompt) &&
-      !(side === "en" && sharesMeaning(item, c)),
+      !(side === "en" && sharesMeaning(item, c)) &&
+      !(side === "romaji" && accepted.has(labelKey(answerLabel(c, side).label))),
   );
   // Over-sample, then drop answers that collide with one already chosen.
   const ranked = weightedSample(
@@ -129,7 +144,7 @@ export function buildOptions(
   const distractors: ChoiceOption[] = [];
   for (const candidate of ranked) {
     if (distractors.length >= count - 1) break;
-    const option = { itemId: candidate.id, ...answerLabel(candidate, side), correct: false };
+    const option = toOption(candidate, false);
     const key = labelKey(option.label);
     if (taken.has(key)) continue;
     taken.add(key);
