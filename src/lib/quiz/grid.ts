@@ -22,7 +22,8 @@ export function gridAnswer(item: StudyItem): { reading: string; meaning?: string
   return { reading: item.reading, meaning: item.meaning[0] };
 }
 
-/** What to type, as a field placeholder. */
-export function gridHint(item: StudyItem): string {
-  return isKana(item) ? "romaji" : "reading or meaning";
+/** What to type, as a field placeholder; shorter on a one-column card. */
+export function gridHint(item: StudyItem, wide = false): string {
+  if (isKana(item)) return "romaji";
+  return wide ? "reading or meaning" : "reading/meaning";
 }

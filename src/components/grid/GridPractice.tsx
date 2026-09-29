@@ -33,11 +33,20 @@ const UNTRIED: CardState = { status: "open", tries: 0, firstTry: null };
 
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
-function glyphSize(text: string): string {
+/**
+ * How wide a card is and how big its text, so words never wrap. The grid is
+ * three columns on a phone (about 100px each) and more on wider screens:
+ * - up to 2 characters: one column, large
+ * - 3: one column, a size that still fits
+ * - 4–5: two columns
+ * - 6 or more (long words written in kana): three columns, the whole row on a phone
+ */
+function cardSize(text: string): { span?: string; glyph: string; wide: boolean } {
   const length = [...text].length;
-  if (length <= 2) return "text-4xl";
-  if (length <= 4) return "text-3xl";
-  return "text-2xl";
+  if (length <= 2) return { glyph: "text-4xl", wide: false };
+  if (length === 3) return { glyph: "text-2xl", wide: false };
+  if (length <= 5) return { span: "col-span-2", glyph: "text-3xl", wide: true };
+  return { span: "col-span-3", glyph: "text-3xl", wide: true };
 }
 
 interface CardProps {
@@ -61,14 +70,15 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
   const revealed = right || finished;
   const missed = finished && !right;
   const answer = gridAnswer(shown);
-  const wide = [...shown.surface].length > 4;
+  const size = cardSize(shown.surface);
 
   return (
     <div
       ref={scope}
       className={cn(
-        "relative flex flex-col items-center gap-2 rounded-2xl border px-2.5 pt-3 pb-2.5 text-center transition-colors duration-300",
-        wide && "col-span-2",
+        // The field sits at the bottom, so cards in a row line up whatever their height.
+        "relative flex flex-col items-center justify-between gap-2 rounded-2xl border px-1.5 pt-3 pb-2 text-center transition-colors duration-300 sm:px-2.5 sm:pb-2.5",
+        size.span,
         // The glass surface sets its own border and fill, so answered cards swap it out.
         right ? "border-gold/60 bg-gold/[0.1]" : missed ? "border-crimson/45 bg-crimson/[0.07]" : "glass",
       )}
@@ -84,7 +94,7 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
         disabled={!revealed}
         tabIndex={revealed ? 0 : -1}
         aria-label={revealed ? `Play ${shown.surface}` : undefined}
-        className={cn("jp leading-tight text-paper", glyphSize(shown.surface), revealed && "cursor-pointer")}
+        className={cn("jp leading-tight whitespace-nowrap text-paper", size.glyph, revealed && "cursor-pointer")}
         lang="ja"
       >
         {shown.surface}
@@ -106,7 +116,7 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
           ref={inputRef}
           type="text"
           aria-label={`Answer for ${shown.surface}`}
-          placeholder={gridHint(item)}
+          placeholder={gridHint(item, size.wide)}
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="none"
@@ -123,7 +133,8 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
             if (onCheck(event.currentTarget, "leave") === false) shake();
           }}
           className={cn(
-            "h-9 w-full min-w-0 rounded-lg border bg-veil/[0.04] px-2 text-center text-sm text-paper outline-none transition-colors placeholder:text-[10px] placeholder:text-smoke focus:border-gold/60",
+            // Scroll margins keep a focused card clear of the header and the bottom bar.
+            "h-9 w-full min-w-0 scroll-mt-20 scroll-mb-28 rounded-lg border bg-veil/[0.04] px-1 text-center text-sm text-paper outline-none transition-colors placeholder:text-[10px] placeholder:text-smoke focus:border-gold/60",
             state.tries > 0 ? "border-crimson/60" : "border-line",
           )}
         />
@@ -331,7 +342,7 @@ export function GridPractice() {
             </section>
           )}
 
-          <div className="mt-6 grid grid-flow-dense grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] gap-2.5 pb-32">
+          <div className="mt-6 grid grid-flow-dense grid-cols-3 gap-2 pb-32 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:gap-2.5">
             {items.map((item) => (
               <GridCard
                 key={item.id}
