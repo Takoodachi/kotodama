@@ -7,30 +7,36 @@ export type Mode = "choice" | "reading" | "typing";
 export type PracticeMode = Mode | "grid";
 
 /**
- * What the card shows → what the learner answers with. Grammar cards are
+ * What the card shows → what the learner answers with. "jp-both" asks for the
+ * reading and the meaning together, in two fields. Grammar cards are
  * sentences with a gap: "cloze" is answered in Japanese, "cloze-romaji" in romaji.
  */
-export type Direction = "jp-en" | "jp-romaji" | "romaji-jp" | "en-jp" | "cloze" | "cloze-romaji";
+export type Direction = "jp-en" | "jp-romaji" | "jp-both" | "romaji-jp" | "en-jp" | "cloze" | "cloze-romaji";
 
 export const isCloze = (direction: Direction) => direction === "cloze" || direction === "cloze-romaji";
+
+/** Whether the card asks how it's read, so furigana and audio wait for the answer. */
+export const asksReading = (direction: Direction) => direction === "jp-romaji" || direction === "jp-both";
 
 export type Side = "jp" | "romaji" | "en";
 
 export const MODE_DIRECTIONS: Record<Mode, Direction[]> = {
   choice: ["jp-en", "jp-romaji", "romaji-jp", "en-jp"],
-  reading: ["jp-romaji", "jp-en"],
+  // One at a time, chosen as "Answer with": the reading, the meaning, or both.
+  reading: ["jp-romaji", "jp-en", "jp-both"],
   typing: ["en-jp", "romaji-jp"],
 };
 
 export const DEFAULT_DIRECTIONS: Record<Mode, Direction[]> = {
   choice: ["jp-en", "jp-romaji"],
-  reading: ["jp-romaji", "jp-en"],
+  reading: ["jp-both"],
   typing: ["en-jp", "romaji-jp"],
 };
 
 export const DIRECTION_LABELS: Record<Direction, { from: string; to: string }> = {
   "jp-en": { from: "日本語", to: "English" },
   "jp-romaji": { from: "日本語", to: "Reading" },
+  "jp-both": { from: "日本語", to: "Reading & English" },
   "romaji-jp": { from: "Romaji", to: "日本語" },
   "en-jp": { from: "English", to: "日本語" },
   cloze: { from: "文", to: "Gap" },
@@ -48,6 +54,8 @@ export function directionDescription(direction: Direction, mode: Mode): string {
       return typed ? "See Japanese, type the meaning in English" : "See Japanese, pick the meaning";
     case "jp-romaji":
       return typed ? "See Japanese, type how it's read in romaji" : "See Japanese, pick how it's read";
+    case "jp-both":
+      return "See Japanese, type how it's read and what it means";
     case "romaji-jp":
       return typed ? "See romaji, type it in Japanese" : "See romaji, pick the Japanese";
     case "en-jp":
@@ -57,7 +65,7 @@ export function directionDescription(direction: Direction, mode: Mode): string {
 
 export const MODE_INFO: Record<PracticeMode, { glyph: string; title: string; description: string }> = {
   choice: { glyph: "選", title: "Multiple choice", description: "Pick from four options." },
-  reading: { glyph: "読", title: "Reading", description: "See Japanese, type the romaji or meaning." },
+  reading: { glyph: "読", title: "Reading", description: "See Japanese, type the reading, the meaning or both." },
   typing: { glyph: "書", title: "Typing", description: "See English or romaji, type Japanese with your keyboard." },
   grid: { glyph: "覧", title: "All at once", description: "Every card on one page. Type what you know." },
 };
@@ -91,6 +99,8 @@ export function promptSide(direction: Direction): Side {
 
 export function answerSide(direction: Direction): Side {
   if (direction === "cloze") return "jp";
+  // Both: the reading comes first; the meaning has a field of its own.
+  if (direction === "jp-both") return "romaji";
   return direction.split("-")[1] as Side;
 }
 
@@ -106,15 +116,14 @@ export function supportedDirections(item: Pick<StudyItem, "category">, mode: Mod
       // Romaji → kanji is ambiguous (many kanji share a reading), so it is left out.
       return item.category === "kanji" ? ["jp-en", "jp-romaji", "en-jp"] : MODE_DIRECTIONS.choice;
     case "reading":
-      // Free-typed English translations of whole sentences can't be graded reliably.
-      return item.category === "sentence" ? ["jp-romaji"] : MODE_DIRECTIONS.reading;
+      return MODE_DIRECTIONS.reading;
     case "typing":
       return item.category === "kanji" ? ["en-jp"] : MODE_DIRECTIONS.typing;
   }
 }
 
 export interface DirectionLimit {
-  /** "Kana", "Kanji" or "Sentences". */
+  /** "Kana" or "Kanji". */
   label: string;
   /** The directions these cards are asked in. */
   used: Direction[];
@@ -124,7 +133,6 @@ export interface DirectionLimit {
 const LIMITED: { label: string; categories: Category[]; reason: string }[] = [
   { label: "Kana", categories: ["hiragana", "katakana"], reason: "they have no English meaning" },
   { label: "Kanji", categories: ["kanji"], reason: "many kanji share a reading, so romaji can't point to one" },
-  { label: "Sentences", categories: ["sentence"], reason: "a typed English translation can't be checked reliably" },
 ];
 
 /**
@@ -166,6 +174,8 @@ export function questionHint(item: StudyItem, direction: Direction, mode: Mode):
     case "jp-romaji":
       if (item.category === "kanji") return typed ? "Type any reading in romaji" : "How is it read?";
       return typed ? "Type the reading in romaji" : "How is it read?";
+    case "jp-both":
+      return item.category === "kanji" ? "Type a reading and the meaning" : "Type the reading and the meaning";
     case "romaji-jp":
       return typed ? "Type it in Japanese" : "Which one is it?";
     case "en-jp":

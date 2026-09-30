@@ -2,6 +2,7 @@ import { isKana, toHiragana, toRomaji } from "wanakana";
 import { kanjiReadings } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import {
+  contentWords,
   editDistance,
   japaneseKey,
   literalRomajiKey,
@@ -36,16 +37,53 @@ export function checkReading(item: StudyItem, input: string): boolean {
   return [...readings, ...item.romaji].some((r) => readingKey(r) === key);
 }
 
-/** English answers, forgiving small typos in longer words. */
+/**
+ * English answers, forgiving small typos in longer words. Phrases and
+ * sentences can be put many ways, so for them it's enough to have the words
+ * that carry the meaning, in any order (see `sameWords`).
+ */
 export function checkMeaning(item: StudyItem, input: string): boolean {
   const answer = normalizeEnglish(input);
   if (!answer) return false;
+  const loose = item.category === "phrase" || item.category === "sentence";
   return item.meaning.some((m) => {
     const expected = normalizeEnglish(m);
     if (expected === answer) return true;
     const allowed = expected.length >= 8 ? 2 : expected.length >= 4 ? 1 : 0;
-    return editDistance(expected, answer) <= allowed;
+    if (editDistance(expected, answer) <= allowed) return true;
+    return loose && sameWords(m, input);
   });
+}
+
+/** Two words that are the same, give or take a typo in a longer one. */
+function sameWord(a: string, b: string): boolean {
+  return a === b || (Math.max(a.length, b.length) >= 5 && editDistance(a, b) <= 1);
+}
+
+/**
+ * Whether an answer has every meaningful word of the expected translation,
+ * in any order, with at most one extra (two in longer sentences).
+ * "My father isn't a doctor" matches "My father is not a doctor."; "I drink
+ * tea" doesn't match "I drink coffee".
+ */
+export function sameWords(expected: string, answer: string): boolean {
+  const want = contentWords(expected);
+  const left = contentWords(answer);
+  if (!want.length || !left.length) return false;
+  for (const word of want) {
+    const at = left.findIndex((w) => sameWord(w, word));
+    if (at < 0) return false;
+    left.splice(at, 1);
+  }
+  return left.length <= (want.length >= 5 ? 2 : 1);
+}
+
+/** A card answered with both its reading and its meaning: each half checked on its own. */
+export function checkBoth(item: StudyItem, reading: string, meaning: string): { reading: boolean; meaning: boolean } {
+  return {
+    reading: !!reading.trim() && checkReading(item, reading),
+    meaning: !!meaning.trim() && checkMeaning(item, meaning),
+  };
 }
 
 /**

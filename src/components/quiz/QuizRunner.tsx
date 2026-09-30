@@ -8,10 +8,10 @@ import { useHotkeys } from "@/hooks/useHotkeys";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useStartSession } from "@/hooks/useStartSession";
-import { checkTypedAnswer } from "@/lib/quiz/check";
+import { checkBoth, checkTypedAnswer } from "@/lib/quiz/check";
 import { answersInJapanese } from "@/lib/quiz/directions";
 import type { ChoiceOption } from "@/lib/quiz/distractors";
-import { useSession } from "@/store/session";
+import { useSession, type AnswerParts } from "@/store/session";
 import { useSettings } from "@/store/settings";
 import { AnswerInput } from "./AnswerInput";
 import { FeedbackPanel } from "./FeedbackPanel";
@@ -98,7 +98,8 @@ export function QuizRunner() {
   const router = useRouter();
   const hydrated = useHydrated();
   const session = useSession();
-  const { status, mode, queue, index, results, length, label, writing, poolIds, answer, advance, finish, clear } = session;
+  const { status, mode, queue, index, results, length, label, writing, poolIds } = session;
+  const { answer, overrule, advance, finish, clear } = session;
   const furigana = useSettings((s) => s.furigana);
   const autoAdvance = useSettings((s) => s.autoAdvance);
   const autoplay = useSettings((s) => s.audio.autoplay);
@@ -110,8 +111,8 @@ export function QuizRunner() {
   const [reviewKey, setReviewKey] = useState<string | null>(null);
   // 1 going forward, -1 going back: which way cards slide.
   const [navDir, setNavDir] = useState(1);
-  // Half-typed answer, kept while looking at an earlier card.
-  const [draft, setDraft] = useState<{ key: string; text: string } | null>(null);
+  // Half-typed answer (one text per field), kept while looking at an earlier card.
+  const [draft, setDraft] = useState<{ key: string; texts: string[] } | null>(null);
   const startSession = useStartSession();
 
   const question = status === "active" ? queue[index] : undefined;
@@ -206,8 +207,8 @@ export function QuizRunner() {
 
   if (!question || !item) return <div className="flex-1" />;
 
-  const respond = (given: string, correct: boolean) => {
-    answer(given, correct);
+  const respond = (given: string, correct: boolean, parts?: AnswerParts) => {
+    answer(given, correct, parts);
     if (autoplay === "off" || !speechSupported || muted) return;
     const key = question.key;
     setSpoken({ key, done: false });
@@ -215,7 +216,24 @@ export function QuizRunner() {
   };
 
   const onChoose = (option: ChoiceOption) => respond(option.label, option.correct);
-  const onSubmit = (given: string) => respond(given, !!given && checkTypedAnswer(item, question.direction, given));
+  const onSubmit = (given: string, meaning = "") => {
+    if (question.direction !== "jp-both") return respond(given, !!given && checkTypedAnswer(item, question.direction, given));
+    const right = checkBoth(item, given, meaning);
+    respond([given, meaning].filter(Boolean).join(" / "), right.reading && right.meaning, {
+      reading: { given, correct: right.reading },
+      meaning: { given: meaning, correct: right.meaning },
+    });
+  };
+
+  // An English answer marked wrong may just be worded in a way the check didn't expect:
+  // the learner can count it as right. Only the meaning: a reading is checked exactly.
+  const canOverrule =
+    !!result &&
+    !result.correct &&
+    !question.options &&
+    (result.parts
+      ? result.parts.reading.correct && !!result.parts.meaning.given
+      : question.direction === "jp-en" && !!result.given);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4">
@@ -282,10 +300,22 @@ export function QuizRunner() {
                     direction={question.direction}
                     kanaConverter={kanaConverter}
                     correct={result ? result.correct : null}
+                    parts={
+                      result?.parts && { reading: result.parts.reading.correct, meaning: result.parts.meaning.correct }
+                    }
                     onSubmit={onSubmit}
                     onContinue={advance}
-                    draft={draft?.key === question.key ? draft.text : undefined}
-                    onDraft={(text) => setDraft({ key: question.key, text })}
+                    // Once answered (say, after a reload), the fields show what was given.
+                    draft={
+                      result
+                        ? result.parts
+                          ? [result.parts.reading.given, result.parts.meaning.given]
+                          : [result.given]
+                        : draft?.key === question.key
+                          ? draft.texts
+                          : undefined
+                    }
+                    onDraft={(texts) => setDraft({ key: question.key, texts })}
                   />
                 )}
               </>
@@ -303,6 +333,9 @@ export function QuizRunner() {
             writing={writing}
             correct={result.correct}
             given={result.given}
+            parts={result.parts}
+            overruled={result.overruled}
+            onOverrule={canOverrule ? overrule : undefined}
             furigana={furigana}
             onContinue={advance}
           />

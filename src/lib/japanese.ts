@@ -82,6 +82,62 @@ export function normalizeEnglish(input: string): string {
     .trim();
 }
 
+/**
+ * Words that change little in a translation: articles, pronouns (Japanese
+ * often leaves the subject out, so "I", "he" or none can all be right), forms
+ * of "be" and "do", and titles like "Mr." for さん.
+ */
+const FILLER = new Set(
+  "a an the i you he she it we they me him her us them my your his its our their is am are was were be been being do does did to of please mr mrs ms miss san".split(" "),
+);
+
+/** Words that mean the same here, folded to one; numbers become digits, so "ten" and "10" match. */
+const SAME_WORD: Record<string, string> = {
+  each: "every",
+  film: "movie",
+  films: "movies",
+  store: "shop",
+  stores: "shops",
+  ...Object.fromEntries(
+    "zero one two three four five six seven eight nine ten eleven twelve".split(" ").map((word, n) => [word, String(n)]),
+  ),
+  twenty: "20",
+  thirty: "30",
+  hundred: "100",
+};
+
+/** Trims common endings so "cooks", "cooked" and "cooking" compare as one word. */
+function stem(word: string): string {
+  const trimmed = word.replace(/(ing|ed|es|s|e)$/, "");
+  return trimmed.length >= 3 ? trimmed : word;
+}
+
+/**
+ * The words of an English answer that carry its meaning, in order: contractions
+ * spelled out ("isn't" → "is not"), filler dropped and endings trimmed.
+ */
+export function contentWords(input: string): string[] {
+  return input
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[‘’]/g, "'")
+    .replace(/\bo'?clock\b/g, " ")
+    .replace(/\bwon't\b/g, "will not")
+    .replace(/\b(can't|cannot)\b/g, "can not")
+    .replace(/n't\b/g, " not")
+    .replace(/'m\b/g, " am")
+    .replace(/'re\b/g, " are")
+    .replace(/'s\b/g, " is")
+    .replace(/'ll\b/g, " will")
+    .replace(/'ve\b/g, " have")
+    .replace(/'d\b/g, " would")
+    .replace(/\(.*?\)/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word && !FILLER.has(word))
+    .map((word) => stem(SAME_WORD[word] ?? word));
+}
+
 /** Edit distance where swapping two adjacent letters ("friut") counts as one edit. */
 export function editDistance(a: string, b: string): number {
   if (a === b) return 0;

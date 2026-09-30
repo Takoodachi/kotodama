@@ -89,8 +89,8 @@ const STEPS: Step[] = [
     ),
     points: [
       <>
-        <b className="font-medium text-paper">Mode:</b> pick from four options, type the reading or meaning,
-        see every card at once, or (on a phone) type the Japanese.
+        <b className="font-medium text-paper">Mode:</b> pick from four options, type the reading, the meaning or
+        both, see every card at once, or (on a phone) type the Japanese.
       </>,
       <>
         <b className="font-medium text-paper">Directions:</b> what the card shows and what you answer with.

@@ -1,7 +1,7 @@
 import { toKatakana } from "wanakana";
 import { describe, expect, it } from "vitest";
 import { ITEMS_BY_CATEGORY, ITEMS_BY_ID } from "@/data/library";
-import { checkGap, checkJapanese, checkMeaning, checkReading } from "./check";
+import { checkBoth, checkGap, checkJapanese, checkMeaning, checkReading, sameWords } from "./check";
 
 const item = (id: string) => {
   const found = ITEMS_BY_ID.get(id);
@@ -133,6 +133,42 @@ describe("checkMeaning", () => {
     expect(checkMeaning(item("v-toshokan"), "libary")).toBe(true);
     expect(checkMeaning(item("v-inu"), "cog")).toBe(false);
     expect(checkMeaning(item("v-inu"), "cat")).toBe(false);
+  });
+
+  it("takes a sentence in other words, as long as the key words are there", () => {
+    const coffee = item("s-masu-1"); // I drink coffee every morning.
+    expect(checkMeaning(coffee, "Every morning I drink coffee")).toBe(true);
+    expect(checkMeaning(coffee, "he drinks coffee each morning")).toBe(true);
+    expect(checkMeaning(coffee, "drinking coffe every morning")).toBe(true);
+    expect(checkMeaning(coffee, "I drink tea every morning")).toBe(false);
+    expect(checkMeaning(coffee, "I drink coffee")).toBe(false);
+    const doctor = item("s-desu-6"); // My father is not a doctor.
+    expect(checkMeaning(doctor, "my dad isn't a doctor")).toBe(false);
+    expect(checkMeaning(doctor, "My father isn't a doctor")).toBe(true);
+    expect(checkMeaning(doctor, "My father is a doctor")).toBe(false);
+    // I go to bed at ten every night.
+    expect(checkMeaning(item("s-masu-7"), "Every night I go to bed at 10 o'clock")).toBe(true);
+    expect(checkMeaning(item("s-masu-7"), "Every night I go to bed at 11")).toBe(false);
+  });
+
+  it("keeps words to their exact meaning", () => {
+    expect(checkMeaning(item("v-taberu"), "eat food")).toBe(false);
+  });
+});
+
+describe("sameWords", () => {
+  it("allows one extra word, or two in a longer sentence", () => {
+    expect(sameWords("What is that?", "what is that thing")).toBe(true);
+    expect(sameWords("What is that?", "what is that big thing")).toBe(false);
+    expect(sameWords("What is that?", "what is this")).toBe(false);
+  });
+});
+
+describe("checkBoth", () => {
+  it("checks the reading and the meaning on their own", () => {
+    expect(checkBoth(item("v-taberu"), "taberu", "to eat")).toEqual({ reading: true, meaning: true });
+    expect(checkBoth(item("v-taberu"), "taberu", "drink")).toEqual({ reading: true, meaning: false });
+    expect(checkBoth(item("v-taberu"), "", "eat")).toEqual({ reading: false, meaning: true });
   });
 });
 

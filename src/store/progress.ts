@@ -34,6 +34,12 @@ interface ProgressState {
 
   /** Records an answer. Only first attempts move an item between SRS boxes. */
   record: (itemId: string, correct: boolean, firstAttempt: boolean) => void;
+  /**
+   * Turns an answer recorded as wrong into a right one: the item's record is
+   * redone from `before`, and one more right answer is counted on the day it
+   * was given (`at`). Counts only grow, so this syncs like any answer.
+   */
+  amend: (itemId: string, before: SrsRecord | undefined, firstAttempt: boolean, at: number) => void;
   /** Erases progress on every device of the account (on the next sync). */
   reset: () => void;
   /** Forgets progress on this device only, e.g. when signing out. */
@@ -100,6 +106,27 @@ export const useProgress = create<ProgressState>()(
               [s.deviceId]: {
                 totals: addTo(own.totals, correct),
                 history: { ...own.history, [day]: addTo(own.history[day], correct) },
+              },
+            },
+          };
+        }),
+      amend: (itemId, before, firstAttempt, at) =>
+        set((s) => {
+          const day = localDay(new Date(at));
+          const own = s.devices[s.deviceId] ?? { totals: { answered: 0, correct: 0 }, history: {} };
+          const oneMoreRight = (counts?: Counts): Counts => ({
+            answered: counts?.answered ?? 0,
+            correct: (counts?.correct ?? 0) + 1,
+          });
+          return {
+            records: firstAttempt ? { ...s.records, [itemId]: review(before, true, Date.now()) } : s.records,
+            totals: oneMoreRight(s.totals),
+            history: { ...s.history, [day]: oneMoreRight(s.history[day]) },
+            devices: {
+              ...s.devices,
+              [s.deviceId]: {
+                totals: oneMoreRight(own.totals),
+                history: { ...own.history, [day]: oneMoreRight(own.history[day]) },
               },
             },
           };
