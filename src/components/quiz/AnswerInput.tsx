@@ -85,8 +85,9 @@ export function AnswerInput({
           spellCheck={false}
           enterKeyHint={answered ? "next" : "done"}
           className={cn(
-            "h-16 w-full rounded-2xl border bg-veil/[0.03] px-5 text-center text-2xl text-paper outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-smoke",
-            side === "jp" && "jp",
+            "h-16 w-full rounded-2xl border bg-veil/[0.03] px-5 text-center text-paper outline-none transition-[border-color,box-shadow] duration-300 placeholder:text-smoke",
+            // Japanese follows the text size setting.
+            side === "jp" ? "jp text-[length:calc(var(--text-2xl)*var(--jp-scale,1))]" : "text-2xl",
             correct === true && "border-gold/80 shadow-[0_0_36px_-10px_rgb(201_164_92/0.9)]",
             correct === false && "border-crimson/80",
             correct === null && "border-line focus:border-veil/30",

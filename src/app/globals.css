@@ -58,6 +58,24 @@
   color: transparent;
 }
 
+/*
+ * Japanese study text, scaled by the size chosen in settings (--jp-scale on
+ * <html>, 1 by default). It goes on the text inside a sized element, or on text
+ * that takes its size from its parent: 1em is the size it would otherwise have.
+ */
+@utility jp-scale {
+  font-size: calc(1em * var(--jp-scale, 1));
+}
+
+/*
+ * The same for a single word that must stay on one line, inside an @container:
+ * it grows only as far as the container has room for its --chars characters,
+ * and display-size text (6rem and up) keeps its size.
+ */
+@utility jp-scale-fit {
+  font-size: min(calc(1em * var(--jp-scale, 1)), max(1em, min(calc(95cqi / var(--chars, 1)), 6rem)));
+}
+
 @utility bg-gold-metal {
   background: var(--gold-metal);
 }

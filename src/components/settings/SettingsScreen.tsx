@@ -8,18 +8,21 @@ import { JpText } from "@/components/japanese/Furigana";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { Button } from "@/components/ui/Button";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Select } from "@/components/ui/Select";
 import { Toggle } from "@/components/ui/Toggle";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useJapaneseVoices, useSpeech } from "@/hooks/useSpeech";
+import { bestVoice } from "@/lib/speech";
 import { useAccount } from "@/store/account";
 import { useProgress } from "@/store/progress";
-import { useSettings } from "@/store/settings";
+import { JP_SIZES, useSettings } from "@/store/settings";
 
 const SAMPLE = "{日本語|にほんご}を{勉強|べんきょう}しています。";
 
 function Panel({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="glass rounded-2xl p-5 sm:p-6">
+    // The panel in use rises above the rest, so its drop-down isn't hidden under the next one.
+    <section className="glass relative rounded-2xl p-5 focus-within:z-10 sm:p-6">
       <p className="eyebrow">{eyebrow}</p>
       <h2 className="mt-1.5 mb-5 font-mincho text-2xl text-paper">{title}</h2>
       <div className="space-y-6">{children}</div>
@@ -74,6 +77,7 @@ export function SettingsScreen() {
   const totals = useProgress((s) => s.totals);
   const account = useAccount((s) => s.status);
   const voices = useJapaneseVoices();
+  const automaticVoice = bestVoice(voices, null);
   const { supported, speak } = useSpeech();
 
   return (
@@ -100,6 +104,28 @@ export function SettingsScreen() {
               { value: "light", label: <span className="flex items-center justify-center gap-1.5"><Sun className="size-3.5" /> Light</span> },
               { value: "system", label: <span className="flex items-center justify-center gap-1.5"><Monitor className="size-3.5" /> Auto</span> },
             ]}
+          />
+        </Field>
+        <Field
+          label="Japanese text size"
+          hint="Makes the Japanese in quizzes, answers and examples bigger. Single words grow as far as their card has room."
+        >
+          <SegmentedControl
+            label="Japanese text size"
+            value={settings.jpSize}
+            onChange={settings.setJpSize}
+            options={JP_SIZES.map((size) => ({
+              value: size,
+              title: size === 1 ? "Normal size" : `${Math.round(size * 100)}% size`,
+              label: (
+                <span className="flex items-baseline justify-center gap-1">
+                  <span lang="ja" className="jp leading-none" style={{ fontSize: `${size * 0.875}rem` }}>
+                    あ
+                  </span>
+                  {Math.round(size * 100)}%
+                </span>
+              ),
+            }))}
           />
         </Field>
         <Field label="Furigana" hint="Small kana over kanji in words, phrases and sentences.">
@@ -175,19 +201,24 @@ export function SettingsScreen() {
               hint={voices.length ? undefined : "No Japanese voice found. Add one in your device's speech or language settings."}
             >
               <div className="flex gap-3">
-                <select
+                <Select
+                  label="Japanese voice"
                   value={settings.audio.voiceURI ?? ""}
-                  onChange={(e) => settings.setAudio({ voiceURI: e.target.value || null })}
-                  aria-label="Japanese voice"
-                  className="h-11 min-w-0 flex-1 rounded-full border border-line bg-ink-900 px-4 text-sm text-paper"
-                >
-                  <option value="">Automatic (best available)</option>
-                  {voices.map((v) => (
-                    <option key={v.voiceURI} value={v.voiceURI}>
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(voiceURI) => settings.setAudio({ voiceURI: voiceURI || null })}
+                  options={[
+                    {
+                      value: "",
+                      label: "Automatic",
+                      description: automaticVoice ? `The most natural one here: ${automaticVoice.name}` : "The most natural one available",
+                    },
+                    ...voices.map((v) => ({
+                      value: v.voiceURI,
+                      label: v.name,
+                      description: `${v.lang} · ${v.localService ? "on this device" : "online, needs a connection"}`,
+                    })),
+                  ]}
+                  className="min-w-0 flex-1"
+                />
                 <Button onClick={() => speak("こんにちは。ことだまへようこそ。")} aria-label="Test voice">
                   <Play className="size-4" /> Test
                 </Button>

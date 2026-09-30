@@ -10,6 +10,9 @@ export type Autoplay = "off" | "answer" | "reveal";
 /** Number of questions; 0 means endless. */
 export type SessionLength = 10 | 20 | 30 | 50 | 0;
 export type Theme = "dark" | "light" | "system";
+/** How much larger Japanese study text is drawn than normal. */
+export type JpSize = 1 | 1.15 | 1.3 | 1.5;
+export const JP_SIZES: JpSize[] = [1, 1.15, 1.3, 1.5];
 
 export interface AudioSettings {
   autoplay: Autoplay;
@@ -25,6 +28,7 @@ interface SettingsState {
   kanjiGrouping: "jlpt" | "grade";
   furigana: FuriganaMode;
   glyph: GlyphStyle;
+  jpSize: JpSize;
   audio: AudioSettings;
   builtInIme: boolean;
   autoAdvance: boolean;
@@ -45,6 +49,7 @@ interface SettingsState {
   setKanjiGrouping: (grouping: "jlpt" | "grade") => void;
   setFurigana: (mode: FuriganaMode) => void;
   setGlyph: (glyph: GlyphStyle) => void;
+  setJpSize: (size: JpSize) => void;
   setAudio: (audio: Partial<AudioSettings>) => void;
   setBuiltInIme: (on: boolean) => void;
   setAutoAdvance: (on: boolean) => void;
@@ -64,6 +69,7 @@ export const useSettings = create<SettingsState>()(
       kanjiGrouping: "jlpt",
       furigana: "show",
       glyph: "mincho",
+      jpSize: 1,
       audio: { autoplay: "answer", rate: 0.9, voiceURI: null },
       builtInIme: false,
       autoAdvance: true,
@@ -96,6 +102,7 @@ export const useSettings = create<SettingsState>()(
       setKanjiGrouping: (kanjiGrouping) => set({ kanjiGrouping }),
       setFurigana: (furigana) => set({ furigana }),
       setGlyph: (glyph) => set({ glyph }),
+      setJpSize: (jpSize) => set({ jpSize }),
       setAudio: (audio) => set((s) => ({ audio: { ...s.audio, ...audio } })),
       setBuiltInIme: (builtInIme) => set({ builtInIme }),
       setAutoAdvance: (autoAdvance) => set({ autoAdvance }),

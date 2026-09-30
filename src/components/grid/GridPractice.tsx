@@ -4,6 +4,7 @@ import { ArrowRight, RotateCcw, Target, X } from "lucide-react";
 import { motion, useAnimate } from "motion/react";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { JpText } from "@/components/japanese/Furigana";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { MuteButton } from "@/components/ui/MuteButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -80,7 +81,8 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
       ref={scope}
       className={cn(
         // The field sits at the bottom, so cards in a row line up whatever their height.
-        "relative flex flex-col items-center justify-between gap-2 rounded-2xl border px-1.5 pt-3 pb-2 text-center transition-colors duration-300 sm:px-2.5 sm:pb-2.5",
+        // A container, so the word can grow with the text size only as far as the card has room.
+        "@container relative flex flex-col items-center justify-between gap-2 rounded-2xl border px-1.5 pt-3 pb-2 text-center transition-colors duration-300 sm:px-2.5 sm:pb-2.5",
         size.span,
         // The glass surface sets its own border and fill, so answered cards swap it out.
         right ? "border-gold/60 bg-gold/[0.1]" : missed ? "border-crimson/45 bg-crimson/[0.07]" : "glass",
@@ -100,20 +102,18 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
         className={cn("jp leading-tight whitespace-nowrap text-paper", size.glyph, revealed && "cursor-pointer")}
         lang="ja"
       >
-        {shown.surface}
+        <JpText text={shown.surface} ruby="none" scale="fit" />
       </button>
       {revealed ? (
         <div className="min-h-9 text-xs leading-snug">
-          <p className={cn(right ? "text-gold-bright" : "text-crimson-bright", /[ぁ-ヿ]/.test(answer.reading) && "jp")}>
-            {answer.reading}
+          <p className={right ? "text-gold-bright" : "text-crimson-bright"}>
+            {/[ぁ-ヿ]/.test(answer.reading) ? <JpText text={answer.reading} ruby="none" /> : answer.reading}
           </p>
           {answer.meaning && <p className="text-[11px] text-mist">{answer.meaning}</p>}
           {shown.usual && (
             <p className="mt-0.5 text-[10px] text-smoke" title={`Usually written in ${scriptNames(toSurface(shown.usual))}`}>
               usually{" "}
-              <span lang="ja" className="jp text-[11px] text-mist">
-                {toSurface(shown.usual)}
-              </span>
+              <JpText text={shown.usual} ruby="none" className="text-[11px] text-mist" />
             </p>
           )}
           {missed && state.given && (

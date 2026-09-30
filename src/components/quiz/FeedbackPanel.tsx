@@ -12,7 +12,7 @@ import { cn } from "@/lib/cn";
 import { toSurface } from "@/lib/furigana";
 import { cleanKanjiReading } from "@/lib/japanese";
 import { scriptNames, type Script } from "@/lib/writing";
-import type { FuriganaMode } from "@/store/settings";
+import { useSettings, type FuriganaMode } from "@/store/settings";
 
 interface FeedbackPanelProps {
   item: StudyItem;
@@ -37,7 +37,9 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export function FeedbackPanel({ item: source, writing, correct, given, furigana, onContinue }: FeedbackPanelProps) {
   const item = writtenItem(source, writing);
   const isKana = item.category === "hiragana" || item.category === "katakana";
-  const long = [...item.surface].length > 6;
+  // Long items, or ones made long by a larger text size, get the full width.
+  const jpSize = useSettings((s) => s.jpSize);
+  const long = [...item.surface].length * jpSize > 6;
 
   return (
     <motion.section
@@ -71,28 +73,29 @@ export function FeedbackPanel({ item: source, writing, correct, given, furigana,
         </div>
 
         {/* Short items sit beside their details; sentences get the full width above them. */}
-        <div className={cn("mt-4 flex flex-col gap-4", !long && "sm:flex-row sm:items-center sm:gap-8")}>
+        <div className={cn("@container mt-4 flex flex-col gap-4", !long && "sm:flex-row sm:items-center sm:gap-8")}>
           <JpText
             text={item.jp}
             ruby={furigana === "hide" ? "none" : "show"}
+            scale={long ? "wrap" : "fit"}
             className={cn("shrink-0 text-paper", long ? "text-2xl leading-[1.9]" : "text-5xl")}
           />
           <dl className="min-w-0 space-y-1.5">
             {!isKana && item.reading !== item.surface && item.category !== "kanji" && (
               <Row label="Reading">
-                <span lang="ja" className="jp">{item.reading}</span>
+                <JpText text={item.reading} ruby="none" />
               </Row>
             )}
             {item.category === "kanji" ? (
               <>
                 {!!item.on?.length && (
                   <Row label="On'yomi">
-                    <span lang="ja" className="jp">{item.on.join("、")}</span>
+                    <JpText text={item.on.join("、")} ruby="none" />
                   </Row>
                 )}
                 {!!item.kun?.length && (
                   <Row label="Kun'yomi">
-                    <span lang="ja" className="jp">{item.kun.map(cleanKanjiReading).join("、")}</span>
+                    <JpText text={item.kun.map(cleanKanjiReading).join("、")} ruby="none" />
                   </Row>
                 )}
               </>
