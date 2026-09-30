@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check, X } from "lucide-react";
 import { motion } from "motion/react";
 import { ExampleSentence } from "@/components/japanese/ExampleSentence";
 import { JpText } from "@/components/japanese/Furigana";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/cn";
 import { toSurface } from "@/lib/furigana";
 import { cleanKanjiReading } from "@/lib/japanese";
 import { scriptNames, type Script } from "@/lib/writing";
+import type { AnswerPart, AnswerParts } from "@/store/session";
 import { useSettings, type FuriganaMode } from "@/store/settings";
 
 interface FeedbackPanelProps {
@@ -20,8 +21,28 @@ interface FeedbackPanelProps {
   writing: readonly Script[];
   correct: boolean;
   given: string;
+  /** A card answered with both its reading and its meaning. */
+  parts?: AnswerParts;
+  /** Counted as right by the learner after the check said wrong. */
+  overruled?: boolean;
+  /** Offered when a typed English answer was marked wrong: count it as right. */
+  onOverrule?: () => void;
   furigana: FuriganaMode;
   onContinue: () => void;
+}
+
+/** One half of a "both" answer: what was typed, and whether it was right. */
+function PartAnswer({ label, part }: { label: string; part: AnswerPart }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      {part.correct ? (
+        <Check className="size-3.5 shrink-0 text-gold-bright" strokeWidth={2.5} />
+      ) : (
+        <X className="size-3.5 shrink-0 text-crimson-bright" strokeWidth={2.5} />
+      )}
+      {label}: <span className="text-paper">{part.given || "—"}</span>
+    </span>
+  );
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -34,7 +55,17 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 /** Slides up after an answer with everything about the item, including an example sentence. */
-export function FeedbackPanel({ item: source, writing, correct, given, furigana, onContinue }: FeedbackPanelProps) {
+export function FeedbackPanel({
+  item: source,
+  writing,
+  correct,
+  given,
+  parts,
+  overruled,
+  onOverrule,
+  furigana,
+  onContinue,
+}: FeedbackPanelProps) {
   const item = writtenItem(source, writing);
   const isKana = item.category === "hiragana" || item.category === "katakana";
   // Long items, or ones made long by a larger text size, get the full width.
@@ -63,10 +94,27 @@ export function FeedbackPanel({ item: source, writing, correct, given, furigana,
               <span className="jp text-2xl">{correct ? "正解" : "残念"}</span>
               <span className="text-xs tracking-[0.2em] uppercase">{correct ? "Correct" : "Not quite"}</span>
             </p>
-            {!correct && (
-              <p className="mt-1 text-xs text-mist">
-                You answered: <span className="text-paper">{given || "—"}</span>
-              </p>
+            {parts && (!correct || overruled) ? (
+              <div className="mt-1 space-y-0.5 text-xs text-mist">
+                <PartAnswer label="Reading" part={parts.reading} />
+                <PartAnswer label="Meaning" part={parts.meaning} />
+              </div>
+            ) : (
+              !correct && (
+                <p className="mt-1 text-xs text-mist">
+                  You answered: <span className="text-paper">{given || "—"}</span>
+                </p>
+              )
+            )}
+            {overruled && <p className="mt-1 text-xs text-mist">Counted as right.</p>}
+            {onOverrule && (
+              <button
+                type="button"
+                onClick={onOverrule}
+                className="mt-2 h-8 rounded-full border border-line px-3.5 text-xs text-mist transition-colors hover:border-gold/50 hover:text-gold-bright"
+              >
+                I was right
+              </button>
             )}
           </div>
           <SpeakButton text={speechText(item)} />

@@ -45,40 +45,58 @@ export function PastCard({ item: source, question, result, mode, writing, furiga
           onChoose={() => {}}
           review
         />
+      ) : result.parts ? (
+        <div className="space-y-4">
+          <TypedAnswer label="Reading" item={item} side="romaji" {...result.parts.reading} furigana={furigana} />
+          <TypedAnswer label="Meaning" item={item} side="en" {...result.parts.meaning} furigana={furigana} />
+        </div>
       ) : (
-        <TypedAnswer item={item} side={answerSide(question.direction)} result={result} furigana={furigana} />
+        <TypedAnswer
+          item={item}
+          side={answerSide(question.direction)}
+          given={result.given}
+          correct={result.correct}
+          furigana={furigana}
+        />
       )}
     </>
   );
 }
 
 function TypedAnswer({
+  label,
   item,
   side,
-  result,
+  given,
+  correct,
   furigana,
 }: {
+  /** Names the field when a card was answered in two. */
+  label?: string;
   item: StudyItem;
   side: Side;
-  result: AnswerResult;
+  given: string;
+  correct: boolean;
   furigana: FuriganaMode;
 }) {
   return (
     <div className="space-y-3 text-center">
+      {label && <p className="-mb-1.5 pl-1 text-left text-[11px] tracking-[0.2em] text-smoke uppercase">{label}</p>}
       <p
         className={cn(
-          "flex h-16 items-center justify-center rounded-2xl border bg-veil/[0.03] px-5 text-2xl text-paper",
+          "flex items-center justify-center rounded-2xl border bg-veil/[0.03] px-5 text-2xl text-paper",
+          label ? "h-14" : "h-16",
           side === "jp" && "jp",
-          result.correct ? "border-gold/80" : "border-crimson/80",
+          correct ? "border-gold/80" : "border-crimson/80",
         )}
       >
-        {result.given ? (
-          <span className={cn(side === "jp" && "jp-scale")}>{result.given}</span>
+        {given ? (
+          <span className={cn(side === "jp" && "jp-scale")}>{given}</span>
         ) : (
           <span className="font-sans text-base text-smoke">No answer</span>
         )}
       </p>
-      {!result.correct && (
+      {!correct && (
         <p className="text-sm text-mist">
           Answer:{" "}
           {item.cloze ? (

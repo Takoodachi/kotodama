@@ -18,6 +18,7 @@ import { cn } from "@/lib/cn";
 import { availableModes, GRID_CATEGORIES, shownMode } from "@/lib/quiz/directions";
 import { useProgress } from "@/store/progress";
 import { useSettings, type SessionLength } from "@/store/settings";
+import { AnswerWithPicker } from "./AnswerWithPicker";
 import { DirectionPicker } from "./DirectionPicker";
 import { ModePicker } from "./ModePicker";
 import { PresetBar } from "./PresetBar";
@@ -97,6 +98,15 @@ export function SelectionScreen() {
               <li className="text-smoke">Phrases, sentences and grammar are left out: they&apos;re too long for a grid.</li>
             )}
           </ul>
+        </div>
+      ) : mode === "reading" ? (
+        <div>
+          <Label>Answer with</Label>
+          <AnswerWithPicker
+            value={settings.directions.reading[0]}
+            onChange={settings.setReadingAnswer}
+            categories={categories}
+          />
         </div>
       ) : (
         <div>

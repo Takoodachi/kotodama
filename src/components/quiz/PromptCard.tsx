@@ -10,6 +10,7 @@ import { toSurface } from "@/lib/furigana";
 import { scriptNames } from "@/lib/writing";
 import {
   answerSide,
+  asksReading,
   isCloze,
   promptSide,
   promptText,
@@ -55,7 +56,7 @@ function latinSize(text: string): string {
 function rubyFor(furigana: FuriganaMode, direction: Direction, answered: boolean): RubyDisplay {
   if (furigana === "hide") return "none";
   if (answered) return "show";
-  return furigana === "after" || direction === "jp-romaji" ? "reserve" : "show";
+  return furigana === "after" || asksReading(direction) ? "reserve" : "show";
 }
 
 /** Holds the empty slot open at the height of a Japanese character. */
@@ -93,7 +94,7 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
     side !== "en" && answerSide(direction) !== "en" && item.meaning.length ? promptText(item, "en") : null;
   const meaningShown = answered || gap;
   // Hearing the word would give away a reading question or a gap, so the button waits for the answer.
-  const canSpeak = gap ? answered : side === "jp" ? direction !== "jp-romaji" || answered : answered;
+  const canSpeak = gap ? answered : side === "jp" ? !asksReading(direction) || answered : answered;
 
   return (
     <div

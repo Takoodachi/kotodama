@@ -45,6 +45,8 @@ interface SettingsState {
   setSelection: (ids: string[]) => void;
   setMode: (mode: PracticeMode) => void;
   toggleDirection: (mode: Mode, direction: Direction) => void;
+  /** Reading mode answers one way: the reading ("jp-romaji"), the meaning ("jp-en") or both ("jp-both"). */
+  setReadingAnswer: (direction: Direction) => void;
   setSessionLength: (length: SessionLength) => void;
   setKanjiGrouping: (grouping: "jlpt" | "grade") => void;
   setFurigana: (mode: FuriganaMode) => void;
@@ -98,6 +100,7 @@ export const useSettings = create<SettingsState>()(
           if (!next.length) return s;
           return { directions: { ...s.directions, [mode]: next } };
         }),
+      setReadingAnswer: (direction) => set((s) => ({ directions: { ...s.directions, reading: [direction] } })),
       setSessionLength: (sessionLength) => set({ sessionLength }),
       setKanjiGrouping: (kanjiGrouping) => set({ kanjiGrouping }),
       setFurigana: (furigana) => set({ furigana }),
@@ -122,8 +125,18 @@ export const useSettings = create<SettingsState>()(
     }),
     {
       name: "kotodama-settings",
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => localStorage),
+      migrate: (persisted, version) => {
+        const state = persisted as Partial<SettingsState>;
+        // v2: reading mode answers one way at a time, and gained "both"; the old
+        // mix of reading and meaning (each card one or the other) becomes both.
+        if (version < 2 && state.directions) {
+          const reading = state.directions.reading ?? [];
+          state.directions = { ...state.directions, reading: reading.length === 1 ? reading : ["jp-both"] };
+        }
+        return state as SettingsState;
+      },
       // Rehydrated by <StoreHydrator /> after mount so server and client render the same HTML.
       skipHydration: true,
     },
