@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { writeAs, writeSurfaceAs } from "./writing";
+import { scriptNames, writeAs, writeSurfaceAs } from "./writing";
 
 const SENTENCE = "{私|わたし}はコーヒーを{飲|の}みます。";
 
@@ -30,5 +30,18 @@ describe("writeAs", () => {
     expect(writeSurfaceAs("{学校|がっこう}", ["katakana"])).toBe("ガッコウ");
     expect(writeSurfaceAs("{牛乳|ぎゅうにゅう}", ["katakana"])).toBe("ギュウニュウ");
     expect(writeSurfaceAs("アイスクリーム", ["hiragana"])).toBe("あいすくりーむ");
+  });
+});
+
+describe("scriptNames", () => {
+  it("names the scripts a word is written in", () => {
+    expect(scriptNames("ありがとう")).toBe("hiragana");
+    expect(scriptNames("コーヒー")).toBe("katakana");
+    expect(scriptNames("食べる")).toBe("kanji and hiragana");
+    expect(scriptNames("私はコーヒーを飲みます。")).toBe("kanji, hiragana and katakana");
+  });
+
+  it("doesn't count the long-vowel mark as katakana", () => {
+    expect(scriptNames("こーひー")).toBe("hiragana");
   });
 });

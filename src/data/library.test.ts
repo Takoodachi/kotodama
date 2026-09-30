@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { isWellFormedFurigana, toReading, toSurface } from "@/lib/furigana";
 import { readingKey, stripPunctuation } from "@/lib/japanese";
 import { ALL_GROUPS, SECTIONS } from "./groups";
-import { EXAMPLES, exampleTarget, GAP, ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, ITEMS_BY_ID, LIBRARY } from "./library";
+import { EXAMPLES, exampleTarget, GAP, ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, ITEMS_BY_ID, LIBRARY, writtenItem } from "./library";
 import type { Category } from "./types";
 
 describe("content library", () => {
@@ -125,5 +125,23 @@ describe("content library", () => {
     expect(count("phrase")).toBeGreaterThanOrEqual(120);
     expect(count("sentence")).toBeGreaterThanOrEqual(95);
     expect(count("grammar")).toBeGreaterThanOrEqual(120);
+  });
+});
+
+describe("writtenItem", () => {
+  const item = (id: string) => ITEMS_BY_ID.get(id)!;
+
+  it("remembers the usual writing when the chosen scripts change a word", () => {
+    const hito = writtenItem(item("v-hito"), ["katakana"]);
+    expect(hito.surface).toBe("ヒト");
+    expect(hito.usual).toBe("{人|ひと}");
+    expect(writtenItem(item("p-ohayou"), ["katakana"]).usual).toBe("おはようございます");
+    expect(writtenItem(item("v-koohii"), ["hiragana", "kanji"]).usual).toBe("コーヒー");
+  });
+
+  it("leaves the usual writing out when the word looks the same", () => {
+    expect(writtenItem(item("v-koohii"), ["katakana"]).usual).toBeUndefined();
+    expect(writtenItem(item("p-ohayou"), ["hiragana", "kanji"]).usual).toBeUndefined();
+    expect(writtenItem(item("v-hito"), ["kanji", "hiragana", "katakana"]).usual).toBeUndefined();
   });
 });

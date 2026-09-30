@@ -19,7 +19,10 @@ interface PresetBarProps {
  */
 export function PresetBar({ selected, onToggle, onClear }: PresetBarProps) {
   return (
-    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-2 [scrollbar-width:none] md:mx-0 md:flex-wrap md:px-0">
+    // A scrolling row clips whatever pokes out of it, the chosen presets' glow included: on a phone
+    // the padding leaves the glow room (the negative margin keeps the spacing); wider screens wrap
+    // the row instead, so nothing needs to scroll or clip.
+    <div className="-mx-4 -my-3 flex gap-2 overflow-x-auto px-4 py-5 [scrollbar-width:none] md:m-0 md:flex-wrap md:overflow-visible md:px-0 md:py-2">
       {PRESETS.map((preset) => {
         const ids = preset.groups();
         const active = ids.every((id) => selected.has(id));

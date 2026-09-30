@@ -6,6 +6,8 @@ import { SpeakButton } from "@/components/japanese/SpeakButton";
 import { GAP, speechText } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import { cn } from "@/lib/cn";
+import { toSurface } from "@/lib/furigana";
+import { scriptNames } from "@/lib/writing";
 import {
   answerSide,
   isCloze,
@@ -147,16 +149,35 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
       </motion.div>
 
       {/* Space is kept from the start, so revealing the meaning doesn't move the options below. */}
-      {meaning && (
-        <p
-          aria-hidden={!meaningShown}
-          className={cn(
-            "relative mx-auto mt-3 -mb-4 max-w-md text-sm leading-relaxed text-mist transition-opacity duration-500",
-            meaningShown ? "opacity-100" : "invisible opacity-0",
+      {(meaning || item.usual) && (
+        <div className="relative mx-auto mt-3 -mb-4 max-w-md space-y-1 leading-relaxed">
+          {meaning && (
+            <p
+              aria-hidden={!meaningShown}
+              className={cn(
+                "text-sm text-mist transition-opacity duration-500",
+                meaningShown ? "opacity-100" : "invisible opacity-0",
+              )}
+            >
+              {meaning}
+            </p>
           )}
-        >
-          {meaning}
-        </p>
+          {/* Written only in the chosen scripts, a word can look unfamiliar: say how it's normally written. */}
+          {item.usual && (
+            <p
+              aria-hidden={!answered}
+              className={cn(
+                "text-xs text-smoke transition-opacity duration-500",
+                answered ? "opacity-100" : "invisible opacity-0",
+              )}
+            >
+              Usually written in {scriptNames(toSurface(item.usual))}:{" "}
+              <span lang="ja" className="jp text-sm text-mist">
+                {toSurface(item.usual)}
+              </span>
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

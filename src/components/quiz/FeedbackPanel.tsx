@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/Button";
 import { speechText, writtenItem } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import { cn } from "@/lib/cn";
+import { toSurface } from "@/lib/furigana";
 import { cleanKanjiReading } from "@/lib/japanese";
-import type { Script } from "@/lib/writing";
+import { scriptNames, type Script } from "@/lib/writing";
 import type { FuriganaMode } from "@/store/settings";
 
 interface FeedbackPanelProps {
@@ -100,6 +101,12 @@ export function FeedbackPanel({ item: source, writing, correct, given, furigana,
             )}
             {!!item.meaning.length && <Row label="Meaning">{item.meaning.join("; ")}</Row>}
             {item.note && <Row label="Note">{item.note}</Row>}
+            {item.usual && (
+              <Row label="Usually">
+                <JpText text={item.usual} ruby={furigana === "hide" ? "none" : "show"} className="text-base" />
+                <span className="ml-2 text-xs text-mist">written in {scriptNames(toSurface(item.usual))}</span>
+              </Row>
+            )}
           </dl>
         </div>
 

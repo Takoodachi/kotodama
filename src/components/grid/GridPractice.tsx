@@ -3,7 +3,7 @@
 import { ArrowRight, RotateCcw, Target, X } from "lucide-react";
 import { motion, useAnimate } from "motion/react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { MuteButton } from "@/components/ui/MuteButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -15,8 +15,10 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { useStartSession } from "@/hooks/useStartSession";
 import { cn } from "@/lib/cn";
 import { GRID_CATEGORIES } from "@/lib/quiz/directions";
-import { checkGridAnswer, gridAnswer, gridHint } from "@/lib/quiz/grid";
+import { toSurface } from "@/lib/furigana";
+import { cardColumns, checkGridAnswer, gridAnswer, gridHint, packRows } from "@/lib/quiz/grid";
 import { seededRng, shuffle } from "@/lib/random";
+import { scriptNames } from "@/lib/writing";
 import { useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
 
@@ -33,21 +35,21 @@ const UNTRIED: CardState = { status: "open", tries: 0, firstTry: null };
 
 const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
+const SPANS = { 1: undefined, 2: "col-span-2", 3: "col-span-3" } as const;
+
 /**
  * How wide a card is and how big its text, so words never wrap. The grid is
- * three columns on a phone (about 100px each) and more on wider screens:
- * - up to 2 characters: one column, large
- * - 3: one column, a size that still fits
- * - 4–5: two columns
- * - 6 or more (long words written in kana): three columns, the whole row on a phone
+ * three columns on a phone (about 100px each) and more on wider screens;
+ * see `cardColumns`. Three characters fit one column only at a smaller size.
  */
 function cardSize(text: string): { span?: string; glyph: string; wide: boolean } {
-  const length = [...text].length;
-  if (length <= 2) return { glyph: "text-4xl", wide: false };
-  if (length === 3) return { glyph: "text-2xl", wide: false };
-  if (length <= 5) return { span: "col-span-2", glyph: "text-3xl", wide: true };
-  return { span: "col-span-3", glyph: "text-3xl", wide: true };
+  const columns = cardColumns(text);
+  if (columns > 1) return { span: SPANS[columns], glyph: "text-3xl", wide: true };
+  return { glyph: [...text].length <= 2 ? "text-4xl" : "text-2xl", wide: false };
 }
+
+/** Where Enter and Tab go from a card: forward, or back with Shift+Tab. */
+type Move = "next" | "previous";
 
 interface CardProps {
   item: StudyItem;
@@ -55,10 +57,11 @@ interface CardProps {
   state: CardState;
   finished: boolean;
   /**
-   * Checks the typed answer, on Enter or when leaving the field; returns
-   * whether it was right, or null if there was nothing new to check.
+   * Checks the typed answer: on Enter or Tab, which then move to another
+   * card, or when leaving the field some other way. Returns whether it was
+   * right, or null if there was nothing new to check.
    */
-  onCheck: (input: HTMLInputElement, how: "enter" | "leave") => boolean | null;
+  onCheck: (input: HTMLInputElement, how: Move | "leave") => boolean | null;
   inputRef: (el: HTMLInputElement | null) => void;
   onPlay: () => void;
 }
@@ -105,6 +108,14 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
             {answer.reading}
           </p>
           {answer.meaning && <p className="text-[11px] text-mist">{answer.meaning}</p>}
+          {shown.usual && (
+            <p className="mt-0.5 text-[10px] text-smoke" title={`Usually written in ${scriptNames(toSurface(shown.usual))}`}>
+              usually{" "}
+              <span lang="ja" className="jp text-[11px] text-mist">
+                {toSurface(shown.usual)}
+              </span>
+            </p>
+          )}
           {missed && state.given && (
             <p className="mt-0.5 text-[10px] text-smoke">
               you: <span className="line-through">{state.given}</span>
@@ -123,12 +134,14 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
           spellCheck={false}
           enterKeyHint="next"
           onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== "Tab") return;
             // The Enter that confirms a Japanese keyboard's conversion isn't a submit.
-            if (event.key !== "Enter" || event.nativeEvent.isComposing || event.keyCode === 229) return;
+            if (event.nativeEvent.isComposing || event.keyCode === 229) return;
             event.preventDefault();
-            if (onCheck(event.currentTarget, "enter") === false) shake();
+            const move = event.key === "Tab" && event.shiftKey ? "previous" : "next";
+            if (onCheck(event.currentTarget, move) === false) shake();
           }}
-          // Tab, or tapping another card, checks the answer too.
+          // Tapping or clicking another card checks the answer too.
           onBlur={(event) => {
             if (onCheck(event.currentTarget, "leave") === false) shake();
           }}
@@ -171,6 +184,40 @@ export function GridPractice() {
     [selected, seed],
   );
 
+  // The grid's column count, measured, so the cards can be put in row order (see packRows).
+  const grid = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(3);
+  const columnsNow = useRef(3);
+  // The field being typed in when the column count changes: moving cards around can drop its focus.
+  const refocus = useRef<HTMLInputElement | null>(null);
+  const hasGrid = hydrated && items.length > 0;
+  useLayoutEffect(() => {
+    const el = grid.current;
+    if (!el) return;
+    const measure = () => {
+      const count = getComputedStyle(el).gridTemplateColumns.split(" ").length;
+      if (count === columnsNow.current) return;
+      columnsNow.current = count;
+      refocus.current = document.activeElement instanceof HTMLInputElement ? document.activeElement : null;
+      setColumns(count);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasGrid]);
+
+  const ordered = useMemo(
+    () => packRows(items, (item) => cardColumns(writtenItem(item, writing).surface), columns),
+    [items, writing, columns],
+  );
+
+  useLayoutEffect(() => {
+    const input = refocus.current;
+    refocus.current = null;
+    if (input?.isConnected && document.activeElement !== input) input.focus();
+  }, [ordered]);
+
   const stateOf = (id: string) => cards[id] ?? UNTRIED;
   const rightCount = items.filter((i) => stateOf(i.id).status === "right").length;
   const firstTryCount = items.filter((i) => stateOf(i.id).firstTry === true).length;
@@ -178,14 +225,25 @@ export function GridPractice() {
   const untriedCount = items.filter((i) => stateOf(i.id).tries === 0).length;
   const perfect = items.length > 0 && rightCount === items.length;
 
-  /** Moves to the next card still waiting for an answer, wrapping around. */
-  const focusNext = (fromId: string) => {
-    const start = items.findIndex((i) => i.id === fromId);
-    for (let step = 1; step <= items.length; step++) {
-      const next = items[(start + step) % items.length];
-      const input = inputs.current.get(next.id);
-      if (next.id !== fromId && input) return input.focus();
+  /**
+   * Moves to the next card still waiting for an answer, in reading order, or
+   * the previous one. Past the last card it loops back to the first one still
+   * open, so wrong and skipped cards come round again. False if none is left.
+   */
+  const focusOpen = (fromId: string, move: Move): boolean => {
+    const count = ordered.length;
+    const start = ordered.findIndex((i) => i.id === fromId);
+    const step = move === "next" ? 1 : -1;
+    for (let k = 1; k < count; k++) {
+      const card = ordered[(((start + step * k) % count) + count) % count];
+      const input = inputs.current.get(card.id);
+      if (!input || stateOf(card.id).status === "right") continue;
+      input.focus();
+      // A wrong answer is still in the field: selected, so typing replaces it.
+      input.select();
+      return true;
     }
+    return false;
   };
 
   /** Grades an answer, records a first try, and returns the card's new state. */
@@ -204,26 +262,26 @@ export function GridPractice() {
     };
   };
 
-  const check = (item: StudyItem, input: HTMLInputElement, how: "enter" | "leave"): boolean | null => {
+  const check = (item: StudyItem, input: HTMLInputElement, how: Move | "leave"): boolean | null => {
+    // Cards being rearranged for a new column count: not the learner leaving the field.
+    if (how === "leave" && refocus.current) return null;
     const value = input.value.trim();
-    // Nothing new to check: Enter moves on, as a skip.
-    if (!value || checked.current.get(item.id) === value) {
-      if (how === "enter") focusNext(item.id);
-      return null;
+    let correct: boolean | null = null;
+    // Nothing new to check (empty, or the same wrong answer again): Enter and Tab just move on.
+    if (value && checked.current.get(item.id) !== value) {
+      const next = grade(item, value, stateOf(item.id));
+      setCards((all) => ({ ...all, [item.id]: next }));
+      correct = next.status === "right";
+      if (correct && autoplay !== "off") speak(speechText(item));
+      // The last card right: that's everything, so show the result.
+      if (correct && items.every((i) => i.id === item.id || stateOf(i.id).status === "right")) {
+        finish();
+        return correct;
+      }
     }
-    const next = grade(item, value, stateOf(item.id));
-    setCards((all) => ({ ...all, [item.id]: next }));
-    const correct = next.status === "right";
-    if (correct && autoplay !== "off") speak(speechText(item));
-    // The last card right: that's everything, so show the result.
-    if (correct && items.every((i) => i.id === item.id || stateOf(i.id).status === "right")) {
-      finish();
-      return correct;
-    }
-    if (how === "enter") {
-      if (correct) focusNext(item.id);
-      else input.select();
-    }
+    // Right or wrong, Enter and Tab move on, and wrong cards come round again after the
+    // last one. With no other card open, stay here to try again.
+    if (how !== "leave" && !focusOpen(item.id, how)) input.select();
     return correct;
   };
 
@@ -336,14 +394,20 @@ export function GridPractice() {
               <h1 className="font-mincho text-3xl text-paper">Type what you know</h1>
               <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-mist marker:text-smoke">
                 <li>Type the romaji for kana, or a reading or the meaning for kanji and words.</li>
-                <li>Press Enter, or just move to another card, to check. Right cards turn gold; wrong ones can be tried again.</li>
+                <li>
+                  Press Enter or Tab to check and move on. Right cards turn gold; wrong ones stay red, and after the last
+                  card you loop back round to them.
+                </li>
                 <li>Skip any you don&apos;t know, and press Finish (or Esc) when you&apos;re done.</li>
               </ul>
             </section>
           )}
 
-          <div className="mt-6 grid grid-flow-dense grid-cols-3 gap-2 pb-32 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:gap-2.5">
-            {items.map((item) => (
+          <div
+            ref={grid}
+            className="mt-6 grid grid-cols-3 gap-2 pb-32 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:gap-2.5"
+          >
+            {ordered.map((item) => (
               <GridCard
                 key={item.id}
                 item={item}

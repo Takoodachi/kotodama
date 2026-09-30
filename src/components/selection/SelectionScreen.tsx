@@ -88,9 +88,10 @@ export function SelectionScreen() {
           <ul className="space-y-1.5 text-xs leading-relaxed text-mist">
             <li>Every selected card is laid out on one page, shuffled.</li>
             <li>
-              Type what you know and press Enter (or move on): <span className="text-paper">romaji</span> for kana, any{" "}
-              <span className="text-paper">reading or the meaning</span> for kanji and words. Wrong? Try again.
+              Type what you know and press Enter or Tab: <span className="text-paper">romaji</span> for kana, any{" "}
+              <span className="text-paper">reading or the meaning</span> for kanji and words.
             </li>
+            <li>Wrong ones stay red, and after the last card you loop back round to them.</li>
             <li>Finish whenever you like to see what you missed.</li>
             {gridCount < items.length && (
               <li className="text-smoke">Phrases, sentences and grammar are left out: they&apos;re too long for a grid.</li>
