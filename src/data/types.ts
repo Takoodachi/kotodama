@@ -75,6 +75,11 @@ export interface StudyItem extends RawItem {
   romaji: string[];
   /** Grammar only: the sentence with ＿ for the gap (furigana markup). `jp` is the whole sentence. */
   cloze?: string;
+  /**
+   * How the item is normally written (furigana markup), set by `writtenItem`
+   * when the chosen scripts show it differently: タベル is usually 食べる.
+   */
+  usual?: string;
 }
 
 export type KanaKind = "main" | "dakuten" | "handakuten" | "combo" | "extended";

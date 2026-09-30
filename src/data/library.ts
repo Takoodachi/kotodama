@@ -68,11 +68,13 @@ export function exampleTarget(item: StudyItem, scripts: readonly Script[] = ALL_
 export function writtenItem(item: StudyItem, scripts: readonly Script[] = ALL_SCRIPTS): StudyItem {
   if (!WRITTEN_CATEGORIES.has(item.category) || isStandardWriting(scripts)) return item;
   const jp = writeAs(item.jp, scripts);
+  const surface = toSurface(jp);
   return {
     ...item,
     jp,
-    surface: toSurface(jp),
+    surface,
     speech: speechText(item),
+    ...(surface !== item.surface && { usual: item.jp }),
     example: item.example && { ...item.example, jp: writeAs(item.example.jp, scripts) },
     ...(item.cloze && {
       cloze: writeAs(item.cloze, scripts),

@@ -51,6 +51,21 @@ export function writeAs(markup: string, scripts: readonly Script[]): string {
     .join("");
 }
 
+/** The scripts a piece of Japanese uses, in the order kanji, hiragana, katakana. The long-vowel mark ー counts as neither kana. */
+export function scriptsIn(text: string): Script[] {
+  const found: Script[] = [];
+  if (/[㐀-鿿々〆]/.test(text)) found.push("kanji");
+  if (/[ぁ-ゖ]/.test(text)) found.push("hiragana");
+  if (/[ァ-ヺ]/.test(text)) found.push("katakana");
+  return found;
+}
+
+/** "kanji and hiragana" for 食べる: the scripts a piece of Japanese uses, as words. */
+export function scriptNames(text: string): string {
+  const names = scriptsIn(text).map((s) => SCRIPT_INFO[s].en.toLowerCase());
+  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+}
+
 /** Plain text of `writeAs`, without furigana. */
 export function writeSurfaceAs(markup: string, scripts: readonly Script[]): string {
   return toSurface(writeAs(markup, scripts));
