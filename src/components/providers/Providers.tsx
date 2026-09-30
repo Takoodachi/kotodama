@@ -20,18 +20,23 @@ function StoreHydrator() {
 }
 
 /**
- * Mirrors the glyph style and theme onto <html> so CSS can follow them. Waits
- * for saved settings, so the defaults never overwrite what the inline script
- * in the layout already applied.
+ * Mirrors the glyph style, Japanese text size and theme onto <html> so CSS
+ * can follow them. Waits for saved settings, so the defaults never overwrite
+ * what the inline script in the layout already applied.
  */
 function PreferenceSync() {
   const hydrated = useHydrated();
   const glyph = useSettings((s) => s.glyph);
+  const jpSize = useSettings((s) => s.jpSize);
   const theme = useSettings((s) => s.theme);
 
   useEffect(() => {
     if (hydrated) document.documentElement.dataset.glyph = glyph;
   }, [glyph, hydrated]);
+
+  useEffect(() => {
+    if (hydrated) document.documentElement.style.setProperty("--jp-scale", String(jpSize));
+  }, [jpSize, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;

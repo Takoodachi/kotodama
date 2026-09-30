@@ -32,11 +32,11 @@ export const viewport: Viewport = {
 };
 
 /**
- * Applies the saved theme and glyph style before the first paint, so a light
- * theme never flashes dark (see Next's "Preventing flash before hydration").
- * ThemeSync keeps them up to date afterwards.
+ * Applies the saved theme, glyph style and Japanese text size before the
+ * first paint, so a light theme never flashes dark (see Next's "Preventing
+ * flash before hydration"). PreferenceSync keeps them up to date afterwards.
  */
-const PREFERENCES_SCRIPT = `(function(){try{var s=(JSON.parse(localStorage.getItem("kotodama-settings")||"{}").state)||{};var t=s.theme||"dark";if(t==="system")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";var d=document.documentElement;d.setAttribute("data-theme",t);if(s.glyph)d.setAttribute("data-glyph",s.glyph)}catch(e){}})()`;
+const PREFERENCES_SCRIPT = `(function(){try{var s=(JSON.parse(localStorage.getItem("kotodama-settings")||"{}").state)||{};var t=s.theme||"dark";if(t==="system")t=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";var d=document.documentElement;d.setAttribute("data-theme",t);if(s.glyph)d.setAttribute("data-glyph",s.glyph);if(s.jpSize)d.style.setProperty("--jp-scale",String(s.jpSize))}catch(e){}})()`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

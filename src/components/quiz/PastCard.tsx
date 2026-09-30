@@ -72,15 +72,17 @@ function TypedAnswer({
           result.correct ? "border-gold/80" : "border-crimson/80",
         )}
       >
-        {result.given || <span className="font-sans text-base text-smoke">No answer</span>}
+        {result.given ? (
+          <span className={cn(side === "jp" && "jp-scale")}>{result.given}</span>
+        ) : (
+          <span className="font-sans text-base text-smoke">No answer</span>
+        )}
       </p>
       {!result.correct && (
         <p className="text-sm text-mist">
           Answer:{" "}
           {item.cloze ? (
-            <span lang="ja" className="jp text-xl text-paper">
-              {item.answer}
-            </span>
+            <JpText text={item.answer!} ruby="none" className="text-xl text-paper" />
           ) : side === "jp" ? (
             <JpText text={item.jp} ruby={furigana === "hide" ? "none" : "show"} className="text-xl text-paper" />
           ) : (

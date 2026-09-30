@@ -2,6 +2,7 @@
 
 import { Check, X } from "lucide-react";
 import { motion } from "motion/react";
+import { JpText } from "@/components/japanese/Furigana";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { cn } from "@/lib/cn";
 import type { ChoiceOption } from "@/lib/quiz/distractors";
@@ -19,7 +20,13 @@ interface MultipleChoiceProps {
 export function MultipleChoice({ options, japanese, chosen, onChoose, review = false }: MultipleChoiceProps) {
   const answered = chosen !== null;
   const longest = Math.max(...options.map((o) => o.label.length));
-  const singleColumn = longest > (japanese ? 9 : 22);
+  // Japanese answers sit two to a row only when the longest still fits on one line at the
+  // chosen text size (1.5rem a character, plus the padding); otherwise one to a row.
+  const columns: React.CSSProperties | undefined = japanese
+    ? {
+        gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, max(calc(${longest} * 1.5rem * var(--jp-scale, 1) + 2.25rem), calc(50% - 0.375rem))), 1fr))`,
+      }
+    : undefined;
 
   useHotkeys(
     Object.fromEntries(options.map((option, i) => [String(i + 1), () => onChoose(option)])),
@@ -27,7 +34,12 @@ export function MultipleChoice({ options, japanese, chosen, onChoose, review = f
   );
 
   return (
-    <div role="group" aria-label="Answer options" className={cn("grid gap-3", singleColumn ? "grid-cols-1" : "grid-cols-2")}>
+    <div
+      role="group"
+      aria-label="Answer options"
+      style={columns}
+      className={cn("grid gap-3", !japanese && (longest > 22 ? "grid-cols-1" : "grid-cols-2"))}
+    >
       {options.map((option, i) => {
         const isChosen = answered && option.label === chosen;
         const reveal = answered && option.correct;
@@ -68,8 +80,14 @@ export function MultipleChoice({ options, japanese, chosen, onChoose, review = f
             <span className="absolute top-2 left-3 hidden text-[10px] text-smoke tabular-nums sm:block">{i + 1}</span>
             {reveal && <Check className="absolute top-2.5 right-3 size-4 text-gold-bright" strokeWidth={2.5} />}
             {wrongPick && <X className="absolute top-2.5 right-3 size-4 text-crimson-bright" strokeWidth={2.5} />}
-            <span lang={japanese ? "ja" : undefined} className={cn("text-paper", japanese ? "jp text-2xl" : "text-base")}>
-              {option.label}
+            <span
+              className={cn(
+                "text-paper",
+                // Japanese breaks between phrases where the browser can, in lines of even length.
+                japanese ? "text-2xl [text-wrap:balance] [word-break:auto-phrase]" : "text-base",
+              )}
+            >
+              {japanese ? <JpText text={option.label} ruby="none" /> : option.label}
             </span>
             {option.sublabel && <span className="mt-0.5 text-xs text-mist">{option.sublabel}</span>}
             {/* Space is kept for the meaning from the start, so revealing it doesn't move the options. */}

@@ -164,7 +164,7 @@ export function ProgressScreen() {
           <ul className="mt-4 divide-y divide-line">
             {weakest.map(({ item, record }) => (
               <li key={item.id} className="flex items-center gap-4 py-2.5">
-                <JpText text={item.jp} className="w-20 shrink-0 truncate text-xl text-paper" ruby="none" />
+                <JpText text={item.jp} className="max-w-[45%] min-w-20 shrink-0 truncate text-xl text-paper" ruby="none" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-paper">{item.meaning[0] ?? romajiLabel(item)}</p>
                   <p className="truncate text-xs text-mist">{romajiLabel(item)}</p>

@@ -66,17 +66,19 @@ function GapSentence({ item, ruby, answered }: { item: StudyItem; ruby: RubyDisp
   const [before, after] = item.cloze!.split(GAP);
   return (
     <span lang="ja" className={cn("jp text-paper", jpSize(item.surface))}>
-      <JpText text={before} ruby={ruby} />
-      <span
-        aria-label={answered ? undefined : "blank"}
-        className={cn(
-          "mx-1 inline-block min-w-[2.2em] border-b-2 px-1 text-center",
-          answered ? "border-gold/70 text-gold-bright" : "border-mist/70 text-transparent",
-        )}
-      >
-        {answered ? item.answer : IDEOGRAPHIC_SPACE}
+      <span className="jp-scale">
+        <JpText text={before} ruby={ruby} scale="none" />
+        <span
+          aria-label={answered ? undefined : "blank"}
+          className={cn(
+            "mx-1 inline-block min-w-[2.2em] border-b-2 px-1 text-center",
+            answered ? "border-gold/70 text-gold-bright" : "border-mist/70 text-transparent",
+          )}
+        >
+          {answered ? item.answer : IDEOGRAPHIC_SPACE}
+        </span>
+        <JpText text={after} ruby={ruby} scale="none" />
       </span>
-      <JpText text={after} ruby={ruby} />
     </span>
   );
 }
@@ -125,7 +127,8 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
       </div>
 
       <motion.div
-        className="relative mt-6 flex min-h-[9rem] items-center justify-center sm:min-h-[11rem]"
+        // A container, so a single word can grow with the text size only as far as it still fits.
+        className="@container relative mt-6 flex min-h-[9rem] items-center justify-center sm:min-h-[11rem]"
         animate={correct === true && !review ? { scale: [1, 1.06, 1] } : { scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       >
@@ -135,6 +138,7 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
           <JpText
             text={item.jp}
             ruby={rubyFor(furigana, direction, answered)}
+            scale={[...item.surface].length <= 8 ? "fit" : "wrap"}
             className={cn("text-paper", jpSize(item.surface))}
           />
         ) : side === "romaji" ? (
@@ -172,9 +176,7 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
               )}
             >
               Usually written in {scriptNames(toSurface(item.usual))}:{" "}
-              <span lang="ja" className="jp text-sm text-mist">
-                {toSurface(item.usual)}
-              </span>
+              <JpText text={item.usual} ruby="none" className="text-sm text-mist" />
             </p>
           )}
         </div>
