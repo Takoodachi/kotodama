@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check, X } from "lucide-react";
+import { ArrowRight, BookOpenCheck, Check, X } from "lucide-react";
 import { motion } from "motion/react";
 import { ExampleSentence } from "@/components/japanese/ExampleSentence";
 import { JpText } from "@/components/japanese/Furigana";
@@ -25,6 +25,8 @@ interface FeedbackPanelProps {
   parts?: AnswerParts;
   /** Counted as right by the learner after the check said wrong. */
   overruled?: boolean;
+  /** This answer was the item's first right one: it's now in the learner's dictionary. */
+  unlocked?: boolean;
   /** Offered when a typed English answer was marked wrong: count it as right. */
   onOverrule?: () => void;
   furigana: FuriganaMode;
@@ -62,6 +64,7 @@ export function FeedbackPanel({
   given,
   parts,
   overruled,
+  unlocked,
   onOverrule,
   furigana,
   onContinue,
@@ -107,6 +110,11 @@ export function FeedbackPanel({
               )
             )}
             {overruled && <p className="mt-1 text-xs text-mist">Counted as right.</p>}
+            {unlocked && (
+              <p className="mt-1.5 flex items-center gap-1.5 text-xs text-gold-bright">
+                <BookOpenCheck className="size-3.5" strokeWidth={1.75} /> Unlocked: added to your dictionary
+              </p>
+            )}
             {onOverrule && (
               <button
                 type="button"

@@ -2,12 +2,14 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { QuizDictionary } from "@/components/dictionary/QuizDictionary";
 import { ITEMS_BY_ID, speechText, writtenItem } from "@/data/library";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useSpeech } from "@/hooks/useSpeech";
 import { useStartSession } from "@/hooks/useStartSession";
+import { inDictionary } from "@/lib/dictionary";
 import { checkBoth, checkTypedAnswer } from "@/lib/quiz/check";
 import { answersInJapanese } from "@/lib/quiz/directions";
 import type { ChoiceOption } from "@/lib/quiz/distractors";
@@ -113,6 +115,17 @@ export function QuizRunner() {
   const [navDir, setNavDir] = useState(1);
   // Half-typed answer (one text per field), kept while looking at an earlier card.
   const [draft, setDraft] = useState<{ key: string; texts: string[] } | null>(null);
+  // The dictionary of unlocked entries, there to consult when the session has words, phrases or sentences.
+  const [dictionaryOpen, setDictionaryOpen] = useState(false);
+  const hasDictionary = useMemo(
+    () =>
+      poolIds.some((id) => {
+        const pooled = ITEMS_BY_ID.get(id);
+        return !!pooled && inDictionary(pooled);
+      }),
+    [poolIds],
+  );
+  const closeDictionary = useCallback(() => setDictionaryOpen(false), []);
   const startSession = useStartSession();
 
   const question = status === "active" ? queue[index] : undefined;
@@ -151,13 +164,13 @@ export function QuizRunner() {
   // while the answer is being read aloud, wait for it to finish first.
   // Paused while looking at an earlier card.
   useEffect(() => {
-    if (!result || showPanel || reviewing || !question || !item) return;
+    if (!result || showPanel || reviewing || dictionaryOpen || !question || !item) return;
     const base = (mode === "choice" ? ADVANCE_DELAY.choice : ADVANCE_DELAY.typed) + readingTime(item.surface);
     const reading = spoken?.key === question.key;
     const delay = !reading ? base : spoken.done ? AFTER_SPEECH : MAX_SPEECH_WAIT;
     const timer = setTimeout(advance, delay);
     return () => clearTimeout(timer);
-  }, [result, showPanel, reviewing, question, item, spoken, advance, mode]);
+  }, [result, showPanel, reviewing, dictionaryOpen, question, item, spoken, advance, mode]);
 
   const onClose = useCallback(() => {
     if (results.length) finish();
@@ -186,11 +199,13 @@ export function QuizRunner() {
   const returnToQuestion = () => lookAt(null, 1);
 
   // Enter or Space moves on once answered; Escape ends the session; ← looks back.
-  useHotkeys({ Enter: advance, " ": advance }, !!result && !reviewing);
-  useHotkeys({ Escape: onClose, ArrowLeft: goBack }, status === "active" && !reviewing);
+  // All of them wait while the dictionary is open.
+  const keys = status === "active" && !dictionaryOpen;
+  useHotkeys({ Enter: advance, " ": advance }, keys && !!result && !reviewing);
+  useHotkeys({ Escape: onClose, ArrowLeft: goBack }, keys && !reviewing);
   useHotkeys(
     { ArrowLeft: goBack, ArrowRight: goForward, Enter: returnToQuestion, " ": returnToQuestion, Escape: returnToQuestion },
-    status === "active" && reviewing,
+    keys && reviewing,
   );
 
   if (!hydrated || status === "idle") return <div className="flex-1" />;
@@ -245,6 +260,8 @@ export function QuizRunner() {
         correct={correctCount}
         streak={inARow}
         ghost={label === "ghost"}
+        onDictionary={hasDictionary ? () => setDictionaryOpen(true) : undefined}
+        unlocked={results.filter((r) => r.unlocked).length}
         onClose={onClose}
       />
       <ReviewNav
@@ -335,12 +352,16 @@ export function QuizRunner() {
             given={result.given}
             parts={result.parts}
             overruled={result.overruled}
+            unlocked={result.unlocked}
             onOverrule={canOverrule ? overrule : undefined}
             furigana={furigana}
             onContinue={advance}
           />
         )}
       </AnimatePresence>
+
+      {/* The card being asked stays out of the dictionary until it's answered. */}
+      <QuizDictionary open={dictionaryOpen} onClose={closeDictionary} hidden={result ? undefined : question.itemId} />
     </div>
   );
 }

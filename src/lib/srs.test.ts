@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BOX_INTERVALS, isDue, mastery, MAX_BOX, priority, review } from "./srs";
+import { BOX_INTERVALS, isDue, isUnlocked, mastery, MAX_BOX, priority, review, unlock, unlockedAt } from "./srs";
 
 const now = 1_000_000_000_000;
 
@@ -51,5 +51,27 @@ describe("mastery", () => {
     const records = { a: { box: 5, due: 0, seen: 5, correct: 5, lapses: 0, last: 0 } };
     expect(mastery(["a", "b"], records)).toBeCloseTo(0.5);
     expect(mastery([], records)).toBe(0);
+  });
+});
+
+describe("unlocking", () => {
+  it("unlocks an item the first time it's answered right, and keeps the time", () => {
+    const missed = review(undefined, false, now);
+    expect(isUnlocked(undefined)).toBe(false);
+    expect(isUnlocked(missed)).toBe(false);
+    const right = review(missed, true, now + 5);
+    expect(isUnlocked(right)).toBe(true);
+    expect(unlockedAt(right)).toBe(now + 5);
+    // A later miss sends it back to box 0, but it stays unlocked.
+    const missedAgain = review(right, false, now + 9);
+    expect(missedAgain.box).toBe(0);
+    expect(unlockedAt(missedAgain)).toBe(now + 5);
+  });
+
+  it("unlocks on a right retry without moving the item between boxes", () => {
+    const missed = review(undefined, false, now);
+    const retried = unlock(missed, now + 3);
+    expect(retried).toEqual({ ...missed, unlocked: now + 3 });
+    expect(unlock(retried, now + 8)).toBe(retried);
   });
 });

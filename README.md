@@ -4,6 +4,12 @@ A dark, minimal Japanese practice app that runs on the web and installs as a PWA
 hiragana and katakana rows, kanji levels, words, phrases and sentences, then drill them with
 multiple choice, reading or typing quizzes. Spaced repetition brings back whatever you miss.
 
+- **Dictionary:** every word, phrase and sentence in the library (about 2,200 entries), opened
+  from the Practice page. Search in English, Japanese or romaji; words come with an example
+  sentence.
+- **Unlocking:** an entry is unlocked the first time you answer it right. During a quiz with
+  words, phrases or sentences, the book button opens your own dictionary: only what you've
+  unlocked, and never the card you're on. It starts empty and fills up as you learn.
 - **All at once:** Tofugu-style: every selected kana, kanji and word on one page. Type what you
   know, press Enter to check, retry wrong ones, then Finish to see what you missed.
 - **Grammar:** 127 fill-in-the-gap drills in 16 sets (particles, verb and adjective forms, common

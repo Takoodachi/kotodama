@@ -1,4 +1,4 @@
-import type { SrsRecord } from "@/lib/srs";
+import { isUnlocked, unlockedAt, type SrsRecord } from "@/lib/srs";
 
 /**
  * Progress as it is saved to an account: one document that every device
@@ -86,6 +86,18 @@ function newerRecord(a: SrsRecord, b: SrsRecord): SrsRecord {
   return a;
 }
 
+/**
+ * Two devices' records for one item. The more recent one wins, but an item
+ * unlocked on either device stays unlocked, from the earliest time known.
+ */
+function mergeRecords(a: SrsRecord, b: SrsRecord): SrsRecord {
+  const newer = newerRecord(a, b);
+  const times = [a, b].filter(isUnlocked).map(unlockedAt);
+  if (!times.length) return newer;
+  const unlocked = Math.min(...times);
+  return isUnlocked(newer) && unlockedAt(newer) === unlocked ? newer : { ...newer, unlocked };
+}
+
 /** All devices' counts added together, as shown in stats and the heatmap. */
 export function combinedCounts(devices: Record<string, DeviceCounts>): { totals: Counts; history: Record<string, Counts> } {
   const totals = { answered: 0, correct: 0 };
@@ -141,7 +153,7 @@ export function mergeDocs(a: ProgressDoc, b: ProgressDoc): ProgressDoc {
 
   const records: Record<string, SrsRecord> = { ...a.records };
   for (const [id, record] of Object.entries(b.records)) {
-    records[id] = records[id] ? newerRecord(records[id], record) : record;
+    records[id] = records[id] ? mergeRecords(records[id], record) : record;
   }
 
   const devices: Record<string, DeviceCounts> = {};
@@ -197,6 +209,7 @@ export function readDoc(value: unknown): ProgressDoc {
         correct: num(r.correct),
         lapses: num(r.lapses),
         last: num(r.last),
+        ...(num(r.unlocked) > 0 && { unlocked: num(r.unlocked) }),
       };
     }
   }
