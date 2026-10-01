@@ -143,7 +143,7 @@ let synonyms: { revision: number; index: Map<string, StudyItem[]> } | null = nul
  */
 export function synonymsOf(item: StudyItem): StudyItem[] {
   if (item.category !== "vocab" && item.category !== "phrase") return [];
-  // Built again when the library grows (a dictionary word set arriving).
+  // Built again when the library grows (a fetched set arriving).
   if (synonyms?.revision !== libraryRevision()) {
     const index = new Map<string, StudyItem[]>();
     for (const category of ["vocab", "phrase"] as const) {

@@ -15,7 +15,7 @@ import { useStartSession } from "@/hooks/useStartSession";
 import { isDue, isMastered, isWeak, priority } from "@/lib/srs";
 import { currentStreak, useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
-import { useLibraryRevision, useWordSets } from "@/store/wordSets";
+import { useLibraryRevision, useFetchedSets } from "@/store/fetchedSets";
 
 const LIBRARY_TILES: { category: Category; jp: string; label: string; section: string }[] = [
   { category: "hiragana", jp: "ひらがな", label: "Hiragana", section: "hiragana" },
@@ -56,7 +56,7 @@ export function HomeScreen() {
   const [today] = useState(() => new Date());
   // Words from the dictionary's sets join the library a moment after the page loads.
   const revision = useLibraryRevision();
-  const setSizes = useWordSets((s) => s.meta?.sets);
+  const setSizes = useFetchedSets((s) => s.meta?.sets);
 
   const stats = useMemo(() => {
     const entries = Object.entries(records).filter(([id]) => ITEMS_BY_ID.has(id));

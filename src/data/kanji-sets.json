@@ -1,0 +1,18 @@
+{
+  "jlpt": [
+    { "level": 5, "parts": 1 },
+    { "level": 4, "parts": 1 },
+    { "level": 3, "parts": 2 },
+    { "level": 2, "parts": 2 },
+    { "level": 1, "parts": 6 }
+  ],
+  "grade": [
+    { "grade": 1, "parts": 1 },
+    { "grade": 2, "parts": 1 },
+    { "grade": 3, "parts": 1 },
+    { "grade": 4, "parts": 1 },
+    { "grade": 5, "parts": 1 },
+    { "grade": 6, "parts": 1 },
+    { "grade": 8, "parts": 6 }
+  ]
+}

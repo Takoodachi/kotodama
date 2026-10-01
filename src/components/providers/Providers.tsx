@@ -5,13 +5,12 @@ import { useEffect, useMemo } from "react";
 import { useHydrated } from "@/hooks/useHydrated";
 import { AccountSync } from "@/components/account/AccountSync";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
-import type { JlptLevel } from "@/data/types";
-import { wordSetLevels } from "@/data/wordSets";
+import { setKeys, type SetKey } from "@/data/fetchedSets";
 import { useProgress } from "@/store/progress";
 import { useSession } from "@/store/session";
 import { useSettings } from "@/store/settings";
 import { requestPersistentStorage } from "@/store/storage";
-import { useWordSets } from "@/store/wordSets";
+import { useFetchedSets } from "@/store/fetchedSets";
 
 /** Reads saved state from localStorage once the app has mounted. */
 function StoreHydrator() {
@@ -61,28 +60,30 @@ function PreferenceSync() {
 }
 
 /**
- * Fetches the dictionary word sets in use: the ones selected for practice,
- * and the ones with words already practiced or in the quiz under way, so
- * their progress shows everywhere. Tried again when the connection returns.
+ * Fetches the sets in use that aren't bundled with the app (JLPT words, the
+ * full kanji sets): the ones selected for practice, and the ones with items
+ * already practiced or in the quiz under way, so their progress shows
+ * everywhere. Tried again when the connection returns.
  */
-function WordSetLoader() {
+function FetchedSetLoader() {
   const hydrated = useHydrated();
   const selected = useSettings((s) => s.selected);
   const records = useProgress((s) => s.records);
   const poolIds = useSession((s) => s.poolIds);
-  const ensure = useWordSets((s) => s.ensure);
-  const levels = useMemo(
-    () => wordSetLevels([...selected, ...poolIds, ...Object.keys(records)]).join(""),
+  const ensure = useFetchedSets((s) => s.ensure);
+  // As one string, so the effect below only runs again when the sets needed change.
+  const keys = useMemo(
+    () => setKeys([...selected, ...poolIds, ...Object.keys(records)]).join(" "),
     [selected, poolIds, records],
   );
 
   useEffect(() => {
-    if (!hydrated || !levels) return;
-    const load = () => void ensure([...levels].map((level) => Number(level) as JlptLevel));
+    if (!hydrated || !keys) return;
+    const load = () => void ensure(keys.split(" ") as SetKey[]);
     load();
     window.addEventListener("online", load);
     return () => window.removeEventListener("online", load);
-  }, [hydrated, levels, ensure]);
+  }, [hydrated, keys, ensure]);
 
   return null;
 }
@@ -102,7 +103,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <MotionConfig reducedMotion="user" transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}>
       <StoreHydrator />
       <PreferenceSync />
-      <WordSetLoader />
+      <FetchedSetLoader />
       <StorageKeeper />
       <ServiceWorkerRegister />
       <AccountSync />

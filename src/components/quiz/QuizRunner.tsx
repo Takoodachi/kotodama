@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { QuizDictionary } from "@/components/dictionary/QuizDictionary";
 import { Button } from "@/components/ui/Button";
 import { ITEMS_BY_ID, speechText, writtenItem } from "@/data/library";
-import { wordSetLevel } from "@/data/wordSets";
+import { setKeyOf } from "@/data/fetchedSets";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useSpeech } from "@/hooks/useSpeech";
@@ -17,7 +17,7 @@ import { answersInJapanese } from "@/lib/quiz/directions";
 import type { ChoiceOption } from "@/lib/quiz/distractors";
 import { useSession, type AnswerParts } from "@/store/session";
 import { useSettings } from "@/store/settings";
-import { useLibraryRevision, useWordSets } from "@/store/wordSets";
+import { useLibraryRevision, useFetchedSets } from "@/store/fetchedSets";
 import { AnswerInput } from "./AnswerInput";
 import { FeedbackPanel } from "./FeedbackPanel";
 import { MultipleChoice } from "./MultipleChoice";
@@ -122,7 +122,7 @@ export function QuizRunner() {
   const [dictionaryOpen, setDictionaryOpen] = useState(false);
   // Words from the dictionary's sets are fetched after a reload: the quiz picks up once they are back.
   const revision = useLibraryRevision();
-  const setStatus = useWordSets((s) => s.status);
+  const setStatus = useFetchedSets((s) => s.status);
   const hasDictionary = useMemo(
     () =>
       poolIds.some((id) => {
@@ -229,15 +229,15 @@ export function QuizRunner() {
 
   if (!question) return <div className="flex-1" />;
   if (!item) {
-    // After a reload, a word from one of the dictionary's sets is in the library again once its set is fetched.
-    const level = wordSetLevel(question.itemId);
-    const failed = level !== null && setStatus[level] === "error";
+    // After a reload, a word or kanji from one of the fetched sets is in the library again once its set is fetched.
+    const key = setKeyOf(question.itemId);
+    const failed = key !== null && setStatus[key] === "error";
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-5 px-6 text-center">
         <p className="max-w-sm text-sm leading-relaxed text-mist" role="status">
           {failed
-            ? "This quiz uses dictionary words that couldn't be fetched. They need a connection the first time; after that they work offline."
-            : "Fetching the dictionary words…"}
+            ? "This quiz uses words or kanji from the dictionary that couldn't be fetched. They need a connection the first time; after that they work offline."
+            : "Fetching from the dictionary…"}
         </p>
         {failed && (
           <Button variant="ghost" onClick={onClose}>

@@ -12,7 +12,7 @@ import { useUnlockProgress } from "@/hooks/useUnlockProgress";
 import { cn } from "@/lib/cn";
 import { unlockedEntries } from "@/lib/dictionary";
 import { useProgress } from "@/store/progress";
-import { useLibraryRevision, useWordSets } from "@/store/wordSets";
+import { useLibraryRevision, useFetchedSets } from "@/store/fetchedSets";
 import { DictionaryBrowser } from "./DictionaryBrowser";
 import { DictionaryCredits } from "./DictionaryCredits";
 import { JmdictResults } from "./JmdictResults";
@@ -30,7 +30,7 @@ export function DictionaryScreen() {
   const hydrated = useHydrated();
   const records = useProgress((s) => s.records);
   const revision = useLibraryRevision();
-  const meta = useWordSets((s) => s.meta);
+  const meta = useFetchedSets((s) => s.meta);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the library itself grows when a word set arrives
   const unlocked = useMemo(() => unlockedEntries(records), [records, revision]);
   const progress = useUnlockProgress();

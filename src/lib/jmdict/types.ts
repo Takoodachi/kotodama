@@ -40,11 +40,13 @@ export interface DictMeta {
   ja: string[];
   en: string[];
   ph: string[];
-  /** Words in each JLPT quiz set, by group id. */
+  /** Items in each fetched quiz set (JLPT words, kanji), by group id. */
   sets: Record<string, number>;
   /** Of those, the words the app's own library doesn't already teach; and their total. */
   setNewWords: Record<string, number>;
   newWords: number;
+  /** How many kanji have details to look up. */
+  kanji: number;
   /** What the JMdict codes stand for. */
   tags: Record<string, string>;
 }
@@ -62,6 +64,32 @@ export interface SetFile {
   level: JlptLevel;
   /** One list of words per part of the level. */
   groups: SetRow[][];
+}
+
+/** The kanji sets: the jōyō kanji the app doesn't carry, and which kanji each set holds. */
+export interface KanjiSetFile {
+  /** [kanji, on'yomi, kun'yomi, meanings] */
+  items: [string, string[], string[], string[]][];
+  /** Set id → its kanji, as one string, in order. */
+  groups: Record<string, string>;
+}
+
+/** A kanji's details, as stored in the dictionary files (see scripts/dictionary/kanji.mjs). */
+export interface KanjiDetails {
+  /** On'yomi, in katakana. */
+  o?: string[];
+  /** Kun'yomi, in hiragana, okurigana after a dot (た.べる). */
+  k?: string[];
+  /** Meanings. */
+  m?: string[];
+  /** Strokes. */
+  s?: number;
+  /** School grade: 1 to 6, 8 for secondary school, 9 and 10 for kanji used in names. */
+  g?: number;
+  /** JLPT level, for jōyō kanji. */
+  j?: JlptLevel;
+  /** Rank among the 2,500 kanji most used in newspapers. */
+  f?: number;
 }
 
 /** Fetches a dictionary file by its path under the dictionary folder, parsed. */
