@@ -3,8 +3,11 @@
 import { BookOpen, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo } from "react";
-import { DICTIONARY, unlockedEntries } from "@/lib/dictionary";
+import { Scrim } from "@/components/ui/Scrim";
+import { useUnlockProgress } from "@/hooks/useUnlockProgress";
+import { unlockedEntries } from "@/lib/dictionary";
 import { useProgress } from "@/store/progress";
+import { useLibraryRevision } from "@/store/wordSets";
 import { DictionaryBrowser } from "./DictionaryBrowser";
 
 interface QuizDictionaryProps {
@@ -21,7 +24,10 @@ interface QuizDictionaryProps {
  */
 export function QuizDictionary({ open, onClose, hidden }: QuizDictionaryProps) {
   const records = useProgress((s) => s.records);
-  const unlocked = useMemo(() => unlockedEntries(records), [records]);
+  const revision = useLibraryRevision();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the library itself grows when a word set arrives
+  const unlocked = useMemo(() => unlockedEntries(records), [records, revision]);
+  const progress = useUnlockProgress();
 
   // Esc closes; focus goes back to where it was (the answer field, usually).
   useEffect(() => {
@@ -42,15 +48,8 @@ export function QuizDictionary({ open, onClose, hidden }: QuizDictionaryProps) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
-          key="quiz-dictionary"
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden />
+        <div key="quiz-dictionary" className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
+          <Scrim onClick={onClose} exitDuration={0.2} />
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -67,8 +66,8 @@ export function QuizDictionary({ open, onClose, hidden }: QuizDictionaryProps) {
                   <BookOpen className="size-3.5 text-gold" /> 辞書 · My dictionary
                 </p>
                 <h2 id="quiz-dictionary-title" className="mt-1.5 font-mincho text-2xl text-paper">
-                  {unlocked.size.toLocaleString("en")}{" "}
-                  <span className="text-base text-mist">of {DICTIONARY.length.toLocaleString("en")} unlocked</span>
+                  {progress.unlocked.toLocaleString("en")}{" "}
+                  <span className="text-base text-mist">of {progress.total.toLocaleString("en")} unlocked</span>
                 </h2>
                 <p className="mt-1 text-xs leading-relaxed text-mist">
                   Only what you&apos;ve got right before is here. The card you&apos;re on stays hidden until you
@@ -94,7 +93,7 @@ export function QuizDictionary({ open, onClose, hidden }: QuizDictionaryProps) {
               />
             </div>
           </motion.div>
-        </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );

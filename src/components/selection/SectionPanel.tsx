@@ -2,7 +2,7 @@
 
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { groupIdsOfSection, type SectionDef } from "@/data/groups";
-import { ITEMS_BY_GROUP, itemsForGroups } from "@/data/library";
+import { countForGroups, ITEMS_BY_GROUP } from "@/data/library";
 import { cn } from "@/lib/cn";
 import { mastery, type SrsRecord } from "@/lib/srs";
 import { GroupChip } from "./GroupChip";
@@ -11,6 +11,10 @@ interface SectionPanelProps {
   section: SectionDef;
   selected: ReadonlySet<string>;
   records: Record<string, SrsRecord>;
+  /** Sizes of the dictionary's word sets, shown until a set's words have been fetched. */
+  setSizes?: Record<string, number>;
+  /** How many of each set's words aren't in the library already, for a total that counts no word twice. */
+  setNewWords?: Record<string, number>;
   kanjiGrouping: "jlpt" | "grade";
   onKanjiGrouping: (grouping: "jlpt" | "grade") => void;
   onToggle: (groupId: string) => void;
@@ -41,6 +45,8 @@ export function SectionPanel({
   section,
   selected,
   records,
+  setSizes,
+  setNewWords,
   kanjiGrouping,
   onKanjiGrouping,
   onToggle,
@@ -50,8 +56,8 @@ export function SectionPanel({
   const subsections = section.subsections.filter((sub) => !sub.variant || sub.variant === variant);
   const groupIds = groupIdsOfSection(section, variant);
   const allOn = groupIds.every((id) => selected.has(id));
-  const sectionItems = itemsForGroups(groupIds);
-  const selectedItems = itemsForGroups(groupIds.filter((id) => selected.has(id)));
+  const sectionCount = countForGroups(groupIds, setNewWords);
+  const selectedCount = countForGroups(groupIds.filter((id) => selected.has(id)), setSizes);
   const kana = isKanaSection(section.id);
 
   return (
@@ -62,7 +68,7 @@ export function SectionPanel({
           <h2 className="mt-1.5 flex items-baseline gap-3">
             <span className="jp text-3xl text-paper sm:text-4xl">{section.jpTitle}</span>
             <span className="text-xs text-smoke tabular-nums">
-              {selectedItems.length} / {sectionItems.length}
+              {selectedCount} / {sectionCount}
             </span>
           </h2>
           <p className="mt-1.5 max-w-md text-sm leading-relaxed text-mist">{section.blurb}</p>
@@ -109,17 +115,17 @@ export function SectionPanel({
                 )}
               >
                 {sub.groups.map((group) => {
-                  const items = ITEMS_BY_GROUP.get(group.id) ?? [];
+                  const items = ITEMS_BY_GROUP.get(group.id);
                   return (
                     <GroupChip
                       key={group.id}
                       label={group.label}
                       sublabel={group.sublabel}
-                      count={kana ? undefined : items.length}
+                      count={kana ? undefined : (items?.length ?? setSizes?.[group.id])}
                       wide={!kana}
                       selected={selected.has(group.id)}
                       mastery={mastery(
-                        items.map((i) => i.id),
+                        (items ?? []).map((i) => i.id),
                         records,
                       )}
                       onToggle={() => onToggle(group.id)}

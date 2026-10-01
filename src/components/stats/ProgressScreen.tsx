@@ -7,12 +7,13 @@ import { SpeakButton } from "@/components/japanese/SpeakButton";
 import { GhostModeButton } from "@/components/practice/GhostModeButton";
 import { LinkButton } from "@/components/ui/Button";
 import { SECTIONS } from "@/data/groups";
-import { ITEMS_BY_CATEGORY, ITEMS_BY_ID, itemsForGroups, romajiLabel, speechText } from "@/data/library";
+import { ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, ITEMS_BY_ID, itemsForGroups, romajiLabel, speechText } from "@/data/library";
 import type { Category } from "@/data/types";
 import { useHydrated } from "@/hooks/useHydrated";
 import { plural } from "@/lib/plural";
 import { accuracy, breakdown, CATEGORIES, CATEGORY_LABELS, proficiency, weakestItems } from "@/lib/analytics";
 import { useProgress } from "@/store/progress";
+import { useLibraryRevision } from "@/store/wordSets";
 import { MasteryBar, MasteryLegend } from "./MasteryBar";
 import { RadarChart, type RadarDatum } from "./RadarChart";
 
@@ -40,10 +41,13 @@ export function ProgressScreen() {
   const hydrated = useHydrated();
   const records = useProgress((s) => s.records);
   const totals = useProgress((s) => s.totals);
+  // Dictionary word sets that have been practiced are fetched a moment after the page loads.
+  const revision = useLibraryRevision();
 
   const byCategory = useMemo(
     () => CATEGORIES.map((category) => ({ category, counts: breakdown(ITEMS_BY_CATEGORY.get(category) ?? [], records) })),
-    [records],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [records, revision],
   );
 
   const radar: RadarDatum[] = byCategory.map(({ category, counts }) => ({
@@ -64,19 +68,24 @@ export function ProgressScreen() {
           .flatMap((sub) =>
             section.id === "hiragana" || section.id === "katakana"
               ? [{ key: sub.id, label: sub.title, counts: breakdown(itemsForGroups(sub.groups.map((g) => g.id)), records) }]
-              : sub.groups.map((g) => ({
-                  key: g.id,
-                  label: section.id === "kanji" ? `${g.label} kanji` : g.sublabel,
-                  counts: breakdown(itemsForGroups([g.id]), records),
-                })),
+              : sub.groups
+                  // A dictionary word set shows once it has been practiced: until then its words aren't fetched.
+                  .filter((g) => ITEMS_BY_GROUP.has(g.id))
+                  .map((g) => ({
+                    key: g.id,
+                    label: section.id === "kanji" ? `${g.label} kanji` : (g.name ?? g.sublabel),
+                    counts: breakdown(itemsForGroups([g.id]), records),
+                  })),
           ),
       })),
-    [records],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [records, revision],
   );
 
   const weakest = useMemo(
     () => weakestItems(records, 10, (id) => ITEMS_BY_ID.has(id)).map((id) => ({ item: ITEMS_BY_ID.get(id)!, record: records[id] })),
-    [records],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [records, revision],
   );
 
   const all = byCategory.reduce(

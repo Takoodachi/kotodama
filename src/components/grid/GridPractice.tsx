@@ -9,6 +9,7 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { MuteButton } from "@/components/ui/MuteButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { itemsForGroups, speechText, writtenItem } from "@/data/library";
+import { wordSetLevels } from "@/data/wordSets";
 import type { StudyItem } from "@/data/types";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { useHydrated } from "@/hooks/useHydrated";
@@ -22,6 +23,7 @@ import { seededRng, shuffle } from "@/lib/random";
 import { scriptNames } from "@/lib/writing";
 import { useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
+import { useLibraryRevision, useWordSets } from "@/store/wordSets";
 
 interface CardState {
   status: "open" | "right";
@@ -162,8 +164,12 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
  * shake and can be tried again. Finish shows the rest.
  */
 export function GridPractice() {
-  const hydrated = useHydrated();
+  const saved = useHydrated();
   const selected = useSettings((s) => s.selected);
+  // Selected word sets from the dictionary are fetched first, so the grid is laid out once, complete.
+  const setStatus = useWordSets((s) => s.status);
+  const fetching = wordSetLevels(selected).some((level) => !setStatus[level] || setStatus[level] === "loading");
+  const hydrated = saved && !fetching;
   const writing = useSettings((s) => s.writing);
   const autoplay = useSettings((s) => s.audio.autoplay);
   const record = useProgress((s) => s.record);
@@ -179,9 +185,12 @@ export function GridPractice() {
   // Cards tried at least once: like a quiz, only the first try counts toward spaced repetition.
   const tried = useRef(new Set<string>());
 
+  // Words from the dictionary's sets are fetched after a reload, and join the grid when they land.
+  const revision = useLibraryRevision();
   const items = useMemo(
     () => shuffle(itemsForGroups(selected).filter((i) => GRID_CATEGORIES.has(i.category)), seededRng(seed)),
-    [selected, seed],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selected, seed, revision],
   );
 
   // The grid's column count, measured, so the cards can be put in row order (see packRows).

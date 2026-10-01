@@ -1,13 +1,16 @@
 "use client";
 
 import { MotionConfig } from "motion/react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useHydrated } from "@/hooks/useHydrated";
 import { AccountSync } from "@/components/account/AccountSync";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
+import type { JlptLevel } from "@/data/types";
+import { wordSetLevels } from "@/data/wordSets";
 import { useProgress } from "@/store/progress";
 import { useSession } from "@/store/session";
 import { useSettings } from "@/store/settings";
+import { useWordSets } from "@/store/wordSets";
 
 /** Reads saved state from localStorage once the app has mounted. */
 function StoreHydrator() {
@@ -56,11 +59,39 @@ function PreferenceSync() {
   return null;
 }
 
+/**
+ * Fetches the dictionary word sets in use: the ones selected for practice,
+ * and the ones with words already practiced or in the quiz under way, so
+ * their progress shows everywhere. Tried again when the connection returns.
+ */
+function WordSetLoader() {
+  const hydrated = useHydrated();
+  const selected = useSettings((s) => s.selected);
+  const records = useProgress((s) => s.records);
+  const poolIds = useSession((s) => s.poolIds);
+  const ensure = useWordSets((s) => s.ensure);
+  const levels = useMemo(
+    () => wordSetLevels([...selected, ...poolIds, ...Object.keys(records)]).join(""),
+    [selected, poolIds, records],
+  );
+
+  useEffect(() => {
+    if (!hydrated || !levels) return;
+    const load = () => void ensure([...levels].map((level) => Number(level) as JlptLevel));
+    load();
+    window.addEventListener("online", load);
+    return () => window.removeEventListener("online", load);
+  }, [hydrated, levels, ensure]);
+
+  return null;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <MotionConfig reducedMotion="user" transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}>
       <StoreHydrator />
       <PreferenceSync />
+      <WordSetLoader />
       <ServiceWorkerRegister />
       <AccountSync />
       {children}

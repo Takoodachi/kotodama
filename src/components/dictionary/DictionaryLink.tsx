@@ -2,17 +2,14 @@
 
 import { ArrowRight, BookOpen } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
 import { useHydrated } from "@/hooks/useHydrated";
+import { useUnlockProgress } from "@/hooks/useUnlockProgress";
 import { cn } from "@/lib/cn";
-import { DICTIONARY, unlockedEntries } from "@/lib/dictionary";
-import { useProgress } from "@/store/progress";
 
 /** Opens the dictionary from the Practice page, with how much of it is unlocked so far. */
 export function DictionaryLink({ className }: { className?: string }) {
   const hydrated = useHydrated();
-  const records = useProgress((s) => s.records);
-  const unlocked = useMemo(() => unlockedEntries(records).size, [records]);
+  const { unlocked, total } = useUnlockProgress();
 
   return (
     <Link
@@ -35,7 +32,7 @@ export function DictionaryLink({ className }: { className?: string }) {
         </span>
         <span className="block text-xs leading-relaxed text-mist tabular-nums">
           Look up any word, in English or Japanese
-          {hydrated && ` · ${unlocked.toLocaleString("en")} of ${DICTIONARY.length.toLocaleString("en")} unlocked`}
+          {hydrated && ` · ${unlocked.toLocaleString("en")} of ${total.toLocaleString("en")} unlocked`}
         </span>
       </span>
       <ArrowRight className="size-4 shrink-0 text-smoke transition-[color,transform] duration-300 group-hover:translate-x-0.5 group-hover:text-gold-bright" />

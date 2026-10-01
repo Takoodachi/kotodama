@@ -3,6 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main, feat/kotodama-app]
+  # The dictionary (JMdict) is fetched at build time; its licence asks for the
+  # data to be refreshed at least monthly, so the site is rebuilt on the 1st.
+  schedule:
+    - cron: "0 5 1 * *"
   workflow_dispatch:
 
 permissions:
@@ -32,6 +36,11 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run lint
+
+      # Downloads the latest JMdict release and writes the dictionary files to public/dict.
+      - run: npm run dict
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       # Static export to out/, served from https://<user>.github.io/<repo>/
       # Accounts are on when the Supabase secrets are set (Settings → Secrets and variables → Actions).

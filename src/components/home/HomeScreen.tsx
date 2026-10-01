@@ -8,13 +8,14 @@ import { GhostModeButton } from "@/components/practice/GhostModeButton";
 import { InstallPrompt, useIsStandalone } from "@/components/pwa/InstallPrompt";
 import { StudyHeatmap } from "@/components/stats/StudyHeatmap";
 import { Button, LinkButton } from "@/components/ui/Button";
-import { ITEMS_BY_CATEGORY, ITEMS_BY_ID, itemsForGroups } from "@/data/library";
+import { countForGroups, ITEMS_BY_CATEGORY, ITEMS_BY_ID, itemsForGroups } from "@/data/library";
 import type { Category } from "@/data/types";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useStartSession } from "@/hooks/useStartSession";
 import { isDue, isMastered, isWeak, priority } from "@/lib/srs";
 import { currentStreak, useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
+import { useLibraryRevision, useWordSets } from "@/store/wordSets";
 
 const LIBRARY_TILES: { category: Category; jp: string; label: string; section: string }[] = [
   { category: "hiragana", jp: "ひらがな", label: "Hiragana", section: "hiragana" },
@@ -53,6 +54,9 @@ export function HomeScreen() {
   // Captured once per visit; the dashboard doesn't need to tick.
   const [now] = useState(() => Date.now());
   const [today] = useState(() => new Date());
+  // Words from the dictionary's sets join the library a moment after the page loads.
+  const revision = useLibraryRevision();
+  const setSizes = useWordSets((s) => s.meta?.sets);
 
   const stats = useMemo(() => {
     const entries = Object.entries(records).filter(([id]) => ITEMS_BY_ID.has(id));
@@ -67,9 +71,11 @@ export function HomeScreen() {
       due: entries.filter(([, r]) => isDue(r, now)).length,
       review,
     };
-  }, [records, now]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [records, now, revision]);
 
-  const selectedCount = useMemo(() => itemsForGroups(selected).length, [selected]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const selectedCount = useMemo(() => countForGroups(selected, setSizes), [selected, setSizes, revision]);
   const show = (value: number) => (hydrated ? String(value) : "—");
 
   return (
