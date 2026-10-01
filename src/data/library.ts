@@ -9,7 +9,9 @@ import kanjiJson from "./kanji.json";
 import phrasesJson from "./phrases.json";
 import sentencesJson from "./sentences.json";
 import vocabJson from "./vocab.json";
-import type { SetFile } from "@/lib/jmdict/types";
+import type { KanjiSetFile, SetFile } from "@/lib/jmdict/types";
+import { setKeyOf, type SetKey } from "./fetchedSets";
+import { kanjiSetOf } from "./kanjiSets";
 import type { Category, Example, RawItem, StudyItem } from "./types";
 import { wordSetGroupId, wordSetItemId } from "./wordSets";
 
@@ -124,17 +126,23 @@ export const LIBRARY: StudyItem[] = [
 /**
  * Kanji without a hand-written example borrow the shortest sentence in the
  * library that uses them: a word's example sentence or a grammar sentence.
+ * (The sentences are the app's own, so kanji fetched later borrow from the
+ * same ones.)
  */
-(function borrowKanjiExamples() {
-  const pool: Example[] = [
-    ...LIBRARY.filter((i) => i.category === "vocab" && i.example).map((i) => i.example!),
-    ...LIBRARY.filter((i) => i.category === "sentence").map((i) => ({ jp: i.jp, en: i.meaning[0] })),
-  ].sort((a, b) => toSurface(a.jp).length - toSurface(b.jp).length);
-  for (const item of LIBRARY) {
-    if (item.category !== "kanji" || item.example) continue;
-    item.example = pool.find((ex) => toSurface(ex.jp).includes(item.surface));
+const EXAMPLE_POOL: { example: Example; surface: string }[] = [
+  ...LIBRARY.filter((i) => i.category === "vocab" && i.example).map((i) => i.example!),
+  ...LIBRARY.filter((i) => i.category === "sentence").map((i) => ({ jp: i.jp, en: i.meaning[0] })),
+]
+  .map((example) => ({ example, surface: toSurface(example.jp) }))
+  .sort((a, b) => a.surface.length - b.surface.length);
+
+function borrowExample(item: StudyItem) {
+  if (item.category === "kanji" && !item.example) {
+    item.example = EXAMPLE_POOL.find((ex) => ex.surface.includes(item.surface))?.example;
   }
-})();
+}
+
+LIBRARY.forEach(borrowExample);
 
 export const ITEMS_BY_ID = new Map(LIBRARY.map((item) => [item.id, item]));
 
@@ -163,13 +171,16 @@ export const ITEMS_BY_CATEGORY: Map<Category, StudyItem[]> = (() => {
 let revision = 0;
 
 /**
- * How many word sets have joined the library since it was first built.
+ * How many fetched sets have joined the library since it was first built.
  * Anything worked out from the library and kept (a search index, a list of
  * synonyms) is out of date once this changes.
  */
 export const libraryRevision = () => revision;
 
-const addedLevels = new Set<number>();
+const addedSets = new Set<SetKey>();
+
+/** Whether a fetched set's items have joined the library. */
+export const hasSet = (key: SetKey) => addedSets.has(key);
 
 /**
  * Adds a JLPT level's words from the dictionary to the library, as the sets
@@ -178,8 +189,8 @@ const addedLevels = new Set<number>();
  * twice. Returns false when the level was already added.
  */
 export function addWordSet(file: SetFile): boolean {
-  if (addedLevels.has(file.level)) return false;
-  addedLevels.add(file.level);
+  if (addedSets.has(`n${file.level}`)) return false;
+  addedSets.add(`n${file.level}`);
   file.groups.forEach((rows, index) => {
     const group = wordSetGroupId(file.level, index + 1);
     const items: StudyItem[] = [];
@@ -209,6 +220,49 @@ export function addWordSet(file: SetFile): boolean {
 }
 
 /**
+ * Adds the jōyō kanji the app doesn't carry itself, from KANJIDIC2, and files
+ * every kanji under its JLPT and school-grade sets: the sets the app's own
+ * kanji were already in grow to their full size, and the further parts of
+ * the large levels appear. Returns false when already added.
+ */
+export function addKanjiSet(file: KanjiSetFile): boolean {
+  if (addedSets.has("kanji")) return false;
+  addedSets.add("kanji");
+
+  // A kanji is in two sets: one of its JLPT level, one of its school grade.
+  const groupsOf = new Map<string, string[]>();
+  for (const [group, kanji] of Object.entries(file.groups)) {
+    for (const literal of kanji) groupsOf.set(literal, [...(groupsOf.get(literal) ?? []), group]);
+  }
+
+  for (const [literal, on, kun, meaning] of file.items) {
+    const id = `k-${literal}`;
+    const groups = groupsOf.get(literal);
+    if (ITEMS_BY_ID.has(id) || !groups) continue;
+    const { jlpt, grade } = Object.assign({}, ...groups.map(kanjiSetOf));
+    const item = { ...resolve({ id, jp: literal, meaning, on, kun, jlpt, grade }, "kanji"), groups };
+    borrowExample(item);
+    LIBRARY.push(item);
+    ITEMS_BY_ID.set(id, item);
+    ITEMS_BY_CATEGORY.get("kanji")!.push(item);
+  }
+
+  for (const [group, kanji] of Object.entries(file.groups)) {
+    const items: StudyItem[] = [];
+    for (const literal of kanji) {
+      const item = ITEMS_BY_ID.get(`k-${literal}`);
+      if (!item) continue;
+      // The app's own kanji are filed where the dictionary's sets put them.
+      item.groups = groupsOf.get(literal)!;
+      items.push(item);
+    }
+    ITEMS_BY_GROUP.set(group, items);
+  }
+  revision++;
+  return true;
+}
+
+/**
  * Every item in any of the given groups, without duplicates. This is what
  * makes mix-and-match work: kana rows, kanji levels and phrase sets can be
  * combined freely.
@@ -227,14 +281,22 @@ export function itemsForGroups(groupIds: Iterable<string>): StudyItem[] {
   return items;
 }
 
+/** Whether a group is drawn from a fetched set that hasn't joined the library yet. */
+export function isPending(groupId: string): boolean {
+  const key = setKeyOf(groupId);
+  return !!key && !addedSets.has(key);
+}
+
 /**
- * How many items the groups hold. A word set whose words haven't been fetched
- * yet counts with its size from the dictionary's summary, when that is given.
+ * How many items the groups hold. A set whose items haven't been fetched yet
+ * counts with its size from the dictionary's summary, when that is given: a
+ * kanji level then counts in full, not just the kanji the app carries.
  */
 export function countForGroups(groupIds: Iterable<string>, sizes?: Record<string, number>): number {
   const ids = [...groupIds];
-  const pending = sizes ? ids.filter((id) => !ITEMS_BY_GROUP.has(id)) : [];
-  return itemsForGroups(ids).length + pending.reduce((sum, id) => sum + (sizes![id] ?? 0), 0);
+  const pending = sizes ? ids.filter((id) => isPending(id) && sizes[id] !== undefined) : [];
+  const here = ids.filter((id) => !pending.includes(id));
+  return itemsForGroups(here).length + pending.reduce((sum, id) => sum + sizes![id], 0);
 }
 
 export function itemsByIds(ids: Iterable<string>): StudyItem[] {

@@ -48,5 +48,5 @@ function open() {
 /** The full dictionary, ready to search. Rejects when its files can't be reached. */
 export const openDictionary = (): Promise<Dictionary> => open().then((o) => o.dictionary);
 
-/** One of the dictionary's other files: a JLPT word set, or the links to the app's own library. */
+/** One of the dictionary's other files: a set for the quiz, a file of kanji details, the links to the app's own library. */
 export const loadDictionaryFile = (path: string): Promise<unknown> => open().then((o) => o.load(path));

@@ -14,6 +14,10 @@ export function DictionaryCredits({ date, className }: { date?: string; classNam
         className={link}
       >
         JMdict
+      </a>{" "}
+      and kanji from{" "}
+      <a href="https://www.edrdg.org/wiki/index.php/KANJIDIC_Project" target="_blank" rel="noreferrer" className={link}>
+        KANJIDIC
       </a>
       {date && ` (${date})`}, the property of the{" "}
       <a href="https://www.edrdg.org/" target="_blank" rel="noreferrer" className={link}>
@@ -23,7 +27,7 @@ export function DictionaryCredits({ date, className }: { date?: string; classNam
       <a href="https://www.edrdg.org/edrdg/licence.html" target="_blank" rel="noreferrer" className={link}>
         licence
       </a>{" "}
-      (CC BY-SA 4.0). JLPT levels follow Jonathan Waller&apos;s{" "}
+      (CC BY-SA 4.0). The JLPT levels of words follow Jonathan Waller&apos;s{" "}
       <a href="https://www.tanos.co.uk/jlpt/" target="_blank" rel="noreferrer" className={link}>
         JLPT word lists
       </a>

@@ -1,4 +1,5 @@
 import { HIRAGANA_ROWS, KATAKANA_ROWS, type KanaRow } from "./kana";
+import { KANJI_SETS, kanjiGroupIds } from "./kanjiSets";
 import type { KanaKind } from "./types";
 import { WORD_SETS, wordSetGroupId } from "./wordSets";
 
@@ -49,20 +50,27 @@ function kanaSubsections(prefix: string, rows: KanaRow[]): SubsectionDef[] {
   })).filter((sub) => sub.groups.length > 0);
 }
 
-const JLPT_GROUPS: GroupDef[] = [5, 4, 3, 2, 1].map((level) => ({
-  id: `kanji-n${level}`,
-  label: `N${level}`,
-  sublabel: ["", "Advanced", "Upper", "Intermediate", "Elementary", "Beginner"][level],
-}));
+const JLPT_NAMES = ["", "Advanced", "Upper", "Intermediate", "Elementary", "Beginner"];
 
-const GRADE_GROUPS: GroupDef[] = [
-  ...[1, 2, 3, 4, 5, 6].map((grade) => ({
-    id: `kanji-g${grade}`,
-    label: `${grade}年`,
-    sublabel: `Grade ${grade}`,
-  })),
-  { id: "kanji-g8", label: "中学", sublabel: "Secondary" },
-];
+/**
+ * The chips of a kanji level or grade: one, or one per part when it is large
+ * (see ./kanjiSets). A part's label is numbered ("N1·3").
+ */
+function kanjiGroups(kind: "n" | "g", key: number, parts: number, label: string, sublabel: string): GroupDef[] {
+  return kanjiGroupIds(kind, key, parts).map((id, i) =>
+    parts === 1 ? { id, label, sublabel } : { id, label: `${label}·${i + 1}`, sublabel: `${sublabel}, part ${i + 1}` },
+  );
+}
+
+const JLPT_GROUPS: GroupDef[] = KANJI_SETS.jlpt.flatMap(({ level, parts }) =>
+  kanjiGroups("n", level, parts, `N${level}`, JLPT_NAMES[level]),
+);
+
+const GRADE_GROUPS: GroupDef[] = KANJI_SETS.grade.flatMap(({ grade, parts }) =>
+  grade === 8
+    ? kanjiGroups("g", grade, parts, "中学", "Secondary")
+    : kanjiGroups("g", grade, parts, `${grade}年`, `Grade ${grade}`),
+);
 
 /** Each JLPT level's word list from the dictionary, in parts (see ./wordSets). */
 const WORD_SET_SUBSECTIONS: SubsectionDef[] = WORD_SETS.map(({ level, parts }) => ({
@@ -95,7 +103,7 @@ export const SECTIONS: SectionDef[] = [
     id: "kanji",
     title: "Kanji",
     jpTitle: "漢字",
-    blurb: "Characters with meanings and readings, by JLPT level or school grade.",
+    blurb: "All 2,136 kanji in everyday use, with meanings and readings, by JLPT level or school grade.",
     subsections: [
       { id: "kanji-jlpt", title: "JLPT level", variant: "jlpt", groups: JLPT_GROUPS },
       { id: "kanji-grade", title: "School grade", variant: "grade", groups: GRADE_GROUPS },

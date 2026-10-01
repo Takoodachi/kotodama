@@ -2,7 +2,7 @@
 
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { groupIdsOfSection, type SectionDef } from "@/data/groups";
-import { countForGroups, ITEMS_BY_GROUP } from "@/data/library";
+import { countForGroups, isPending, ITEMS_BY_GROUP } from "@/data/library";
 import { cn } from "@/lib/cn";
 import { mastery, type SrsRecord } from "@/lib/srs";
 import { GroupChip } from "./GroupChip";
@@ -11,9 +11,9 @@ interface SectionPanelProps {
   section: SectionDef;
   selected: ReadonlySet<string>;
   records: Record<string, SrsRecord>;
-  /** Sizes of the dictionary's word sets, shown until a set's words have been fetched. */
+  /** Sizes of the sets fetched from the dictionary, shown until a set's items have arrived. */
   setSizes?: Record<string, number>;
-  /** How many of each set's words aren't in the library already, for a total that counts no word twice. */
+  /** How many of each word set's words aren't in the library already, for a total that counts no word twice. */
   setNewWords?: Record<string, number>;
   kanjiGrouping: "jlpt" | "grade";
   onKanjiGrouping: (grouping: "jlpt" | "grade") => void;
@@ -56,7 +56,8 @@ export function SectionPanel({
   const subsections = section.subsections.filter((sub) => !sub.variant || sub.variant === variant);
   const groupIds = groupIdsOfSection(section, variant);
   const allOn = groupIds.every((id) => selected.has(id));
-  const sectionCount = countForGroups(groupIds, setNewWords);
+  // Word sets overlap the themes, so only their new words add to the total; kanji sets don't overlap each other.
+  const sectionCount = countForGroups(groupIds, section.id === "vocab" ? setNewWords : setSizes);
   const selectedCount = countForGroups(groupIds.filter((id) => selected.has(id)), setSizes);
   const kana = isKanaSection(section.id);
 
@@ -121,7 +122,8 @@ export function SectionPanel({
                       key={group.id}
                       label={group.label}
                       sublabel={group.sublabel}
-                      count={kana ? undefined : (items?.length ?? setSizes?.[group.id])}
+                      // A kanji level counts in full even before the kanji the app doesn't carry arrive.
+                      count={kana ? undefined : isPending(group.id) ? (setSizes?.[group.id] ?? items?.length) : items?.length}
                       wide={!kana}
                       selected={selected.has(group.id)}
                       mastery={mastery(

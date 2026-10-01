@@ -6,8 +6,12 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
 
 - **Dictionary:** the whole of [JMdict](https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project)
   (about 219,000 entries), opened from the Practice page. Search in English, Japanese or romaji.
-  It is fetched a few small files at a time, so it needs a connection for words not looked up
-  before; see [The dictionary](#the-dictionary).
+  Any entry opens the details of its kanji (readings, meanings, strokes, grade, JLPT level), and
+  searching a kanji shows them straight away. It is fetched a few small files at a time, so it
+  needs a connection for words not looked up before; see [The dictionary](#the-dictionary).
+- **Kanji:** all 2,136 jōyō kanji, by JLPT level or school grade, in sets of under two hundred.
+  The app carries 524 itself, with example sentences; the rest come from KANJIDIC and are fetched
+  the first time a kanji set is chosen.
 - **JLPT word sets:** every JLPT level's word list (about 7,700 words, N5 to N1), drawn from the
   dictionary and dealt into sets of a couple of hundred. A level's words are fetched when one of
   its sets is first chosen, and work offline after that.
@@ -27,8 +31,8 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
 - **Written in:** choose whether words, phrases and sentences appear in hiragana, katakana,
   kanji or any mix (hiragana + katakana keeps loanwords in katakana, with no kanji). A preview
   shows the result, and prompts, options and example sentences all follow it.
-- **Example sentences:** every word and kanji comes with a short sentence using it, with the word
-  highlighted. Tap the sentence to hear it and see the translation. The first time you meet a
+- **Example sentences:** the app's own words and kanji come with a short sentence using them, with
+  the word highlighted (words and kanji fetched from the dictionary borrow one where they can). Tap the sentence to hear it and see the translation. The first time you meet a
   word, its sentence always shows.
 - **Ghost mode:** one tap drills the 20 items you have the lowest accuracy on.
 - **Study heatmap:** the home page shows a year of daily study, GitHub-style.
@@ -74,18 +78,21 @@ security and service-worker headers. To try the Pages build locally, run
 ## The dictionary
 
 The dictionary is [JMdict](https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project),
+and the kanji come from [KANJIDIC](https://www.edrdg.org/wiki/index.php/KANJIDIC_Project); both are
 the property of the [Electronic Dictionary Research and Development Group](https://www.edrdg.org/),
-used under the group's [licence](https://www.edrdg.org/edrdg/licence.html) (CC BY-SA 4.0). JLPT
-levels follow [Jonathan Waller's lists](https://www.tanos.co.uk/jlpt/), matched to JMdict entries by
-[yomitan-jlpt-vocab](https://github.com/stephenmk/yomitan-jlpt-vocab) (CC BY-SA 4.0); those lists
-are kept in [`scripts/jlpt`](scripts/jlpt). The files built from them carry the same licence.
+used under the group's [licence](https://www.edrdg.org/edrdg/licence.html) (CC BY-SA 4.0). The
+JLPT levels of words follow [Jonathan Waller's lists](https://www.tanos.co.uk/jlpt/), matched to
+JMdict entries by [yomitan-jlpt-vocab](https://github.com/stephenmk/yomitan-jlpt-vocab) (CC BY-SA
+4.0); those lists are kept in [`scripts/jlpt`](scripts/jlpt). The files built from them carry the
+same licence.
 
 `npm run dict` ([`scripts/build-dictionary.mjs`](scripts/build-dictionary.mjs)) downloads the latest
-JMdict as JSON from [jmdict-simplified](https://github.com/scriptin/jmdict-simplified) into `.cache/`
-and writes about 54 MB of small files to `public/dict/`. Neither folder is committed: the deploy
+JMdict and KANJIDIC2 as JSON from [jmdict-simplified](https://github.com/scriptin/jmdict-simplified)
+into `.cache/` and writes about 55 MB of small files to `public/dict/`. Neither folder is committed: the deploy
 workflow runs the script before each build, and once a month on a schedule, which keeps the data
 within the month's freshness the licence asks for. Without the files the app still works; the
-dictionary page says it can't be reached and the JLPT sets stay empty.
+dictionary page says it can't be reached, the JLPT word sets stay empty and the kanji sets hold
+only the app's own kanji.
 
 Nothing downloads the dictionary whole. The files are:
 
@@ -100,9 +107,17 @@ Nothing downloads the dictionary whole. The files are:
   list has in mind leads when the dictionary's first sense is about something else (肉 is "meat"
   before "flesh"), and long notes in parentheses are dropped ("cup", not "cup (drinking vessel,
   measure, …)").
+- Kanji: the details of each of KANJIDIC's 10,384 kanji, 128 code points to a file, and one file
+  with the jōyō kanji the app doesn't carry and which kanji each set holds.
 
-The service worker keeps every dictionary file it has fetched, so earlier lookups and used word
-sets work offline. The files sit in a folder named after the JMdict release and the word sets built from it; when a new one is
+There is no official list of kanji by JLPT level. KANJIDIC has the four levels of the test before
+2010: its level 4 is taken as N5, level 3 as N4, and level 1 (with the jōyō kanji added in 2010)
+as N1. Level 2 became N3 and N2; the more common half, by KANJIDIC's newspaper frequency, is
+taken as N3. The app's own kanji keep the level given in `kanji.json`, which follows the same
+rule ([`scripts/dictionary/kanji.mjs`](scripts/dictionary/kanji.mjs)).
+
+The service worker keeps every dictionary file it has fetched, so earlier lookups and used sets
+work offline. The files sit in a folder named after the JMdict release and the word sets built from it; when a new one is
 deployed, the old folder's files are dropped.
 
 ## Accounts and sync
@@ -153,11 +168,14 @@ src/
 │  ├─ layout/ ui/ pwa/ home/ practice/ settings/
 ├─ data/                the content library
 │  ├─ kana.ts           hiragana/katakana row tables (with accepted romaji variants)
-│  ├─ kanji.json        524 kanji (N5 103, N4 143, N3 167, N2 57, N1 54) with readings, JLPT level, grade
+│  ├─ kanji.json        the app's own 524 kanji (N5 103, N4 158, N3 152, N2 50, N1 61) with readings,
+│  │                    JLPT level and grade; the other jōyō kanji are fetched
 │  ├─ vocab.json  phrases.json  sentences.json
 │  ├─ examples.json     an example sentence for every word and kanji
 │  ├─ groups.ts         sections and selectable sets that drive the picker, plus presets
 │  ├─ wordSets.ts       the JLPT word sets from the dictionary: ids, levels, parts
+│  ├─ kanjiSets.ts      the kanji sets by JLPT level and school grade, and their parts
+│  ├─ fetchedSets.ts    which fetched file a set or an item is in
 │  └─ library.ts        resolves everything into StudyItems and indexes them
 ├─ lib/
 │  ├─ quiz/             directions, distractors, look-alike clusters, answer checking, session building
@@ -169,11 +187,12 @@ src/
 │  ├─ furigana.ts       `{漢字|かんじ}` markup → ruby segments / surface text / reading
 │  └─ japanese.ts       romaji/kana/English normalization
 ├─ store/               settings and progress (localStorage), live session (sessionStorage), account,
-│                       fetched word sets
+│                       fetched sets
 └─ hooks/               useHydrated, useSpeech, useHotkeys, useStartSession, useScrolled…
 scripts/
-├─ build-dictionary.mjs downloads JMdict, writes public/dict (see "The dictionary")
+├─ build-dictionary.mjs downloads JMdict and KANJIDIC2, writes public/dict (see "The dictionary")
 ├─ dictionary/build.mjs turns JMdict into the indexes, entry files and JLPT sets
+├─ dictionary/kanji.mjs turns KANJIDIC2 into the kanji details and the kanji sets
 └─ jlpt/                JLPT word lists, n5.csv to n1.csv
 ```
 

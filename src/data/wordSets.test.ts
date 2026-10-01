@@ -10,7 +10,8 @@ import {
   itemsForGroups,
   libraryRevision,
 } from "./library";
-import { WORD_SETS, wordSetGroupId, wordSetItemId, wordSetLevel, wordSetLevels } from "./wordSets";
+import { setKeyOf, setKeys, setLabel } from "./fetchedSets";
+import { WORD_SETS, wordSetGroupId, wordSetItemId, wordSetLevel } from "./wordSets";
 
 describe("word set ids", () => {
   it("say which level a set or a word belongs to", () => {
@@ -22,9 +23,19 @@ describe("word set ids", () => {
     expect(wordSetLevel("kanji-n5")).toBeNull();
   });
 
-  it("give the levels a selection and a list of items need, easiest first", () => {
-    expect(wordSetLevels(["hira-a", "dict-n3-2", "jm5-1", "dict-n3-1", "v-taberu"])).toEqual([5, 3]);
-    expect(wordSetLevels([])).toEqual([]);
+  it("say which fetched file a set or an item is in", () => {
+    expect(setKeyOf("dict-n5-1")).toBe("n5");
+    expect(setKeyOf("jm3-1358280")).toBe("n3");
+    expect(setKeyOf("kanji-n3-2")).toBe("kanji");
+    expect(setKeyOf("k-語")).toBe("kanji");
+    // Katakana items are "k-" too; kana, the app's words and its other sets are bundled.
+    for (const id of ["k-カ", "k-ティ", "h-あ", "v-taberu", "hira-a", "vocab-food"]) expect(setKeyOf(id)).toBeNull();
+  });
+
+  it("give the files a selection and a list of items need, words from the easiest level, then the kanji", () => {
+    expect(setKeys(["hira-a", "kanji-n5", "dict-n3-2", "jm5-1", "dict-n3-1", "v-taberu"])).toEqual(["n5", "n3", "kanji"]);
+    expect(setKeys([])).toEqual([]);
+    expect(["n5", "kanji"].map((key) => setLabel(key as "n5" | "kanji"))).toEqual(["N5 words", "kanji"]);
   });
 
   it("have a chip in the picker for every part of every level", () => {

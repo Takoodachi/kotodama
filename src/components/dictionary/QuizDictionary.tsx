@@ -7,7 +7,7 @@ import { Scrim } from "@/components/ui/Scrim";
 import { useUnlockProgress } from "@/hooks/useUnlockProgress";
 import { unlockedEntries } from "@/lib/dictionary";
 import { useProgress } from "@/store/progress";
-import { useLibraryRevision } from "@/store/wordSets";
+import { useLibraryRevision } from "@/store/fetchedSets";
 import { DictionaryBrowser } from "./DictionaryBrowser";
 
 interface QuizDictionaryProps {

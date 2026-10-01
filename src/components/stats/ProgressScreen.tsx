@@ -13,7 +13,7 @@ import { useHydrated } from "@/hooks/useHydrated";
 import { plural } from "@/lib/plural";
 import { accuracy, breakdown, CATEGORIES, CATEGORY_LABELS, proficiency, weakestItems } from "@/lib/analytics";
 import { useProgress } from "@/store/progress";
-import { useLibraryRevision } from "@/store/wordSets";
+import { useLibraryRevision } from "@/store/fetchedSets";
 import { MasteryBar, MasteryLegend } from "./MasteryBar";
 import { RadarChart, type RadarDatum } from "./RadarChart";
 
@@ -41,7 +41,7 @@ export function ProgressScreen() {
   const hydrated = useHydrated();
   const records = useProgress((s) => s.records);
   const totals = useProgress((s) => s.totals);
-  // Dictionary word sets that have been practiced are fetched a moment after the page loads.
+  // Fetched sets (JLPT words, the full kanji sets) that have been practiced arrive a moment after the page loads.
   const revision = useLibraryRevision();
 
   const byCategory = useMemo(
@@ -69,7 +69,7 @@ export function ProgressScreen() {
             section.id === "hiragana" || section.id === "katakana"
               ? [{ key: sub.id, label: sub.title, counts: breakdown(itemsForGroups(sub.groups.map((g) => g.id)), records) }]
               : sub.groups
-                  // A dictionary word set shows once it has been practiced: until then its words aren't fetched.
+                  // A fetched set shows once it has been practiced: until then its items aren't in the library.
                   .filter((g) => ITEMS_BY_GROUP.has(g.id))
                   .map((g) => ({
                     key: g.id,

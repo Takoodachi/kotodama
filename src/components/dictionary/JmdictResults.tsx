@@ -5,19 +5,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { wordSetItemId } from "@/data/wordSets";
 import { langOf } from "@/lib/japanese";
 import { loadDictionaryFile, openDictionary } from "@/lib/jmdict/client";
+import { kanjiIn } from "@/lib/jmdict/kanji";
 import type { Hit } from "@/lib/jmdict/search";
 import type { JmEntry } from "@/lib/jmdict/types";
 import { isUnlocked } from "@/lib/srs";
 import { useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
-import { useWordSets } from "@/store/wordSets";
+import { useFetchedSets } from "@/store/fetchedSets";
 import { JmdictEntry } from "./JmdictEntry";
+import { KanjiCards } from "./KanjiDetails";
 
 /** Entries fetched at a time; more follow as the list is scrolled. */
 const PAGE = 12;
 /** How long typing has to pause before a search goes out. */
 const TYPING_PAUSE = 200;
 const EXAMPLES = ["eat", "食べる", "taberu", "ねこ", "good morning"];
+/** A short search in kanji is as likely about the characters as about a word: their details lead the results. */
+const KANJI_QUERY = { characters: 4, kanji: 3 };
 
 interface Found {
   query: string;
@@ -37,8 +41,8 @@ interface JmdictResultsProps {
 export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsProps) {
   const furigana = useSettings((s) => s.furigana);
   const records = useProgress((s) => s.records);
-  const meta = useWordSets((s) => s.meta);
-  const loadMeta = useWordSets((s) => s.loadMeta);
+  const meta = useFetchedSets((s) => s.meta);
+  const loadMeta = useFetchedSets((s) => s.loadMeta);
   const typed = query.trim();
   const [found, setFound] = useState<Found | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -178,27 +182,43 @@ export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsPro
     );
   }
 
+  const queryKanji = [...typed].length <= KANJI_QUERY.characters ? kanjiIn(typed).slice(0, KANJI_QUERY.kanji) : [];
+  const kanji = queryKanji.length > 0 && (
+    <section aria-label="Kanji" className="mt-4">
+      <h2 className="mb-2 px-1 text-[11px] tracking-wide text-smoke">Kanji</h2>
+      <KanjiCards kanji={queryKanji} />
+    </section>
+  );
+
   // While the first search is out there is nothing to show yet; later ones keep the last results, dimmed.
   const shown = current ?? found;
   if (!shown) {
     return (
-      <p className="mt-8 px-2 text-center text-sm text-mist" role="status">
-        Searching…
-      </p>
+      <>
+        {kanji}
+        <p className="mt-8 px-2 text-center text-sm text-mist" role="status">
+          Searching…
+        </p>
+      </>
     );
   }
 
   if (shown.hits.length === 0 && current) {
     return (
-      <p className="mt-8 px-2 text-center text-sm leading-relaxed text-mist">
-        No matches for <span className="text-paper">&ldquo;{typed}&rdquo;</span>. Verbs and adjectives are listed in
-        their dictionary form (<span lang="ja" className="jp">食べる</span>, not <span lang="ja" className="jp">食べます</span>).
-      </p>
+      <>
+        {kanji}
+        <p className="mt-8 px-2 text-center text-sm leading-relaxed text-mist">
+          No {kanji ? "words" : "matches"} for <span className="text-paper">&ldquo;{typed}&rdquo;</span>. Verbs and
+          adjectives are listed in their dictionary form (<span lang="ja" className="jp">食べる</span>, not{" "}
+          <span lang="ja" className="jp">食べます</span>).
+        </p>
+      </>
     );
   }
 
   return (
     <div className={current ? undefined : "opacity-50 transition-opacity"} aria-busy={!current}>
+      {kanji}
       <p className="mt-4 mb-2 px-1 text-[11px] tracking-wide text-smoke tabular-nums" aria-live="polite">
         {current
           ? `${shown.hits.length.toLocaleString("en")} ${shown.hits.length === 1 ? "entry" : "entries"}, best matches first`

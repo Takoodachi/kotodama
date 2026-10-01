@@ -7,7 +7,7 @@ import { CATEGORY_LABELS } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { DICTIONARY_CATEGORIES, dictionaryEntries, searchDictionary } from "@/lib/dictionary";
 import { useSettings } from "@/store/settings";
-import { useLibraryRevision } from "@/store/wordSets";
+import { useLibraryRevision } from "@/store/fetchedSets";
 import { DictionaryEntry } from "./DictionaryEntry";
 import { SearchField } from "./SearchField";
 

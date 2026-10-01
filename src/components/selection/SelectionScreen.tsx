@@ -10,7 +10,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { SECTIONS, groupIdsOfSection } from "@/data/groups";
 import { countForGroups, itemsForGroups, WRITTEN_CATEGORIES } from "@/data/library";
 import type { Category } from "@/data/types";
-import { wordSetLevels } from "@/data/wordSets";
+import { setKeys, setLabel } from "@/data/fetchedSets";
 import { useActiveSection } from "@/hooks/useActiveSection";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useStartSession } from "@/hooks/useStartSession";
@@ -20,7 +20,7 @@ import { cn } from "@/lib/cn";
 import { availableModes, GRID_CATEGORIES, shownMode } from "@/lib/quiz/directions";
 import { useProgress } from "@/store/progress";
 import { useSettings, type SessionLength } from "@/store/settings";
-import { useLibraryRevision, useWordSets } from "@/store/wordSets";
+import { useLibraryRevision, useFetchedSets } from "@/store/fetchedSets";
 import { AnswerWithPicker } from "./AnswerWithPicker";
 import { DirectionPicker } from "./DirectionPicker";
 import { ModePicker } from "./ModePicker";
@@ -56,24 +56,25 @@ export function SelectionScreen() {
   const touch = useTouchDevice();
   const mode = shownMode(settings.mode, touch);
 
-  // Word sets from the dictionary arrive after the page: their sizes are known
-  // first (from its summary), their words once a set is selected.
+  // Sets drawn from the dictionary (JLPT words, the full kanji sets) arrive
+  // after the page: their sizes are known first (from its summary), their
+  // items once a set is selected.
   const revision = useLibraryRevision();
-  const setSizes = useWordSets((s) => s.meta?.sets);
-  const setNewWords = useWordSets((s) => s.meta?.setNewWords);
-  const setStatus = useWordSets((s) => s.status);
-  const loadMeta = useWordSets((s) => s.loadMeta);
-  const ensureSets = useWordSets((s) => s.ensure);
+  const setSizes = useFetchedSets((s) => s.meta?.sets);
+  const setNewWords = useFetchedSets((s) => s.meta?.setNewWords);
+  const setStatus = useFetchedSets((s) => s.status);
+  const loadMeta = useFetchedSets((s) => s.loadMeta);
+  const ensureSets = useFetchedSets((s) => s.ensure);
   useEffect(loadMeta, [loadMeta]);
-  const setLevels = useMemo(() => wordSetLevels(settings.selected), [settings.selected]);
-  const setsLoading = setLevels.some((level) => setStatus[level] === "loading");
-  const setsFailed = setLevels.filter((level) => setStatus[level] === "error");
+  const neededSets = useMemo(() => setKeys(settings.selected), [settings.selected]);
+  const setsLoading = neededSets.some((key) => setStatus[key] === "loading");
+  const setsFailed = neededSets.filter((key) => setStatus[key] === "error");
 
   const selected = useMemo(() => new Set(settings.selected), [settings.selected]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- the library itself grows when a word set arrives
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the library itself grows when a fetched set arrives
   const items = useMemo(() => itemsForGroups(settings.selected), [settings.selected, revision]);
   const categories = useMemo(() => new Set(items.map((i) => i.category)), [items]);
-  // Words on their way count too, so the total doesn't jump when they land; they are all grid cards.
+  // Items on their way count too, so the total doesn't jump when they land; they are all grid cards.
   const pendingCount = useMemo(
     () => countForGroups(settings.selected, setSizes) - countForGroups(settings.selected),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,8 +101,8 @@ export function SelectionScreen() {
 
   const start = async () => {
     if (mode === "grid") return router.push("/all");
-    // Selected word sets may still be on their way.
-    await ensureSets(setLevels);
+    // Selected sets may still be on their way.
+    await ensureSets(neededSets);
     startSession(itemsForGroups(settings.selected).map((i) => i.id));
   };
   const activeSection = useActiveSection(SECTIONS.map((section) => `section-${section.id}`));
@@ -169,11 +170,11 @@ export function SelectionScreen() {
         <p className="text-xs leading-relaxed text-mist" role="status">
           {setsFailed.length > 0 ? (
             <>
-              <span className="text-crimson-bright">Couldn&apos;t fetch the {setsFailed.map((level) => `N${level}`).join(", ")} words.</span>{" "}
-              Dictionary sets need a connection the first time; after that they work offline.
+              <span className="text-crimson-bright">Couldn&apos;t fetch the {setsFailed.map(setLabel).join(", ")}.</span>{" "}
+              Sets from the dictionary need a connection the first time; after that they work offline.
             </>
           ) : (
-            "Fetching the dictionary words…"
+            "Fetching from the dictionary…"
           )}
         </p>
       )}

@@ -20,9 +20,11 @@ describe("content library", () => {
     }
   });
 
-  it("has no empty groups in the picker, apart from the dictionary's word sets, which are fetched", () => {
+  it("has no empty groups in the picker, apart from sets that are fetched", () => {
     for (const group of ALL_GROUPS) {
-      if (wordSetLevel(group.id)) expect(ITEMS_BY_GROUP.has(group.id), group.id).toBe(false);
+      // JLPT word sets, and the further parts of the large kanji levels, come from the dictionary's files.
+      const fetched = wordSetLevel(group.id) || /^kanji-[ng]\d-\d+$/.test(group.id);
+      if (fetched) expect(ITEMS_BY_GROUP.has(group.id), group.id).toBe(false);
       else expect(ITEMS_BY_GROUP.get(group.id)?.length ?? 0, group.id).toBeGreaterThan(0);
     }
   });
@@ -114,14 +116,15 @@ describe("content library", () => {
 
   it("has the expected amount of content", () => {
     const count = (c: Category) => ITEMS_BY_CATEGORY.get(c)!.length;
+    // These are the items bundled with the app; the rest of the kanji and the JLPT words are fetched.
     // 46 main + 20 dakuten + 5 handakuten + 36 combinations; katakana adds 24 extended sounds.
     expect(count("hiragana")).toBe(107);
     expect(count("katakana")).toBe(131);
     const kanjiAt = (level: number) => ITEMS_BY_GROUP.get(`kanji-n${level}`)!.length;
     expect(kanjiAt(5)).toBeGreaterThanOrEqual(100);
     expect(kanjiAt(4)).toBeGreaterThanOrEqual(140);
-    expect(kanjiAt(3)).toBeGreaterThanOrEqual(160);
-    expect(kanjiAt(2)).toBeGreaterThanOrEqual(55);
+    expect(kanjiAt(3)).toBeGreaterThanOrEqual(150);
+    expect(kanjiAt(2)).toBeGreaterThanOrEqual(50);
     expect(kanjiAt(1)).toBeGreaterThanOrEqual(50);
     expect(count("vocab")).toBeGreaterThanOrEqual(1600);
     expect(count("phrase")).toBeGreaterThanOrEqual(300);

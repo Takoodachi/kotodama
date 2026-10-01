@@ -8,6 +8,7 @@ import {
   plainMeaning,
   withoutNotes,
 } from "../../src/lib/jmdict/keys.mjs";
+import { buildKanji } from "./kanji.mjs";
 
 /**
  * Turns JMdict into the files the app's dictionary is served from. Nothing
@@ -25,6 +26,8 @@ import {
  *   <v>/ph/<n>.json      English index: a whole meaning of a few words → entries
  *   <v>/sets/n<l>.json   JLPT word sets for the quiz
  *   <v>/links.json       the app's own words and phrases → their entries
+ *   <v>/kd/<n>.json      details of every kanji        } from KANJIDIC2,
+ *   <v>/sets/kanji.json  the jōyō kanji for the quiz   } see ./kanji.mjs
  *
  * An entry is known by its position in commonness order (JLPT words from N5
  * up, then other common words, then the rest), which says which file holds it
@@ -236,8 +239,13 @@ function setWord(word, row) {
  * @param {JlptRow[]} jlptRows
  * @param {Curated[]} curated
  * @param {SetConfig[]} setConfigs
+ * @param {{
+ *   characters: import("./kanji.mjs").Character[],
+ *   curated: import("./kanji.mjs").CuratedKanji[],
+ *   config: import("./kanji.mjs").KanjiConfig,
+ * }} [kanjidic] KANJIDIC2, the app's own kanji and how the kanji sets are split; without it no kanji files are made
  */
-export function buildDictionary(jmdict, jlptRows, curated, setConfigs) {
+export function buildDictionary(jmdict, jlptRows, curated, setConfigs, kanjidic) {
   /** The files of the versioned folder, by their path inside it. @type {Map<string, unknown>} */
   const inside = new Map();
 
@@ -500,10 +508,18 @@ export function buildDictionary(jmdict, jlptRows, curated, setConfigs) {
     sets.push(groups);
   }
 
+  // ---- Kanji: details for the dictionary, and the jōyō kanji as sets for the quiz.
+  const kanji = kanjidic && buildKanji(kanjidic.characters, kanjidic.curated, kanjidic.config);
+  if (kanji) {
+    for (const [path, content] of kanji.files) inside.set(path, content);
+    inside.set("sets/kanji.json", kanji.set);
+    Object.assign(setSizes, kanji.sizes);
+  }
+
   // The folder is named after the JMdict release and the shape of the files,
-  // and after the word sets and links too: those also change with the app's
-  // own library, and a browser keeps a folder's files for good.
-  const version = `${jmdict.date.replace(/-/g, "")}-${FORMAT}-${fingerprint(JSON.stringify([sets, links]))}`;
+  // and after the sets and links too: those also change with the app's own
+  // library, and a browser keeps a folder's files for good.
+  const version = `${jmdict.date.replace(/-/g, "")}-${FORMAT}-${fingerprint(JSON.stringify([sets, links, kanji?.set]))}`;
   /** @type {Map<string, unknown>} */
   const files = new Map([...inside].map(([path, content]) => [`${version}/${path}`, content]));
 
@@ -519,6 +535,7 @@ export function buildDictionary(jmdict, jlptRows, curated, setConfigs) {
     sets: setSizes,
     setNewWords,
     newWords,
+    kanji: kanji?.count ?? 0,
     tags: Object.fromEntries([...usedTags].sort().map((tag) => [tag, jmdict.tags[tag] ?? tag])),
   });
 
@@ -534,6 +551,8 @@ export function buildDictionary(jmdict, jlptRows, curated, setConfigs) {
       englishPhrases: phrases.size,
       linked: Object.keys(links).length,
       newWords,
+      kanji: kanji?.count ?? 0,
+      jouyouKanji: kanji?.jouyou ?? 0,
       sets: setSizes,
       relisted,
       unlinked,

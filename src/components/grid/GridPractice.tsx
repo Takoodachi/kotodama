@@ -9,7 +9,7 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { MuteButton } from "@/components/ui/MuteButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { itemsForGroups, speechText, writtenItem } from "@/data/library";
-import { wordSetLevels } from "@/data/wordSets";
+import { setKeys } from "@/data/fetchedSets";
 import type { StudyItem } from "@/data/types";
 import { useHotkeys } from "@/hooks/useHotkeys";
 import { useHydrated } from "@/hooks/useHydrated";
@@ -23,7 +23,7 @@ import { seededRng, shuffle } from "@/lib/random";
 import { scriptNames } from "@/lib/writing";
 import { useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
-import { useLibraryRevision, useWordSets } from "@/store/wordSets";
+import { useLibraryRevision, useFetchedSets } from "@/store/fetchedSets";
 
 interface CardState {
   status: "open" | "right";
@@ -170,9 +170,9 @@ const scrolling = (): ScrollBehavior =>
 export function GridPractice() {
   const saved = useHydrated();
   const selected = useSettings((s) => s.selected);
-  // Selected word sets from the dictionary are fetched first, so the grid is laid out once, complete.
-  const setStatus = useWordSets((s) => s.status);
-  const fetching = wordSetLevels(selected).some((level) => !setStatus[level] || setStatus[level] === "loading");
+  // Selected sets that are fetched (JLPT words, the full kanji sets) come first, so the grid is laid out once, complete.
+  const setStatus = useFetchedSets((s) => s.status);
+  const fetching = setKeys(selected).some((key) => !setStatus[key] || setStatus[key] === "loading");
   const hydrated = saved && !fetching;
   const writing = useSettings((s) => s.writing);
   const autoplay = useSettings((s) => s.audio.autoplay);

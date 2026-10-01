@@ -93,6 +93,25 @@ export function meaningWords(plain) {
   return [...new Set(words.filter((word) => !STOP_WORDS.has(word) && (word.length > 1 || /\d/.test(word))))];
 }
 
+/** Kanji per file of kanji details: the files are named after the characters' code points. */
+export const KANJI_CHUNK = 128;
+
+/**
+ * The file holding a kanji's details, under the dictionary's folder.
+ * @param {string} kanji
+ */
+export const kanjiFile = (kanji) => `kd/${Math.floor((kanji.codePointAt(0) ?? 0) / KANJI_CHUNK).toString(16)}.json`;
+
+/**
+ * The id of a kanji set: a JLPT level ("n", 5 to 1) or a school grade ("g",
+ * 1 to 6, and 8 for secondary school), and which part of it, from 1. The
+ * first part keeps the plain id the set had before it was split.
+ * @param {"n" | "g"} kind
+ * @param {number} key
+ * @param {number} part
+ */
+export const kanjiGroupId = (kind, key, part) => (part === 1 ? `kanji-${kind}${key}` : `kanji-${kind}${key}-${part}`);
+
 /**
  * How an entry found through an English index matches, 0 the best. The
  * indexes store it with the entry, as `entry * MATCHES + match`.

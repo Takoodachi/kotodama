@@ -5,11 +5,13 @@
  *   npm run dict
  *
  * JMdict (https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project)
- * is downloaded as JSON from the latest jmdict-simplified release and kept in
+ * and KANJIDIC2 (https://www.edrdg.org/wiki/index.php/KANJIDIC_Project) are
+ * downloaded as JSON from the latest jmdict-simplified release and kept in
  * .cache/, so later runs are offline until a newer release appears. Set
- * JMDICT_JSON to a jmdict-eng JSON file to build from that instead. The JLPT
- * levels come from scripts/jlpt/*.csv. Neither the download nor the output is
- * committed: the deploy workflow runs this before each build.
+ * JMDICT_JSON or KANJIDIC_JSON to a JSON file to build from that instead.
+ * The JLPT levels of words come from scripts/jlpt/*.csv. Neither the
+ * downloads nor the output are committed: the deploy workflow runs this
+ * before each build.
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -42,33 +44,46 @@ function untar(archive) {
   throw new Error("No JSON file in the archive");
 }
 
-/** The latest English JMdict as text: from the cache, or downloaded into it. */
-async function latestJmdict() {
-  /** @type {Record<string, string>} */
-  const headers = { "User-Agent": "kotodama-build", Accept: "application/vnd.github+json" };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+/** @type {Record<string, string>} */
+const HEADERS = { "User-Agent": "kotodama-build", Accept: "application/vnd.github+json" };
+if (process.env.GITHUB_TOKEN) HEADERS.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
 
+/** @type {Promise<{ name: string, size: number, browser_download_url: string }[]> | undefined} */
+let release;
+
+/** The files of the latest release, asked for once. */
+function releaseAssets() {
+  release ??= fetch(RELEASES, { headers: HEADERS }).then(async (response) => {
+    if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
+    return (await response.json()).assets;
+  });
+  return release;
+}
+
+/**
+ * One of the release's files as text: from the cache, or downloaded into it.
+ * @param {string} name "jmdict-eng" or "kanjidic2-en"
+ */
+async function latest(name) {
+  const archive = new RegExp(`^${name}-\\d.*\\.json\\.tgz$`);
   mkdirSync(CACHE, { recursive: true });
-  const cached = () => readdirSync(CACHE).filter((name) => /^jmdict-eng-\d.*\.json\.tgz$/.test(name)).sort();
+  const cached = () => readdirSync(CACHE).filter((file) => archive.test(file)).sort();
   let asset;
   try {
-    const response = await fetch(RELEASES, { headers });
-    if (!response.ok) throw new Error(`GitHub answered ${response.status}`);
-    const release = await response.json();
-    asset = release.assets.find((/** @type {{ name: string }} */ a) => /^jmdict-eng-\d.*\.json\.tgz$/.test(a.name));
-    if (!asset) throw new Error("the release has no jmdict-eng archive");
+    asset = (await releaseAssets()).find((a) => archive.test(a.name));
+    if (!asset) throw new Error(`the release has no ${name} archive`);
   } catch (error) {
     // Offline, or rate limited: a copy from an earlier run will do.
     const last = cached().at(-1);
-    if (!last) throw new Error(`Couldn't find the latest JMdict release (${error}), and none is cached.`);
-    console.warn(`Couldn't check for a newer JMdict (${error}); using the cached ${last}.`);
+    if (!last) throw new Error(`Couldn't find the latest ${name} (${error}), and none is cached.`);
+    console.warn(`Couldn't check for a newer ${name} (${error}); using the cached ${last}.`);
     return untar(readFileSync(join(CACHE, last)));
   }
 
   const file = join(CACHE, asset.name);
   if (!existsSync(file)) {
     console.log(`Downloading ${asset.name} (${(asset.size / 1e6).toFixed(1)} MB)`);
-    const response = await fetch(asset.browser_download_url, { headers: { "User-Agent": headers["User-Agent"] } });
+    const response = await fetch(asset.browser_download_url, { headers: { "User-Agent": HEADERS["User-Agent"] } });
     if (!response.ok) throw new Error(`Download failed: ${response.status}`);
     writeFileSync(file, Buffer.from(await response.arrayBuffer()));
     for (const old of cached()) if (old !== asset.name) rmSync(join(CACHE, old));
@@ -120,10 +135,26 @@ function curatedItems() {
   );
 }
 
-const source = process.env.JMDICT_JSON ? readFileSync(process.env.JMDICT_JSON, "utf8") : await latestJmdict();
-const jmdict = JSON.parse(source);
+/** The app's own kanji: which ones they are, and the level and grade they are filed under. */
+function curatedKanji() {
+  return readJson(join(ROOT, "src", "data", "kanji.json")).map(
+    (/** @type {{ jp: string, jlpt: number, grade: number }} */ raw) => ({ literal: raw.jp, jlpt: raw.jlpt, grade: raw.grade }),
+  );
+}
+
+/**
+ * @param {string | undefined} file a JSON file to use instead of the release's
+ * @param {string} name
+ */
+const source = async (file, name) => JSON.parse(file ? readFileSync(file, "utf8") : await latest(name));
+
+const jmdict = await source(process.env.JMDICT_JSON, "jmdict-eng");
 if (!String(jmdict.version).startsWith("3.") || !Array.isArray(jmdict.words)) {
   throw new Error(`Unexpected JMdict format (version ${jmdict.version}); scripts/dictionary/build.mjs needs a look.`);
+}
+const kanjidic = await source(process.env.KANJIDIC_JSON, "kanjidic2-en");
+if (!String(kanjidic.version).startsWith("3.") || !Array.isArray(kanjidic.characters)) {
+  throw new Error(`Unexpected KANJIDIC2 format (version ${kanjidic.version}); scripts/dictionary/kanji.mjs needs a look.`);
 }
 
 const { version, files, report } = buildDictionary(
@@ -131,6 +162,11 @@ const { version, files, report } = buildDictionary(
   jlptRows(),
   curatedItems(),
   readJson(join(ROOT, "src", "data", "dictionary-sets.json")),
+  {
+    characters: kanjidic.characters,
+    curated: curatedKanji(),
+    config: readJson(join(ROOT, "src", "data", "kanji-sets.json")),
+  },
 );
 
 rmSync(OUT, { recursive: true, force: true });
@@ -146,7 +182,7 @@ for (const [path, content] of files) {
 const { unlinked, relisted, sets, ...counts } = report;
 console.log(`Dictionary ${version}: ${files.size} files, ${(bytes / 1e6).toFixed(1)} MB`);
 console.log(counts);
-console.log("Sets:", Object.entries(sets).map(([id, size]) => `${id.replace("dict-", "")} ${size}`).join(", "));
+console.log("Sets:", Object.entries(sets).map(([id, size]) => `${id.replace(/^dict-|^kanji-/, "")} ${size}`).join(", "));
 console.log(`${relisted.length} JLPT words moved to the entry their meaning fits: ${relisted.join(", ")}`);
 // Whole sentences among the phrases aren't dictionary entries, so most of these are expected.
 const words = unlinked.filter((id) => id.startsWith("v-"));

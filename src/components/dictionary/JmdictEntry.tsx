@@ -6,9 +6,11 @@ import { toRomaji } from "wanakana";
 import { JpText } from "@/components/japanese/Furigana";
 import { SpeakButton } from "@/components/japanese/SpeakButton";
 import { cn } from "@/lib/cn";
+import { kanjiIn } from "@/lib/jmdict/kanji";
 import { headword, tagLabel } from "@/lib/jmdict/labels";
 import type { JmEntry } from "@/lib/jmdict/types";
 import type { FuriganaMode } from "@/store/settings";
+import { KanjiCards } from "./KanjiDetails";
 
 /** Senses shown before "Show all": the first few are the ones in everyday use. */
 const SENSES_SHOWN = 3;
@@ -38,10 +40,13 @@ interface JmdictEntryProps {
   furigana: FuriganaMode;
 }
 
-/** One entry of the full dictionary: how the word is written and read, and each of its senses. */
+/** One entry of the full dictionary: how the word is written and read, each of its senses, and its kanji to open. */
 export function JmdictEntry({ entry, tags, practice, furigana }: JmdictEntryProps) {
   const [open, setOpen] = useState(false);
+  const [kanjiOpen, setKanjiOpen] = useState(false);
   const word = headword(entry);
+  // The kanji of its usual written form, even for a word shown in kana because it usually is.
+  const kanji = kanjiIn(entry.k?.[0] ?? "");
   const long = [...word.written].length > 8;
   const senses = open ? entry.e : entry.e.slice(0, SENSES_SHOWN);
   const hidden = entry.e.length - SENSES_SHOWN;
@@ -122,6 +127,24 @@ export function JmdictEntry({ entry, tags, practice, furigana }: JmdictEntryProp
             {word.others.join("、")}
           </span>
         </p>
+      )}
+      {kanji.length > 0 && (
+        <div className="mt-2.5">
+          <button
+            type="button"
+            aria-expanded={kanjiOpen}
+            onClick={() => setKanjiOpen(!kanjiOpen)}
+            className="flex items-center gap-1.5 text-[11px] text-smoke transition-colors hover:text-mist"
+          >
+            <ChevronDown className={cn("size-3.5 transition-transform duration-300", kanjiOpen && "rotate-180")} />
+            Kanji
+            <span lang="ja" className="jp text-sm tracking-widest text-paper/80">
+              {kanji.join("")}
+            </span>
+          </button>
+          {/* Fetched when first opened. */}
+          {kanjiOpen && <KanjiCards kanji={kanji} className="mt-2" />}
+        </div>
       )}
       {(entry.c || entry.j) && (
         <p className="mt-2.5 flex flex-wrap items-center gap-1.5">
