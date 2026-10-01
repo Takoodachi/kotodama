@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# the dictionary: downloaded and built by `npm run dict`
+/.cache/
+/public/dict/
+
 # production
 /build
 

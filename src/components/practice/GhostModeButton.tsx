@@ -7,6 +7,7 @@ import { GHOST_SIZE, useStartGhostMode } from "@/hooks/useStartSession";
 import { cn } from "@/lib/cn";
 import { plural } from "@/lib/plural";
 import { useProgress } from "@/store/progress";
+import { useLibraryRevision } from "@/store/wordSets";
 
 /**
  * Starts Ghost mode: a session made only of the items with the lowest
@@ -14,6 +15,8 @@ import { useProgress } from "@/store/progress";
  */
 export function GhostModeButton({ className, compact }: { className?: string; compact?: boolean }) {
   const hydrated = useHydrated();
+  // Recounted when a dictionary word set arrives: its words are in the library only then.
+  useLibraryRevision();
   const studied = useProgress((s) => Object.keys(s.records).filter((id) => ITEMS_BY_ID.has(id)).length);
   const startGhost = useStartGhostMode();
   const available = hydrated && studied > 0;

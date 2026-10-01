@@ -1,5 +1,5 @@
 import { isKana, toHiragana, toRomaji } from "wanakana";
-import { ITEMS_BY_CATEGORY, kanjiReadings } from "@/data/library";
+import { ITEMS_BY_CATEGORY, kanjiReadings, libraryRevision } from "@/data/library";
 import type { PartOfSpeech, StudyItem } from "@/data/types";
 import {
   contentWords,
@@ -134,7 +134,7 @@ const WORD_CLASS: Record<PartOfSpeech, string> = {
 const synonymKey = (item: StudyItem) =>
   `${item.category}|${item.pos ? WORD_CLASS[item.pos] : ""}|${normalizeEnglish(item.meaning[0] ?? "")}`;
 
-let synonymIndex: Map<string, StudyItem[]> | null = null;
+let synonyms: { revision: number; index: Map<string, StudyItem[]> } | null = null;
 
 /**
  * Other words (or phrases) with the same first meaning and the same class of
@@ -143,16 +143,20 @@ let synonymIndex: Map<string, StudyItem[]> | null = null;
  */
 export function synonymsOf(item: StudyItem): StudyItem[] {
   if (item.category !== "vocab" && item.category !== "phrase") return [];
-  if (!synonymIndex) {
-    synonymIndex = new Map();
+  // Built again when the library grows (a dictionary word set arriving).
+  if (synonyms?.revision !== libraryRevision()) {
+    const index = new Map<string, StudyItem[]>();
     for (const category of ["vocab", "phrase"] as const) {
       for (const other of ITEMS_BY_CATEGORY.get(category) ?? []) {
         const key = synonymKey(other);
-        synonymIndex.set(key, [...(synonymIndex.get(key) ?? []), other]);
+        const same = index.get(key);
+        if (same) same.push(other);
+        else index.set(key, [other]);
       }
     }
+    synonyms = { revision: libraryRevision(), index };
   }
-  return (synonymIndex.get(synonymKey(item)) ?? []).filter((other) => other.id !== item.id);
+  return (synonyms.index.get(synonymKey(item)) ?? []).filter((other) => other.id !== item.id);
 }
 
 export function checkTypedAnswer(item: StudyItem, direction: Direction, input: string): boolean {

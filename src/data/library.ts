@@ -9,7 +9,9 @@ import kanjiJson from "./kanji.json";
 import phrasesJson from "./phrases.json";
 import sentencesJson from "./sentences.json";
 import vocabJson from "./vocab.json";
+import type { SetFile } from "@/lib/jmdict/types";
 import type { Category, Example, RawItem, StudyItem } from "./types";
+import { wordSetGroupId, wordSetItemId } from "./wordSets";
 
 /** Example sentences for words and kanji, keyed by item id. */
 export const EXAMPLES: Record<string, Example> = examplesJson;
@@ -158,6 +160,54 @@ export const ITEMS_BY_CATEGORY: Map<Category, StudyItem[]> = (() => {
   return map;
 })();
 
+let revision = 0;
+
+/**
+ * How many word sets have joined the library since it was first built.
+ * Anything worked out from the library and kept (a search index, a list of
+ * synonyms) is out of date once this changes.
+ */
+export const libraryRevision = () => revision;
+
+const addedLevels = new Set<number>();
+
+/**
+ * Adds a JLPT level's words from the dictionary to the library, as the sets
+ * `dict-n<level>-<part>`. A word the library already teaches joins the set as
+ * it is, keeping its example sentence and its progress, instead of appearing
+ * twice. Returns false when the level was already added.
+ */
+export function addWordSet(file: SetFile): boolean {
+  if (addedLevels.has(file.level)) return false;
+  addedLevels.add(file.level);
+  file.groups.forEach((rows, index) => {
+    const group = wordSetGroupId(file.level, index + 1);
+    const items: StudyItem[] = [];
+    for (const row of rows) {
+      if (typeof row === "string") {
+        const taught = ITEMS_BY_ID.get(row);
+        if (!taught) continue;
+        if (!taught.groups.includes(group)) taught.groups.push(group);
+        items.push(taught);
+        continue;
+      }
+      const [entry, jp, meaning, pos] = row;
+      const id = wordSetItemId(file.level, entry);
+      let item = ITEMS_BY_ID.get(id);
+      if (!item) {
+        item = resolve({ id, group, jp, meaning, pos }, "vocab");
+        LIBRARY.push(item);
+        ITEMS_BY_ID.set(id, item);
+        ITEMS_BY_CATEGORY.get("vocab")!.push(item);
+      }
+      items.push(item);
+    }
+    ITEMS_BY_GROUP.set(group, items);
+  });
+  revision++;
+  return true;
+}
+
 /**
  * Every item in any of the given groups, without duplicates. This is what
  * makes mix-and-match work: kana rows, kanji levels and phrase sets can be
@@ -175,6 +225,16 @@ export function itemsForGroups(groupIds: Iterable<string>): StudyItem[] {
     }
   }
   return items;
+}
+
+/**
+ * How many items the groups hold. A word set whose words haven't been fetched
+ * yet counts with its size from the dictionary's summary, when that is given.
+ */
+export function countForGroups(groupIds: Iterable<string>, sizes?: Record<string, number>): number {
+  const ids = [...groupIds];
+  const pending = sizes ? ids.filter((id) => !ITEMS_BY_GROUP.has(id)) : [];
+  return itemsForGroups(ids).length + pending.reduce((sum, id) => sum + (sizes![id] ?? 0), 0);
 }
 
 export function itemsByIds(ids: Iterable<string>): StudyItem[] {

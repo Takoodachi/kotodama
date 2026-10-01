@@ -1,14 +1,16 @@
 import { toHiragana } from "wanakana";
-import { LIBRARY } from "@/data/library";
+import { ITEMS_BY_ID, LIBRARY, libraryRevision } from "@/data/library";
 import type { Category, StudyItem } from "@/data/types";
+import { wordSetLevel } from "@/data/wordSets";
 import { readingKey, stripPunctuation } from "@/lib/japanese";
 import { isUnlocked, type SrsRecord } from "@/lib/srs";
 
 /**
- * The dictionary is the library's words, phrases and sentences, looked up in
- * either direction: Japanese (kanji, kana or romaji) to English, or English
- * to Japanese. An entry is "unlocked" once it has been answered right in a
- * quiz; unlocked entries are the ones that can be consulted during a quiz.
+ * The learner's own dictionary: the library's words, phrases and sentences,
+ * looked up in either direction: Japanese (kanji, kana or romaji) to English,
+ * or English to Japanese. An entry is "unlocked" once it has been answered
+ * right in a quiz; unlocked entries are the ones that can be consulted during
+ * a quiz. (The full dictionary, JMdict, is searched in lib/jmdict.)
  */
 export const DICTIONARY_CATEGORIES: Category[] = ["vocab", "phrase", "sentence"];
 
@@ -59,15 +61,23 @@ function toEntry(item: StudyItem): Entry {
 
 const KIND_ORDER: Partial<Record<Category, number>> = { vocab: 0, phrase: 1, sentence: 2 };
 
-/** Every entry, in dictionary (kana) order; words come before phrases and sentences that read the same. */
-const ENTRIES: Entry[] = LIBRARY.filter(inDictionary)
-  .map(toEntry)
-  .sort(
-    (a, b) =>
-      a.kana.localeCompare(b.kana, "ja") || KIND_ORDER[a.item.category]! - KIND_ORDER[b.item.category]!,
-  );
+let built: { revision: number; entries: Entry[]; items: StudyItem[] } | null = null;
 
-export const DICTIONARY: StudyItem[] = ENTRIES.map((entry) => entry.item);
+/** The entries as they stand: the library grows when a dictionary word set is fetched. */
+function index() {
+  if (built?.revision !== libraryRevision()) {
+    const entries = LIBRARY.filter(inDictionary)
+      .map(toEntry)
+      .sort(
+        (a, b) => a.kana.localeCompare(b.kana, "ja") || KIND_ORDER[a.item.category]! - KIND_ORDER[b.item.category]!,
+      );
+    built = { revision: libraryRevision(), entries, items: entries.map((entry) => entry.item) };
+  }
+  return built;
+}
+
+/** Every entry, in dictionary (kana) order; words come before phrases and sentences that read the same. */
+export const dictionaryEntries = (): StudyItem[] => index().items;
 
 const NO_MATCH = Infinity;
 
@@ -113,7 +123,7 @@ const JAPANESE = /[぀-ヿ㐀-鿿々]/;
  * say).
  */
 export function searchDictionary(query: string, among?: (item: StudyItem) => boolean): StudyItem[] {
-  const entries = among ? ENTRIES.filter((entry) => among(entry.item)) : ENTRIES;
+  const entries = among ? index().entries.filter((entry) => among(entry.item)) : index().entries;
   const typed = query.normalize("NFKC").trim().toLowerCase();
   if (!typed) return entries.map((entry) => entry.item);
 
@@ -140,5 +150,22 @@ export function searchDictionary(query: string, among?: (item: StudyItem) => boo
 
 /** Ids of the dictionary entries answered right at least once. */
 export function unlockedEntries(records: Record<string, SrsRecord>): Set<string> {
-  return new Set(DICTIONARY.filter((item) => isUnlocked(records[item.id])).map((item) => item.id));
+  return new Set(dictionaryEntries().filter((item) => isUnlocked(records[item.id])).map((item) => item.id));
+}
+
+/**
+ * How many entries have been unlocked, and out of how many. Words from the
+ * dictionary's JLPT sets count even while their set isn't fetched: `newWords`
+ * is how many words those sets add to the library in all.
+ */
+export function unlockProgress(records: Record<string, SrsRecord>, newWords = 0): { unlocked: number; total: number } {
+  let unlocked = 0;
+  for (const [id, record] of Object.entries(records)) {
+    if (!isUnlocked(record)) continue;
+    const item = ITEMS_BY_ID.get(id);
+    if (item ? inDictionary(item) : wordSetLevel(id) !== null) unlocked++;
+  }
+  const entries = dictionaryEntries();
+  const own = entries.filter((item) => wordSetLevel(item.id) === null).length;
+  return { unlocked, total: Math.max(entries.length, own + newWords) };
 }

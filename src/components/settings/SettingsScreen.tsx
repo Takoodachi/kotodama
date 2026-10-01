@@ -4,6 +4,7 @@ import { Monitor, Moon, Play, Sun, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { AccountPanel } from "@/components/account/AccountPanel";
+import { DictionaryCredits } from "@/components/dictionary/DictionaryCredits";
 import { JpText } from "@/components/japanese/Furigana";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { Button } from "@/components/ui/Button";
@@ -257,6 +258,10 @@ export function SettingsScreen() {
             : " Progress is stored on this device only."}
         </p>
         <ResetProgress />
+      </Panel>
+
+      <Panel eyebrow="About" title="Dictionary data">
+        <DictionaryCredits className="text-sm text-mist" />
       </Panel>
     </motion.div>
   );

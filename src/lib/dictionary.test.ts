@@ -1,18 +1,19 @@
 import { describe, expect, it } from "vitest";
+import { addWordSet } from "@/data/library";
 import { review, type SrsRecord } from "@/lib/srs";
-import { DICTIONARY, inDictionary, searchDictionary, unlockedEntries } from "./dictionary";
+import { dictionaryEntries, inDictionary, searchDictionary, unlockedEntries, unlockProgress } from "./dictionary";
 
 const top = (query: string, n = 1) => searchDictionary(query).slice(0, n).map((item) => item.id);
 
 describe("the dictionary", () => {
   it("holds every word, phrase and sentence, and nothing else", () => {
-    expect(DICTIONARY.every(inDictionary)).toBe(true);
-    expect(new Set(DICTIONARY.map((item) => item.category))).toEqual(new Set(["vocab", "phrase", "sentence"]));
+    expect(dictionaryEntries().every(inDictionary)).toBe(true);
+    expect(new Set(dictionaryEntries().map((item) => item.category))).toEqual(new Set(["vocab", "phrase", "sentence"]));
   });
 
   it("lists everything in kana order when nothing is typed", () => {
     const all = searchDictionary("  ");
-    expect(all).toHaveLength(DICTIONARY.length);
+    expect(all).toHaveLength(dictionaryEntries().length);
     const firstA = all.findIndex((item) => item.reading.startsWith("あ"));
     const firstKa = all.findIndex((item) => item.reading.startsWith("か"));
     const firstWa = all.findIndex((item) => item.reading.startsWith("わ"));
@@ -79,5 +80,25 @@ describe("unlockedEntries", () => {
   it("counts records saved before unlocks were kept", () => {
     const old: SrsRecord = { box: 2, due: 0, seen: 3, correct: 2, lapses: 1, last: 500 };
     expect(unlockedEntries({ "v-taberu": old }).has("v-taberu")).toBe(true);
+  });
+});
+
+describe("words from the dictionary's JLPT sets", () => {
+  const right = review(undefined, true, 1000);
+
+  it("count as unlocked even before their set is fetched, out of all there are to unlock", () => {
+    const own = dictionaryEntries().length;
+    const before = unlockProgress({ "jm1-1421150": right, "v-taberu": right, "h-あ": right }, 6000);
+    expect(before).toEqual({ unlocked: 2, total: own + 6000 });
+  });
+
+  it("join the dictionary once their set is added to the library", () => {
+    const own = dictionaryEntries().length;
+    expect(searchDictionary("landowner")).toEqual([]);
+    addWordSet({ level: 1, groups: [[[1421150, "{地主|じぬし}", ["landowner", "landlord"], "noun"], "v-taberu"]] });
+    expect(dictionaryEntries()).toHaveLength(own + 1);
+    expect(top("landowner")).toEqual(["jm1-1421150"]);
+    expect(top("じぬし")).toEqual(["jm1-1421150"]);
+    expect([...unlockedEntries({ "jm1-1421150": right })]).toEqual(["jm1-1421150"]);
   });
 });

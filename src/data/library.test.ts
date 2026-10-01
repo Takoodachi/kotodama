@@ -5,6 +5,7 @@ import { readingKey, stripPunctuation } from "@/lib/japanese";
 import { ALL_GROUPS, SECTIONS } from "./groups";
 import { EXAMPLES, exampleTarget, GAP, ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, ITEMS_BY_ID, LIBRARY, writtenItem } from "./library";
 import type { Category } from "./types";
+import { wordSetLevel } from "./wordSets";
 
 describe("content library", () => {
   it("has unique ids", () => {
@@ -19,9 +20,10 @@ describe("content library", () => {
     }
   });
 
-  it("has no empty groups in the picker", () => {
+  it("has no empty groups in the picker, apart from the dictionary's word sets, which are fetched", () => {
     for (const group of ALL_GROUPS) {
-      expect(ITEMS_BY_GROUP.get(group.id)?.length ?? 0, group.id).toBeGreaterThan(0);
+      if (wordSetLevel(group.id)) expect(ITEMS_BY_GROUP.has(group.id), group.id).toBe(false);
+      else expect(ITEMS_BY_GROUP.get(group.id)?.length ?? 0, group.id).toBeGreaterThan(0);
     }
   });
 

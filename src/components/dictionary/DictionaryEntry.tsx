@@ -39,7 +39,8 @@ export function DictionaryEntry({ item, unlocked, showLock, furigana }: Dictiona
   const [open, setOpen] = useState(false);
   const long = [...item.surface].length > 8;
   const kind = item.category === "vocab" ? item.pos && PART_OF_SPEECH[item.pos] : item.category;
-  const set = GROUPS_BY_ID.get(item.groups[0])?.sublabel;
+  const group = GROUPS_BY_ID.get(item.groups[0]);
+  const set = group?.name ?? group?.sublabel;
   const body = (
     <>
       <JpText

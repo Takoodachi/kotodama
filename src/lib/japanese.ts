@@ -1,4 +1,5 @@
 import { toHiragana, toRomaji } from "wanakana";
+import { withoutNotes } from "@/lib/jmdict/keys.mjs";
 
 const PUNCTUATION =
   /[\s　.,!?;:'"`~()\[\]{}\-‐–—（）「」『』【】［］、。！？・…〜～♪’‘“”]/g;
@@ -71,10 +72,8 @@ export function japaneseKey(input: string, strict = false): string {
 }
 
 export function normalizeEnglish(input: string): string {
-  return input
-    .normalize("NFKC")
+  return withoutNotes(input.normalize("NFKC"))
     .toLowerCase()
-    .replace(/\(.*?\)/g, " ")
     .replace(/'/g, "")
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\b(to|a|an|the)\b/g, " ")

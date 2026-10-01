@@ -1,13 +1,15 @@
 "use client";
 
-import { BookOpenCheck, Search, X } from "lucide-react";
+import { BookOpenCheck } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import type { Category } from "@/data/types";
 import { CATEGORY_LABELS } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
-import { DICTIONARY, DICTIONARY_CATEGORIES, searchDictionary } from "@/lib/dictionary";
+import { DICTIONARY_CATEGORIES, dictionaryEntries, searchDictionary } from "@/lib/dictionary";
 import { useSettings } from "@/store/settings";
+import { useLibraryRevision } from "@/store/wordSets";
 import { DictionaryEntry } from "./DictionaryEntry";
+import { SearchField } from "./SearchField";
 
 /** Entries drawn at a time; more are added as the list is scrolled. */
 const PAGE = 40;
@@ -22,6 +24,8 @@ interface DictionaryBrowserProps {
   scope: "all" | "unlocked";
   /** An entry to leave out: the card being asked. */
   hidden?: string;
+  /** The search text, when the box for it is drawn by the screen around this list. */
+  query?: string;
   autoFocus?: boolean;
   /** Classes for the search bar and filters, e.g. to make them stick while the list scrolls. */
   controlsClassName?: string;
@@ -54,20 +58,29 @@ function Chip({
   );
 }
 
-/** The dictionary's search box, filters and results. */
-export function DictionaryBrowser({ unlocked, scope, hidden, autoFocus, controlsClassName }: DictionaryBrowserProps) {
+/** The learner's own dictionary (the library's words, phrases and sentences): search box, filters and results. */
+export function DictionaryBrowser({
+  unlocked,
+  scope,
+  hidden,
+  query: givenQuery,
+  autoFocus,
+  controlsClassName,
+}: DictionaryBrowserProps) {
   const furigana = useSettings((s) => s.furigana);
-  const [query, setQuery] = useState("");
+  const revision = useLibraryRevision();
+  const [ownQuery, setOwnQuery] = useState("");
+  const query = givenQuery ?? ownQuery;
   const [kind, setKind] = useState<Category | "all">("all");
   const [onlyUnlocked, setOnlyUnlocked] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
   const deferredQuery = useDeferredValue(query);
   const unlockedOnly = scope === "unlocked" || onlyUnlocked;
 
   // Everything that can be listed here, before the search and the kind filter.
   const pool = useMemo(
-    () => DICTIONARY.filter((item) => item.id !== hidden && (!unlockedOnly || unlocked.has(item.id))),
-    [hidden, unlockedOnly, unlocked],
+    () => dictionaryEntries().filter((item) => item.id !== hidden && (!unlockedOnly || unlocked.has(item.id))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the library itself grows when a word set arrives
+    [hidden, unlockedOnly, unlocked, revision],
   );
   const counts = useMemo(() => {
     const byKind = new Map<Category, number>();
@@ -98,44 +111,18 @@ export function DictionaryBrowser({ unlocked, scope, hidden, autoFocus, controls
     return () => observer.disconnect();
   }, [more, listKey, count]);
 
-  const unlockedCount = useMemo(() => DICTIONARY.filter((item) => unlocked.has(item.id)).length, [unlocked]);
+  const unlockedCount = useMemo(
+    () => dictionaryEntries().filter((item) => unlocked.has(item.id)).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [unlocked, revision],
+  );
   const empty = pool.length === 0;
 
   return (
     <div>
       <div className={controlsClassName}>
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-smoke" strokeWidth={1.75} />
-          <input
-            ref={input}
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            autoFocus={autoFocus}
-            placeholder="Search in English, Japanese or romaji"
-            aria-label="Search the dictionary"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            enterKeyHint="search"
-            className="h-12 w-full rounded-2xl border border-line bg-veil/[0.03] pr-11 pl-11 text-[15px] text-paper outline-none transition-colors placeholder:text-smoke focus:border-veil/30 [&::-webkit-search-cancel-button]:hidden"
-          />
-          {query && (
-            <button
-              type="button"
-              onClick={() => {
-                setQuery("");
-                input.current?.focus();
-              }}
-              aria-label="Clear the search"
-              className="absolute top-1/2 right-2 flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-mist transition-colors hover:bg-veil/5 hover:text-paper"
-            >
-              <X className="size-4" strokeWidth={1.75} />
-            </button>
-          )}
-        </div>
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
+        {givenQuery === undefined && <SearchField value={ownQuery} onChange={setOwnQuery} autoFocus={autoFocus} />}
+        <div className={cn("flex flex-wrap gap-1.5", givenQuery === undefined && "mt-2.5")}>
           <Chip on={kind === "all"} onClick={() => setKind("all")} count={pool.length}>
             All
           </Chip>

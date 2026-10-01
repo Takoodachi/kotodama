@@ -1,5 +1,6 @@
 import { HIRAGANA_ROWS, KATAKANA_ROWS, type KanaRow } from "./kana";
 import type { KanaKind } from "./types";
+import { WORD_SETS, wordSetGroupId } from "./wordSets";
 
 /** One selectable set: a chip in the picker. */
 export interface GroupDef {
@@ -8,6 +9,8 @@ export interface GroupDef {
   label: string;
   /** Small label under it. */
   sublabel: string;
+  /** What to call the set where the two labels aren't shown together, when the small label alone doesn't say. */
+  name?: string;
 }
 
 export interface SubsectionDef {
@@ -61,6 +64,18 @@ const GRADE_GROUPS: GroupDef[] = [
   { id: "kanji-g8", label: "中学", sublabel: "Secondary" },
 ];
 
+/** Each JLPT level's word list from the dictionary, in parts (see ./wordSets). */
+const WORD_SET_SUBSECTIONS: SubsectionDef[] = WORD_SETS.map(({ level, parts }) => ({
+  id: `vocab-dict-n${level}`,
+  title: `JLPT N${level} dictionary words`,
+  groups: Array.from({ length: parts }, (_, i) => ({
+    id: wordSetGroupId(level, i + 1),
+    label: `N${level}·${i + 1}`,
+    sublabel: `Part ${i + 1}`,
+    name: `N${level} words, part ${i + 1}`,
+  })),
+}));
+
 export const SECTIONS: SectionDef[] = [
   {
     id: "hiragana",
@@ -90,7 +105,7 @@ export const SECTIONS: SectionDef[] = [
     id: "vocab",
     title: "Words",
     jpTitle: "単語",
-    blurb: "Vocabulary by theme, from first words to everyday conversation.",
+    blurb: "Vocabulary by theme, and every JLPT level's word list drawn from the dictionary.",
     subsections: [
       {
         id: "vocab-themes",
@@ -148,6 +163,7 @@ export const SECTIONS: SectionDef[] = [
           { id: "vocab-adverbs2", label: "副詞 II", sublabel: "Adverbs & linking words" },
         ],
       },
+      ...WORD_SET_SUBSECTIONS,
     ],
   },
   {

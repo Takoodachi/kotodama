@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
+import { Scrim } from "@/components/ui/Scrim";
 import { useHydrated } from "@/hooks/useHydrated";
 import { cn } from "@/lib/cn";
 import { GUIDE_BUTTON_ID, useGuide } from "@/store/guide";
@@ -59,7 +60,7 @@ const STEPS: Step[] = [
       </div>
     ),
     points: [
-      "Tap any set to add it: kana rows, kanji levels, word themes, phrases or sentences. Tap again to remove it.",
+      "Tap any set to add it: kana rows, kanji levels, word themes, JLPT word lists, phrases or sentences. Tap again to remove it.",
       "Mix anything. A katakana row, N5 kanji and greetings can share one session.",
       "Presets at the top add whole bundles, and several can be on at once.",
     ],
@@ -202,14 +203,8 @@ export function PracticeGuide() {
   return (
     <AnimatePresence custom={exitTo}>
       {open && (
-        <motion.div
-          key="guide"
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.5, delay: 0.1 } }}
-        >
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => close()} aria-hidden />
+        <div key="guide" className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
+          <Scrim onClick={() => close()} exitDuration={0.6} />
           <motion.div
             ref={panel}
             role="dialog"
@@ -307,7 +302,7 @@ export function PracticeGuide() {
               </div>
             </div>
           </motion.div>
-        </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
