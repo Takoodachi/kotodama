@@ -6,10 +6,12 @@ import { withBasePath } from "@/lib/basePath";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel", weight: ["400", "600"] });
+const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel", weight: "400" });
 // Japanese fonts ship as many unicode-range slices; the browser fetches only the ones a page uses.
+// Every slice of every weight still adds an @font-face rule to the stylesheet (about 120 per
+// weight), so only the weight the app sets Mincho text in is loaded.
 const notoJp = Noto_Sans_JP({ variable: "--font-noto-jp", preload: false });
-const shippori = Shippori_Mincho({ variable: "--font-shippori", weight: ["400", "600", "800"], preload: false });
+const shippori = Shippori_Mincho({ variable: "--font-shippori", weight: "400", preload: false });
 
 export const metadata: Metadata = {
   title: { default: "Kotodama · Japanese practice", template: "%s · Kotodama" },

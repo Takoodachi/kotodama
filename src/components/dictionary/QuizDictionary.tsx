@@ -63,7 +63,10 @@ export function QuizDictionary({ open, onClose, hidden }: QuizDictionaryProps) {
             <div className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-7 sm:pt-6">
               <div>
                 <p className="eyebrow flex items-center gap-2">
-                  <BookOpen className="size-3.5 text-gold" /> 辞書 · My dictionary
+                  <BookOpen className="size-3.5 text-gold" />
+                  <span>
+                    <span lang="ja">辞書</span> · My dictionary
+                  </span>
                 </p>
                 <h2 id="quiz-dictionary-title" className="mt-1.5 font-mincho text-2xl text-paper">
                   {progress.unlocked.toLocaleString("en")}{" "}

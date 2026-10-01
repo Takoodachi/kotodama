@@ -3,6 +3,7 @@
 import { ArrowRight } from "lucide-react";
 import type { Category } from "@/data/types";
 import { cn } from "@/lib/cn";
+import { langOf } from "@/lib/japanese";
 import {
   DIRECTION_LABELS,
   directionDescription,
@@ -24,9 +25,9 @@ function DirectionName({ direction }: { direction: Direction }) {
   const { from, to } = DIRECTION_LABELS[direction];
   return (
     <span className="inline-flex items-center gap-1 whitespace-nowrap">
-      <span className="jp">{from}</span>
+      <span lang={langOf(from)} className="jp">{from}</span>
       <ArrowRight className="size-3 opacity-60" />
-      <span className="jp">{to}</span>
+      <span lang={langOf(to)} className="jp">{to}</span>
     </span>
   );
 }

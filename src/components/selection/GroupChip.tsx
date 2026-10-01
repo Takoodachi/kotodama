@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/cn";
+import { langOf } from "@/lib/japanese";
 
 interface GroupChipProps {
   label: string;
@@ -31,7 +32,7 @@ export function GroupChip({ label, sublabel, selected, mastery, count, wide, onT
           : "border-line bg-veil/[0.02] hover:border-veil/20 hover:bg-veil/[0.04]",
       )}
     >
-      <span className={cn("jp leading-tight text-paper", wide ? "text-xl" : "text-2xl")}>{label}</span>
+      <span lang={langOf(label)} className={cn("jp leading-tight text-paper", wide ? "text-xl" : "text-2xl")}>{label}</span>
       <span className="text-[11px] tracking-wide text-mist">
         {sublabel}
         {count !== undefined && <span className="text-smoke"> · {count}</span>}

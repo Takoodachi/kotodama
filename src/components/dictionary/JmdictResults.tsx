@@ -3,6 +3,7 @@
 import { CloudOff, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { wordSetItemId } from "@/data/wordSets";
+import { langOf } from "@/lib/japanese";
 import { loadDictionaryFile, openDictionary } from "@/lib/jmdict/client";
 import type { Hit } from "@/lib/jmdict/search";
 import type { JmEntry } from "@/lib/jmdict/types";
@@ -138,6 +139,7 @@ export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsPro
               key={example}
               type="button"
               onClick={() => onQuery(example)}
+              lang={langOf(example)}
               className="jp h-8 rounded-full border border-line px-3.5 text-xs text-mist transition-colors hover:border-veil/20 hover:text-paper"
             >
               {example}

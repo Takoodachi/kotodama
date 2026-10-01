@@ -106,7 +106,7 @@ export function ProgressScreen() {
       className="mx-auto w-full max-w-6xl space-y-6 px-4 pt-4 pb-10 md:px-8 md:pt-8"
     >
       <header>
-        <p className="eyebrow">進歩 · Progress</p>
+        <p className="eyebrow"><span lang="ja">進歩</span> · Progress</p>
         <h1 className="mt-2 font-mincho text-3xl text-paper md:text-5xl">Your mastery</h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-mist">
           An item counts as <span className="text-paper">known</span> once you get it right twice in a row, and{" "}

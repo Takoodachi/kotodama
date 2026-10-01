@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Scrim } from "@/components/ui/Scrim";
 import { useHydrated } from "@/hooks/useHydrated";
 import { cn } from "@/lib/cn";
+import { langOf } from "@/lib/japanese";
 import { GUIDE_BUTTON_ID, useGuide } from "@/store/guide";
 import { useSettings } from "@/store/settings";
 
@@ -34,7 +35,7 @@ function Chip({ jp, en, on }: { jp: string; en: string; on?: boolean }) {
           <Check className="size-2 text-on-accent" strokeWidth={3} />
         </span>
       )}
-      <span lang="ja" className="jp text-xl leading-tight text-paper">{jp}</span>
+      <span lang={langOf(jp)} className="jp text-xl leading-tight text-paper">{jp}</span>
       <span className="text-[10px] text-mist">{en}</span>
     </span>
   );
@@ -95,7 +96,7 @@ const STEPS: Step[] = [
       </>,
       <>
         <b className="font-medium text-paper">Directions:</b> what the card shows and what you answer with.
-        日本語 → English shows Japanese and asks what it means. Turn on several to mix them.
+        <span lang="ja">日本語</span> → English shows Japanese and asks what it means. Turn on several to mix them.
       </>,
       <>
         <b className="font-medium text-paper">Written in:</b> show words, phrases and sentences in hiragana,

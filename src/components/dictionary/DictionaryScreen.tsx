@@ -51,7 +51,7 @@ export function DictionaryScreen() {
         <ArrowLeft className="size-4" /> Practice
       </Link>
       <header className="mt-2 mb-3">
-        <p className="eyebrow">辞書 · Dictionary</p>
+        <p className="eyebrow"><span lang="ja">辞書</span> · Dictionary</p>
         <h1 className="mt-2 font-mincho text-3xl leading-tight text-paper md:text-5xl">Look up a word</h1>
         <p className="mt-2 max-w-xl text-sm leading-relaxed text-mist">
           A full Japanese–English dictionary, from English to Japanese or the other way round, and your own library of

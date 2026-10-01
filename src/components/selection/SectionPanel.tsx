@@ -66,7 +66,7 @@ export function SectionPanel({
         <div>
           <p className="eyebrow">{section.title}</p>
           <h2 className="mt-1.5 flex items-baseline gap-3">
-            <span className="jp text-3xl text-paper sm:text-4xl">{section.jpTitle}</span>
+            <span lang="ja" className="jp text-3xl text-paper sm:text-4xl">{section.jpTitle}</span>
             <span className="text-xs text-smoke tabular-nums">
               {selectedCount} / {sectionCount}
             </span>

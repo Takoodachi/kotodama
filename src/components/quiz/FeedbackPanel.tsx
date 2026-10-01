@@ -94,7 +94,7 @@ export function FeedbackPanel({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className={cn("flex items-baseline gap-2.5", correct ? "text-gold-bright" : "text-crimson-bright")}>
-              <span className="jp text-2xl">{correct ? "正解" : "残念"}</span>
+              <span lang="ja" className="jp text-2xl">{correct ? "正解" : "残念"}</span>
               <span className="text-xs tracking-[0.2em] uppercase">{correct ? "Correct" : "Not quite"}</span>
             </p>
             {parts && (!correct || overruled) ? (

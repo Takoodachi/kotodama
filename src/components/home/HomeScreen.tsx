@@ -83,7 +83,7 @@ export function HomeScreen() {
       <section className="relative grid min-h-[62vh] items-center gap-8 pt-8 pb-10 md:grid-cols-[1fr_auto] md:pt-16">
         <div>
           <motion.p {...rise(0.1)} className="eyebrow">
-            言霊 · The spirit of words
+            <span lang="ja">言霊</span> · The spirit of words
           </motion.p>
           <motion.h1 {...rise(0.25)} className="mt-5 font-mincho text-5xl leading-[1.08] text-paper sm:text-6xl md:text-7xl">
             Words carry
@@ -118,10 +118,10 @@ export function HomeScreen() {
           transition={{ duration: 2, delay: 0.2 }}
           className="pointer-events-none absolute top-6 right-0 flex gap-3 overflow-hidden select-none md:static md:overflow-visible"
         >
-          <span className="jp font-mincho text-[7rem] leading-[1.15] text-paper/[0.06] [writing-mode:vertical-rl] md:text-[11rem] md:text-paper/90">
+          <span lang="ja" className="jp font-mincho text-[7rem] leading-[1.15] text-paper/[0.06] [writing-mode:vertical-rl] md:text-[11rem] md:text-paper/90">
             言霊
           </span>
-          <span className="jp mt-2 hidden text-xs tracking-[0.6em] text-smoke [writing-mode:vertical-rl] md:block">
+          <span lang="ja" className="jp mt-2 hidden text-xs tracking-[0.6em] text-smoke [writing-mode:vertical-rl] md:block">
             ことだま
           </span>
         </motion.div>
@@ -137,7 +137,7 @@ export function HomeScreen() {
       <motion.section {...rise(0.8)} aria-label="Study activity" className="glass mt-3 rounded-2xl p-4 sm:p-6">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">学習 · Activity</p>
+            <p className="eyebrow"><span lang="ja">学習</span> · Activity</p>
             <h2 className="mt-1.5 font-mincho text-2xl text-paper">Your study year</h2>
           </div>
           <Link href="/progress" className="text-xs tracking-wide text-mist hover:text-paper">
@@ -168,7 +168,7 @@ export function HomeScreen() {
               href={`/practice#section-${tile.section}`}
               className="glass group rounded-2xl p-4 transition-colors last:col-span-2 hover:border-veil/20 sm:last:col-span-1"
             >
-              <p className="jp text-2xl text-paper transition-colors group-hover:text-gold-bright">{tile.jp}</p>
+              <p lang="ja" className="jp text-2xl text-paper transition-colors group-hover:text-gold-bright">{tile.jp}</p>
               <p className="mt-3 text-xs text-mist">
                 {tile.label} · <span className="tabular-nums">{ITEMS_BY_CATEGORY.get(tile.category)?.length ?? 0}</span>
               </p>

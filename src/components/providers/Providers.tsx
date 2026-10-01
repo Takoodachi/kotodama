@@ -10,6 +10,7 @@ import { wordSetLevels } from "@/data/wordSets";
 import { useProgress } from "@/store/progress";
 import { useSession } from "@/store/session";
 import { useSettings } from "@/store/settings";
+import { requestPersistentStorage } from "@/store/storage";
 import { useWordSets } from "@/store/wordSets";
 
 /** Reads saved state from localStorage once the app has mounted. */
@@ -86,12 +87,23 @@ function WordSetLoader() {
   return null;
 }
 
+/** Once there is progress to lose, asks the browser not to clear this site's storage by itself. */
+function StorageKeeper() {
+  const hydrated = useHydrated();
+  const hasProgress = useProgress((s) => s.totals.answered > 0);
+  useEffect(() => {
+    if (hydrated && hasProgress) void requestPersistentStorage();
+  }, [hydrated, hasProgress]);
+  return null;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <MotionConfig reducedMotion="user" transition={{ ease: [0.16, 1, 0.3, 1], duration: 0.5 }}>
       <StoreHydrator />
       <PreferenceSync />
       <WordSetLoader />
+      <StorageKeeper />
       <ServiceWorkerRegister />
       <AccountSync />
       {children}

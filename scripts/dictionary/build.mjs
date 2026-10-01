@@ -6,6 +6,7 @@ import {
   meaningWords,
   PHRASE_WORDS,
   plainMeaning,
+  withoutNotes,
 } from "../../src/lib/jmdict/keys.mjs";
 
 /**
@@ -102,50 +103,130 @@ function fingerprint(text) {
 }
 
 /**
- * Whether an entry's meanings share a word with the wanted ones, give or take
- * an ending ("grapes" and "grape").
+ * Words too general to tell one sense of a word from another: "to make a
+ * phone call" and "to make a dress" share nothing that matters.
+ */
+const GENERIC = new Set(
+  "do make get have go come take put give let thing something someone person people place time way".split(" "),
+);
+
+/**
+ * Whether two words are the same give or take an ending: "grapes" and
+ * "grape", "to guide" and "guidance", "to prepare" and "preparation".
+ * @param {string} a
+ * @param {string} b
+ */
+function alike(a, b) {
+  if (a === b) return true;
+  const shorter = Math.min(a.length, b.length);
+  if (shorter < 4) return false;
+  let same = 0;
+  while (same < shorter && a[same] === b[same]) same++;
+  return same >= Math.max(4, shorter - 1);
+}
+
+/**
+ * Whether any of some meanings shares a word with any of the others. With
+ * `telling` set, words too general to mean much don't count.
+ * @param {string[]} meanings
+ * @param {string[]} others
+ * @param {boolean} [telling]
+ */
+function shareWord(meanings, others, telling = false) {
+  /** @param {string} meaning */
+  const words = (meaning) => meaningWords(plainMeaning(meaning)).filter((word) => !telling || !GENERIC.has(word));
+  const wanted = meanings.flatMap(words);
+  const has = [...new Set(others.flatMap(words))];
+  return wanted.some((w) => has.some((h) => alike(w, h)));
+}
+
+/**
+ * Whether an entry means, in any of its senses, what the given meanings say.
  * @param {string[]} meaning
  * @param {Word} word
  */
-function sharesWord(meaning, word) {
-  const wanted = meaning.flatMap((m) => meaningWords(plainMeaning(m)));
-  const has = new Set(word.sense.flatMap((sense) => sense.gloss.flatMap((g) => meaningWords(plainMeaning(g.text)))));
-  return wanted.some(
-    (w) => has.has(w) || (w.length >= 4 && [...has].some((h) => h.length >= 4 && (h.startsWith(w) || w.startsWith(h)))),
+const sharesWord = (meaning, word) =>
+  shareWord(
+    meaning,
+    word.sense.flatMap((sense) => sense.gloss.map((g) => g.text)),
   );
+
+/** Notes in parentheses that explain rather than complete a meaning: "(e.g. a salary)", "(esp. Japanese-style)". */
+const EXPLAINS = /^(e\.g\.|esp\.|i\.e\.|cf\.|usu\.|orig\.|incl\.|lit\.|often|also|sometimes|as |of |in |on |for a|from )/i;
+/** The longest note worth keeping on a quiz card: "(something)", "(for, at, in)". */
+const SHORT_NOTE = 12;
+
+/**
+ * A dictionary gloss as a quiz should show it. Dictionaries qualify their
+ * glosses at length: "cup (drinking vessel, measure, brassiere, prize, etc.)",
+ * "dog (Canis (lupus) familiaris)". A card wants "cup" and "dog". Short notes
+ * that complete the meaning stay: "(hard) candy", "to lose (something)".
+ * @param {string} gloss
+ */
+export function quizMeaning(gloss) {
+  // Notes inside notes are always explanation.
+  const nested = /\([^()]*\(/.test(gloss);
+  const trimmed = (nested ? withoutNotes(gloss) : gloss.replace(/\(([^()]*)\)/g, (note, inside) =>
+    inside.length > SHORT_NOTE || EXPLAINS.test(inside) ? " " : note,
+  ))
+    .replace(/\s+/g, " ")
+    .replace(/ ([,;])/g, "$1")
+    .trim();
+  return trimmed || gloss;
 }
 
 /**
  * A JLPT word as the quiz needs it: [entry number, furigana markup, meanings, class of word].
+ *
+ * A word often has several senses, and the first in the dictionary isn't
+ * always the one a learner meets first: 肉 is "flesh" before it is "meat",
+ * 早い "fast" before "early". The JLPT list gives the meaning it has in mind,
+ * so where the first sense is about something else, the sense that agrees
+ * with the list leads instead, in the dictionary's own words.
  * @param {Word} word
  * @param {JlptRow} row
  */
 function setWord(word, row) {
   const kana = word.kana.some((k) => k.text === row.kana) ? row.kana : word.kana[0].text;
   const kanji = word.kanji.some((k) => k.text === row.kanji) ? row.kanji : "";
-  const senses = word.sense.filter(
+  const fitting = word.sense.filter(
     (sense) =>
       (sense.appliesToKana.includes("*") || sense.appliesToKana.includes(kana)) &&
       (!kanji || sense.appliesToKanji.includes("*") || sense.appliesToKanji.includes(kanji)),
   );
-  const [first = word.sense[0], ...rest] = senses;
-  // Words usually written in kana are taught that way.
-  const written = kanji && !first.misc.includes("uk") ? kanji : kana;
+  const senses = fitting.length ? fitting : word.sense;
 
-  const meanings = first.gloss.slice(0, 3).map((g) => g.text);
-  for (const sense of rest) {
+  // Which sense leads: the dictionary's first, unless it has nothing in
+  // common with what the list says the word means while a later one does.
+  // There, long glosses don't count: they are descriptions and names
+  // ("Democratic Party of Japan"), which share words by accident.
+  /** @param {Sense} sense */
+  const glosses = (sense) => sense.gloss.map((g) => g.text);
+  const fits = (/** @type {Sense} */ sense) =>
+    shareWord(
+      row.meaning,
+      glosses(sense).filter((gloss) => plainMeaning(gloss).split(" ").length <= 3),
+      true,
+    );
+  const main = shareWord(row.meaning, glosses(senses[0]), true) ? senses[0] : (senses.find(fits) ?? senses[0]);
+  // Words usually written in kana are taught that way.
+  const written = kanji && !main.misc.includes("uk") ? kanji : kana;
+
+  // Its first glosses, then one from each other sense in everyday use.
+  const meanings = glosses(main).slice(0, 3);
+  for (const sense of senses) {
     if (meanings.length >= 4) break;
-    if (!sense.misc.some((m) => SIDE_SENSE.has(m))) meanings.push(sense.gloss[0].text);
+    if (sense !== main && !sense.misc.some((m) => SIDE_SENSE.has(m))) meanings.push(sense.gloss[0].text);
   }
   const seen = new Set();
-  const unique = meanings.filter((m) => {
+  const unique = meanings.map(quizMeaning).filter((m) => {
     const plain = plainMeaning(m);
     return plain && !seen.has(plain) && seen.add(plain);
   });
 
   /** @type {(number | string | string[])[]} */
   const out = [seqOf(word), furiganaMarkup(written, kana), unique.length ? unique : meanings.slice(0, 1)];
-  const pos = partOfSpeech(first.partOfSpeech);
+  const pos = partOfSpeech(main.partOfSpeech.length ? main.partOfSpeech : senses[0].partOfSpeech);
   if (pos) out.push(pos);
   return out;
 }
@@ -186,14 +267,16 @@ export function buildDictionary(jmdict, jlptRows, curated, setConfigs) {
   // ---- JLPT levels. A word listed at several levels counts at the easiest.
   // The lists name an entry by number. Where that is an uncommon entry meaning
   // something else than the list says (ボタン, "button", listed as the peony),
-  // the common entry written the same way whose meaning does agree is taken.
+  // or an entry that isn't read the way the list says, the common entry
+  // written and read that way whose meaning does agree is taken.
   /** @type {Map<number, JlptRow>} */
   const jlpt = new Map();
   /** @type {string[]} */
   const relisted = [];
   for (const row of [...jlptRows].sort((a, b) => b.level - a.level)) {
     let word = bySeq.get(row.seq);
-    if (!word || (!isCommon(word) && !sharesWord(row.meaning, word))) {
+    const readAsListed = word?.kana.some((k) => japaneseKey(k.text) === japaneseKey(row.kana));
+    if (!word || !readAsListed || (!isCommon(word) && !sharesWord(row.meaning, word))) {
       const better = written(row.kanji || row.kana, row.kana).find((w) => isCommon(w) && sharesWord(row.meaning, w));
       if (better && better !== word) {
         relisted.push(`${row.kanji || row.kana} ${row.seq}→${better.id}`);
