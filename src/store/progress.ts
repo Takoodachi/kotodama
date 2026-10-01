@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { review, type SrsRecord } from "@/lib/srs";
+import { review, unlock, type SrsRecord } from "@/lib/srs";
 import {
   combinedCounts,
   emptyDoc,
@@ -32,7 +32,10 @@ interface ProgressState {
   /** Account this progress was last synced with, so it never leaks into another account. */
   syncedWith: string | null;
 
-  /** Records an answer. Only first attempts move an item between SRS boxes. */
+  /**
+   * Records an answer. Only first attempts move an item between SRS boxes; a
+   * right answer on a retry still unlocks the item for the dictionary.
+   */
   record: (itemId: string, correct: boolean, firstAttempt: boolean) => void;
   /**
    * Turns an answer recorded as wrong into a right one: the item's record is
@@ -94,10 +97,14 @@ export const useProgress = create<ProgressState>()(
           const now = new Date();
           const day = localDay(now);
           const own = s.devices[s.deviceId] ?? { totals: { answered: 0, correct: 0 }, history: {} };
+          const before = s.records[itemId];
+          const record = firstAttempt
+            ? review(before, correct, now.getTime())
+            : before && correct
+              ? unlock(before, now.getTime())
+              : before;
           return {
-            records: firstAttempt
-              ? { ...s.records, [itemId]: review(s.records[itemId], correct, now.getTime()) }
-              : s.records,
+            records: record && record !== before ? { ...s.records, [itemId]: record } : s.records,
             streak: nextStreak(s.streak, now),
             totals: addTo(s.totals, correct),
             history: { ...s.history, [day]: addTo(s.history[day], correct) },
@@ -118,8 +125,11 @@ export const useProgress = create<ProgressState>()(
             answered: counts?.answered ?? 0,
             correct: (counts?.correct ?? 0) + 1,
           });
+          // A retry doesn't move the item between boxes, but being right still unlocks it.
+          const current = s.records[itemId];
+          const record = firstAttempt ? review(before, true, Date.now()) : current && unlock(current, Date.now());
           return {
-            records: firstAttempt ? { ...s.records, [itemId]: review(before, true, Date.now()) } : s.records,
+            records: record && record !== current ? { ...s.records, [itemId]: record } : s.records,
             totals: oneMoreRight(s.totals),
             history: { ...s.history, [day]: oneMoreRight(s.history[day]) },
             devices: {

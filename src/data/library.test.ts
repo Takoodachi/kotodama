@@ -121,9 +121,9 @@ describe("content library", () => {
     expect(kanjiAt(3)).toBeGreaterThanOrEqual(160);
     expect(kanjiAt(2)).toBeGreaterThanOrEqual(55);
     expect(kanjiAt(1)).toBeGreaterThanOrEqual(50);
-    expect(count("vocab")).toBeGreaterThanOrEqual(470);
-    expect(count("phrase")).toBeGreaterThanOrEqual(120);
-    expect(count("sentence")).toBeGreaterThanOrEqual(95);
+    expect(count("vocab")).toBeGreaterThanOrEqual(1600);
+    expect(count("phrase")).toBeGreaterThanOrEqual(300);
+    expect(count("sentence")).toBeGreaterThanOrEqual(250);
     expect(count("grammar")).toBeGreaterThanOrEqual(120);
   });
 });

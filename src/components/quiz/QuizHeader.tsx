@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, Ghost, X } from "lucide-react";
+import { BookOpen, Flame, Ghost, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { MuteButton } from "@/components/ui/MuteButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -16,10 +16,25 @@ interface QuizHeaderProps {
   streak: number;
   /** Ghost mode: drilling the weakest items. */
   ghost?: boolean;
+  /** Opens the dictionary of unlocked entries; given when the session has words, phrases or sentences. */
+  onDictionary?: () => void;
+  /** Entries unlocked so far this session, shown on the dictionary button. */
+  unlocked?: number;
   onClose: () => void;
 }
 
-export function QuizHeader({ position, done, total, endless, correct, streak, ghost, onClose }: QuizHeaderProps) {
+export function QuizHeader({
+  position,
+  done,
+  total,
+  endless,
+  correct,
+  streak,
+  ghost,
+  onDictionary,
+  unlocked = 0,
+  onClose,
+}: QuizHeaderProps) {
   return (
     <header className="pt-safe">
       <div className="flex h-14 items-center gap-4">
@@ -57,6 +72,29 @@ export function QuizHeader({ position, done, total, endless, correct, streak, gh
         <span className="min-w-12 text-right text-xs text-mist tabular-nums">
           {endless ? `${correct} / ${done}` : `${Math.min(position + 1, total)} / ${total}`}
         </span>
+        {onDictionary && (
+          <button
+            type="button"
+            onClick={onDictionary}
+            aria-label={`Open my dictionary${unlocked ? ` (${unlocked} new this session)` : ""}`}
+            title="My dictionary: the words you've unlocked"
+            className="relative flex size-10 shrink-0 items-center justify-center rounded-full border border-line text-mist transition-colors hover:border-gold/50 hover:text-gold-bright"
+          >
+            <BookOpen className="size-[18px]" strokeWidth={1.6} />
+            {unlocked > 0 && (
+              <motion.span
+                // Pops each time another entry is unlocked.
+                key={unlocked}
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 500, damping: 18 }}
+                className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-medium text-ink-950 tabular-nums"
+              >
+                +{unlocked}
+              </motion.span>
+            )}
+          </button>
+        )}
         <MuteButton className="-mr-1" />
       </div>
     </header>

@@ -13,6 +13,12 @@ export interface SrsRecord {
   lapses: number;
   /** Epoch ms of the last answer. */
   last: number;
+  /**
+   * Epoch ms of the first right answer, on any attempt: what puts a word in
+   * the learner's dictionary. Records from before this was kept don't have
+   * it; see `isUnlocked`.
+   */
+  unlocked?: number;
 }
 
 const MINUTE = 60_000;
@@ -32,7 +38,23 @@ export function review(record: SrsRecord | undefined, correct: boolean, now: num
     correct: prev.correct + (correct ? 1 : 0),
     lapses: prev.lapses + (correct ? 0 : 1),
     last: now,
+    ...(isUnlocked(prev) ? { unlocked: unlockedAt(prev) } : correct ? { unlocked: now } : {}),
   };
+}
+
+/** Whether the item has ever been answered right: it is then in the learner's dictionary. */
+export function isUnlocked(record: SrsRecord | undefined): boolean {
+  return !!record && (record.unlocked !== undefined || record.correct > 0);
+}
+
+/** When the item was unlocked; older records only know it was by their last answer. */
+export function unlockedAt(record: SrsRecord): number {
+  return record.unlocked ?? record.last;
+}
+
+/** Marks an item unlocked by a right answer that doesn't otherwise count, like a retry within a session. */
+export function unlock(record: SrsRecord, now: number): SrsRecord {
+  return isUnlocked(record) ? record : { ...record, unlocked: now };
 }
 
 /** Relative weight for picking an item into a session. Higher means sooner. */

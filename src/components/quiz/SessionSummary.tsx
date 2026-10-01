@@ -1,7 +1,8 @@
 "use client";
 
-import { RotateCcw, Target } from "lucide-react";
+import { BookOpenCheck, RotateCcw, Target } from "lucide-react";
 import { motion } from "motion/react";
+import Link from "next/link";
 import { JpText } from "@/components/japanese/Furigana";
 import { SpeakButton } from "@/components/japanese/SpeakButton";
 import { Button, LinkButton } from "@/components/ui/Button";
@@ -60,6 +61,7 @@ export function SessionSummary({ results, onPracticeMissed, onRepeat }: SessionS
   const correct = first.filter((r) => r.correct).length;
   const accuracy = first.length ? correct / first.length : 0;
   const missedIds = [...new Set(results.filter((r) => !r.correct).map((r) => r.itemId))];
+  const unlocked = results.filter((r) => r.unlocked).length;
   const { jp, en } = verdict(accuracy);
 
   return (
@@ -78,6 +80,15 @@ export function SessionSummary({ results, onPracticeMissed, onRepeat }: SessionS
         <p className="mt-4 text-sm text-mist tabular-nums">
           {correct} of {first.length} right on the first try · {results.length} answers in total
         </p>
+        {unlocked > 0 && (
+          <Link
+            href="/practice/dictionary"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-gold/35 px-3.5 py-1.5 text-xs text-gold-bright transition-colors hover:border-gold hover:bg-gold/10"
+          >
+            <BookOpenCheck className="size-3.5" strokeWidth={1.75} />
+            {unlocked} new {unlocked === 1 ? "entry" : "entries"} unlocked in your dictionary
+          </Link>
+        )}
       </div>
 
       <div className="mt-8 space-y-3">

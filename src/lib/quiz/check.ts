@@ -1,6 +1,6 @@
 import { isKana, toHiragana, toRomaji } from "wanakana";
-import { kanjiReadings } from "@/data/library";
-import type { StudyItem } from "@/data/types";
+import { ITEMS_BY_CATEGORY, kanjiReadings } from "@/data/library";
+import type { PartOfSpeech, StudyItem } from "@/data/types";
 import {
   contentWords,
   editDistance,
@@ -119,6 +119,42 @@ export function checkGap(item: StudyItem, input: string, side: Side): boolean {
   return !!answer && accepted.some((a) => japaneseKey(a) === answer);
 }
 
+/** Nouns, verbs and adjectives of either kind are each one class of word; the rest are another. */
+const WORD_CLASS: Record<PartOfSpeech, string> = {
+  noun: "noun",
+  pronoun: "noun",
+  verb: "verb",
+  "i-adj": "adjective",
+  "na-adj": "adjective",
+  adverb: "other",
+  expression: "other",
+  counter: "other",
+};
+
+const synonymKey = (item: StudyItem) =>
+  `${item.category}|${item.pos ? WORD_CLASS[item.pos] : ""}|${normalizeEnglish(item.meaning[0] ?? "")}`;
+
+let synonymIndex: Map<string, StudyItem[]> | null = null;
+
+/**
+ * Other words (or phrases) with the same first meaning and the same class of
+ * word: 朝食 for 朝ご飯, 今夜 for 今晩. When a card shows only the English,
+ * any of them is a right answer.
+ */
+export function synonymsOf(item: StudyItem): StudyItem[] {
+  if (item.category !== "vocab" && item.category !== "phrase") return [];
+  if (!synonymIndex) {
+    synonymIndex = new Map();
+    for (const category of ["vocab", "phrase"] as const) {
+      for (const other of ITEMS_BY_CATEGORY.get(category) ?? []) {
+        const key = synonymKey(other);
+        synonymIndex.set(key, [...(synonymIndex.get(key) ?? []), other]);
+      }
+    }
+  }
+  return (synonymIndex.get(synonymKey(item)) ?? []).filter((other) => other.id !== item.id);
+}
+
 export function checkTypedAnswer(item: StudyItem, direction: Direction, input: string): boolean {
   if (isCloze(direction)) return checkGap(item, input, answerSide(direction));
   switch (answerSide(direction)) {
@@ -127,6 +163,10 @@ export function checkTypedAnswer(item: StudyItem, direction: Direction, input: s
     case "en":
       return checkMeaning(item, input);
     case "jp":
-      return checkJapanese(item, input);
+      return (
+        checkJapanese(item, input) ||
+        // From English alone, a synonym is just as right.
+        (direction === "en-jp" && synonymsOf(item).some((synonym) => checkJapanese(synonym, input)))
+      );
   }
 }

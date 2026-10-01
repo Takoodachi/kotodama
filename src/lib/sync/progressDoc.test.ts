@@ -57,6 +57,19 @@ describe("mergeDocs", () => {
     expect(sameDoc(mergeDocs(ab, ab), ab)).toBe(true);
   });
 
+  it("keeps an item unlocked when the other device's later answer was wrong", () => {
+    const right: SrsRecord = { box: 1, due: 1100, seen: 1, correct: 1, lapses: 0, last: 100, unlocked: 100 };
+    const wrongLater: SrsRecord = { box: 0, due: 900, seen: 1, correct: 0, lapses: 1, last: 900 };
+    const a = doc({ records: { w: right } });
+    const b = doc({ records: { w: wrongLater } });
+    const merged = mergeDocs(a, b);
+    expect(merged.records.w).toEqual({ ...wrongLater, unlocked: 100 });
+    expect(sameDoc(merged, mergeDocs(b, a))).toBe(true);
+    expect(sameDoc(mergeDocs(merged, a), merged)).toBe(true);
+    // The unlock survives a trip through the cloud.
+    expect(readDoc(JSON.parse(JSON.stringify(merged))).records.w.unlocked).toBe(100);
+  });
+
   it("never double-counts a device's answers when they come back from the cloud", () => {
     const synced = mergeDocs(phone, laptop);
     // The phone answers 5 more on the 1st, then syncs with the cloud copy again.

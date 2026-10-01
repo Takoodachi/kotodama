@@ -1,7 +1,16 @@
 import { toKatakana } from "wanakana";
 import { describe, expect, it } from "vitest";
 import { ITEMS_BY_CATEGORY, ITEMS_BY_ID } from "@/data/library";
-import { checkBoth, checkGap, checkJapanese, checkMeaning, checkReading, sameWords } from "./check";
+import {
+  checkBoth,
+  checkGap,
+  checkJapanese,
+  checkMeaning,
+  checkReading,
+  checkTypedAnswer,
+  sameWords,
+  synonymsOf,
+} from "./check";
 
 const item = (id: string) => {
   const found = ITEMS_BY_ID.get(id);
@@ -191,5 +200,26 @@ describe("checkJapanese", () => {
     expect(checkJapanese(item("k-カ"), "か")).toBe(false);
     expect(checkJapanese(item("v-koohii"), "こーひー")).toBe(true);
     expect(checkJapanese(item("v-koohii"), "ｺｰﾋｰ")).toBe(true);
+  });
+});
+
+describe("synonyms", () => {
+  const breakfast = item("v-asagohan");
+
+  it("takes a synonym when the card only shows the English", () => {
+    expect(synonymsOf(breakfast).map((s) => s.surface)).toContain("朝食");
+    expect(checkTypedAnswer(breakfast, "en-jp", "朝食")).toBe(true);
+    expect(checkTypedAnswer(breakfast, "en-jp", "朝ご飯")).toBe(true);
+    expect(checkTypedAnswer(breakfast, "en-jp", "晩ご飯")).toBe(false);
+  });
+
+  it("wants the word itself when the card shows its romaji", () => {
+    expect(checkTypedAnswer(breakfast, "romaji-jp", "朝食")).toBe(false);
+  });
+
+  it("doesn't mix classes of word: a noun is no answer for an adjective", () => {
+    const kind = item("v-yasashii-kind"); // 優しい, "kind"
+    expect(synonymsOf(kind).map((s) => s.surface)).toContain("親切");
+    expect(synonymsOf(kind).map((s) => s.surface)).not.toContain("種類");
   });
 });

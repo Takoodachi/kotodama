@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
+import { DictionaryLink } from "@/components/dictionary/DictionaryLink";
 import { BELOW_HEADER } from "@/components/layout/nav";
 import { GhostModeButton } from "@/components/practice/GhostModeButton";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -147,12 +148,15 @@ export function SelectionScreen() {
       className="w-full pb-40 lg:pb-16"
     >
       <div className="mx-auto max-w-6xl px-4 pt-4 md:px-8 md:pt-8">
-        <header className="mb-5 md:mb-6">
-          <p className="eyebrow">練習 · Practice</p>
-          <h1 className="mt-2 font-mincho text-3xl leading-tight text-paper md:text-5xl">Choose what to practice</h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-mist">
-            Mix any sets you like: a katakana row, a kanji level and a handful of phrases can all go in one session.
-          </p>
+        <header className="mb-5 flex flex-col gap-4 md:mb-6 md:flex-row md:items-end md:justify-between md:gap-8">
+          <div>
+            <p className="eyebrow">練習 · Practice</p>
+            <h1 className="mt-2 font-mincho text-3xl leading-tight text-paper md:text-5xl">Choose what to practice</h1>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-mist">
+              Mix any sets you like: a katakana row, a kanji level and a handful of phrases can all go in one session.
+            </p>
+          </div>
+          <DictionaryLink className="md:w-80 md:shrink-0" />
         </header>
         <PresetBar selected={selected} onToggle={settings.setGroups} onClear={() => settings.setSelection([])} />
       </div>

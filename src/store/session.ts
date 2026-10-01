@@ -10,7 +10,8 @@ import {
   type Question,
   type SessionConfig,
 } from "@/lib/quiz/session";
-import type { SrsRecord } from "@/lib/srs";
+import { inDictionary } from "@/lib/dictionary";
+import { isUnlocked, type SrsRecord } from "@/lib/srs";
 import { ALL_SCRIPTS, type Script } from "@/lib/writing";
 import { useProgress } from "./progress";
 
@@ -45,7 +46,13 @@ export interface AnswerResult {
   retryKey?: string;
   /** Marked right by the learner after the check said wrong. */
   overruled?: boolean;
+  /** This answer was the item's first right one: it is now in the learner's dictionary. */
+  unlocked?: boolean;
 }
+
+/** Whether a right answer to this item is its first, putting it in the dictionary. */
+const unlocks = (itemId: string, before: SrsRecord | undefined) =>
+  !isUnlocked(before) && inDictionary(ITEMS_BY_ID.get(itemId)!);
 
 /** Ghost mode: a session built from the items answered worst so far. */
 export type SessionLabel = "ghost";
@@ -165,6 +172,7 @@ export const useSession = create<SessionState>()(
               at: Date.now(),
               before,
               retryKey,
+              unlocked: correct && unlocks(question.itemId, before),
             },
           ],
         });
@@ -180,7 +188,10 @@ export const useSession = create<SessionState>()(
         const parts = last.parts && { ...last.parts, meaning: { ...last.parts.meaning, correct: true } };
         set({
           queue: queue.filter((q) => q.key !== last.retryKey),
-          results: [...results.slice(0, -1), { ...last, correct: true, parts, overruled: true }],
+          results: [
+            ...results.slice(0, -1),
+            { ...last, correct: true, parts, overruled: true, unlocked: unlocks(last.itemId, last.before) },
+          ],
         });
       },
 
