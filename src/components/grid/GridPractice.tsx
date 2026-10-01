@@ -158,6 +158,10 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
   );
 }
 
+/** Scrolling glides, unless the device asks for reduced motion. */
+const scrolling = (): ScrollBehavior =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+
 /**
  * Tofugu-style "type what you know": every selected kana, kanji and word on
  * one page. Type an answer and press Enter; right cards turn gold, wrong ones
@@ -308,7 +312,7 @@ export function GridPractice() {
 
   // The result sits above what may be hundreds of cards: bring it into view.
   useEffect(() => {
-    if (finished) window.scrollTo({ top: 0, behavior: "smooth" });
+    if (finished) window.scrollTo({ top: 0, behavior: scrolling() });
   }, [finished]);
 
   // Esc finishes, as it ends a quiz; not while a Japanese keyboard is converting (Esc cancels that).
@@ -327,7 +331,7 @@ export function GridPractice() {
     checked.current.clear();
     tried.current.clear();
     setFinished(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: scrolling() });
   };
 
   // Missed, or right only after another try: worth a focused quiz.

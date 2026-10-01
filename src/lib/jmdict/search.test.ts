@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDictionary, COMMON_CHUNK, RARE_CHUNK } from "../../../scripts/dictionary/build.mjs";
+import { buildDictionary, COMMON_CHUNK, quizMeaning, RARE_CHUNK } from "../../../scripts/dictionary/build.mjs";
 import { headword, tagLabel } from "./labels";
 import { Dictionary, romajiKeys } from "./search";
 import type { DictMeta, JmEntry, SetFile } from "./types";
@@ -271,7 +271,7 @@ describe("JLPT word sets", () => {
 
   it("give a new word its furigana, meanings and class", () => {
     expect(rows).toContainEqual([FOOD, "{食|た}べ{物|もの}", ["food"], "noun"]);
-    expect(rows).toContainEqual([DOG, "{犬|いぬ}", ["dog (Canis (lupus) familiaris)", "canine"], "noun"]);
+    expect(rows).toContainEqual([DOG, "{犬|いぬ}", ["dog", "canine"], "noun"]);
     // 勉強する is taught, but that is not the word 勉強 itself.
     expect(n4.groups[0]).toEqual([[STUDY, "{勉強|べんきょう}", ["study"], "noun"]]);
   });
@@ -284,6 +284,80 @@ describe("JLPT word sets", () => {
     expect(rows).toContainEqual([BUTTON, "ボタン", ["button (clothing)"], "noun"]);
     expect(rows.some((row) => typeof row !== "string" && row[0] === PEONY)).toBe(false);
     expect(built.report.relisted).toHaveLength(1);
+  });
+});
+
+describe("the meanings of JLPT words", () => {
+  const FAST = 1;
+  const MEAT = 2;
+  const PEOPLE = 3;
+  const FIXED = 4;
+  const VERILY = 5;
+  const { files, version, report } = buildDictionary(
+    {
+      words: [
+        word(FAST, ["早い"], ["はやい"], [
+          { pos: ["adj-i"], gloss: ["fast", "quick"] },
+          { pos: ["adj-i"], gloss: ["early (in the day, etc.)", "premature"] },
+        ]),
+        word(MEAT, ["肉"], ["にく"], [
+          { pos: ["n"], gloss: ["flesh"] },
+          { pos: ["n"], gloss: ["meat"] },
+          { pos: ["n"], gloss: ["the physical body (as opposed to the spirit)"], misc: ["arch"] },
+        ]),
+        word(PEOPLE, ["民主"], ["みんしゅ"], [
+          { pos: ["n"], gloss: ["democracy", "popular sovereignty"] },
+          { pos: ["n"], gloss: ["Democratic Party of Japan (1998-2016)"] },
+        ]),
+        word(FIXED, ["一定"], ["いってい"], [{ pos: ["adj-no"], gloss: ["fixed", "settled"] }]),
+        word(VERILY, ["一定"], ["いちじょう"], [{ pos: ["adv"], gloss: ["veritably", "to be sure"] }], false),
+      ],
+      tags: {},
+      date: "2026-09-28",
+    },
+    [
+      { level: 5, seq: FAST, kana: "はやい", kanji: "早い", meaning: ["early"] },
+      { level: 5, seq: MEAT, kana: "にく", kanji: "肉", meaning: ["meat"] },
+      { level: 5, seq: PEOPLE, kana: "みんしゅ", kanji: "民主", meaning: ["democratic", "the head of the nation"] },
+      // The list names the entry read いちじょう for the word read いってい.
+      { level: 5, seq: VERILY, kana: "いってい", kanji: "一定", meaning: ["fixed", "definite"] },
+    ],
+    [],
+    [{ level: 5, parts: 1 }],
+  );
+  const rows = (files.get(`${version}/sets/n5.json`) as SetFile).groups[0];
+
+  it("lead with the sense the list means when the dictionary's first is about something else", () => {
+    expect(rows).toContainEqual([FAST, "{早|はや}い", ["early", "premature", "fast"], "i-adj"]);
+    // Senses out of everyday use aren't offered as meanings.
+    expect(rows).toContainEqual([MEAT, "{肉|にく}", ["meat", "flesh"], "noun"]);
+  });
+
+  it("keep the dictionary's first sense when it already agrees with the list", () => {
+    expect(rows).toContainEqual([
+      PEOPLE,
+      "{民主|みんしゅ}",
+      ["democracy", "popular sovereignty", "Democratic Party of Japan (1998-2016)"],
+      "noun",
+    ]);
+  });
+
+  it("take the entry read the way the list says", () => {
+    expect(rows).toContainEqual([FIXED, "{一定|いってい}", ["fixed", "settled"], "noun"]);
+    expect(rows).toHaveLength(4);
+    expect(report.relisted).toHaveLength(1);
+  });
+
+  it("drop a gloss's longer notes, and keep short ones that complete it", () => {
+    expect(quizMeaning("cup (drinking vessel, measure, brassiere, prize, etc.)")).toBe("cup");
+    expect(quizMeaning("dog (Canis (lupus) familiaris)")).toBe("dog");
+    expect(quizMeaning("door (esp. Japanese-style)")).toBe("door");
+    expect(quizMeaning("to close (e.g. book, eyes, meeting, etc.)")).toBe("to close");
+    expect(quizMeaning("(hard) candy")).toBe("(hard) candy");
+    expect(quizMeaning("to lose (something)")).toBe("to lose (something)");
+    expect(quizMeaning("to work (for, at, in)")).toBe("to work (for, at, in)");
+    expect(quizMeaning("(e.g. only a note)")).toBe("(e.g. only a note)");
+    expect(quizMeaning("thank you")).toBe("thank you");
   });
 });
 

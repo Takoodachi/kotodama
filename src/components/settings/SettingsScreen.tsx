@@ -13,10 +13,12 @@ import { Select } from "@/components/ui/Select";
 import { Toggle } from "@/components/ui/Toggle";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useJapaneseVoices, useSpeech } from "@/hooks/useSpeech";
+import { plural } from "@/lib/plural";
 import { bestVoice } from "@/lib/speech";
 import { useAccount } from "@/store/account";
 import { useProgress } from "@/store/progress";
 import { JP_SIZES, useSettings } from "@/store/settings";
+import { useStorage } from "@/store/storage";
 
 const SAMPLE = "{日本語|にほんご}を{勉強|べんきょう}しています。";
 
@@ -77,6 +79,7 @@ export function SettingsScreen() {
   const settings = useSettings();
   const totals = useProgress((s) => s.totals);
   const account = useAccount((s) => s.status);
+  const persisted = useStorage((s) => s.persisted);
   const voices = useJapaneseVoices();
   const automaticVoice = bestVoice(voices, null);
   const { supported, speak } = useSpeech();
@@ -88,7 +91,7 @@ export function SettingsScreen() {
       className="mx-auto w-full max-w-3xl space-y-5 px-4 pt-4 pb-10 md:px-8 md:pt-8"
     >
       <header className="mb-6">
-        <p className="eyebrow">設定 · Settings</p>
+        <p className="eyebrow"><span lang="ja">設定</span> · Settings</p>
         <h1 className="mt-2 font-mincho text-3xl text-paper md:text-5xl">Make it yours</h1>
       </header>
 
@@ -150,8 +153,8 @@ export function SettingsScreen() {
             value={settings.glyph}
             onChange={settings.setGlyph}
             options={[
-              { value: "mincho", label: <span className="font-mincho text-base">明朝 Mincho</span> },
-              { value: "sans", label: <span className="font-jp text-base">ゴシック Sans</span> },
+              { value: "mincho", label: <span className="font-mincho text-base"><span lang="ja">明朝</span> Mincho</span> },
+              { value: "sans", label: <span className="font-jp text-base"><span lang="ja">ゴシック</span> Sans</span> },
             ]}
           />
         </Field>
@@ -252,11 +255,19 @@ export function SettingsScreen() {
 
       <Panel eyebrow="Data" title="Progress">
         <p className="text-sm text-mist tabular-nums">
-          {totals.answered} answers so far, {totals.answered ? Math.round((totals.correct / totals.answered) * 100) : 0}% correct.
+          {plural(totals.answered, "answer")} so far, {totals.answered ? Math.round((totals.correct / totals.answered) * 100) : 0}% correct.
           {account === "signed-in"
             ? " Progress is saved to your account; resetting erases it on all your devices."
             : " Progress is stored on this device only."}
         </p>
+        {/* The browser hasn't agreed to keep the site's storage, and no account holds a copy. */}
+        {account !== "signed-in" && persisted === false && (
+          <p className="mt-2 text-xs leading-relaxed text-mist">
+            This browser may clear what it stores for a site that isn&apos;t visited for a while (Safari does after a
+            week). {account === "unavailable" ? "Installing the app keeps" : "Installing the app, or signing in, keeps"}{" "}
+            your progress safe.
+          </p>
+        )}
         <ResetProgress />
       </Panel>
 

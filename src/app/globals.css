@@ -9,11 +9,17 @@
   --color-ink-800: #1a1a1a;
   --color-ink-700: #262626;
   --color-paper: #f2efea;
+  /*
+   * Text colours keep at least 4.5:1 against every surface they sit on, in
+   * both themes (WCAG AA): paper, then mist, then smoke for the quietest text.
+   */
   --color-mist: #a8a39b;
-  --color-smoke: #6f6a63;
+  --color-smoke: #8a847b;
   --color-line: rgb(255 255 255 / 0.08);
   --color-crimson: #c8102e;
-  --color-crimson-bright: #e0243f;
+  /* Crimson as text (errors, wrong answers), and the primary button's hover fill. */
+  --color-crimson-bright: #ef4c62;
+  --color-crimson-hover: #d81c38;
   --color-gold: #c9a45c;
   --color-gold-bright: #e6c98a;
   /* Overlays and hairlines: light on the dark theme, dark on the light one. */
@@ -122,10 +128,11 @@
     --color-ink-700: #ded5c6;
     --color-paper: #1d1914;
     --color-mist: #5c554c;
-    --color-smoke: #867e73;
+    --color-smoke: #6b645a;
     --color-line: rgb(29 25 20 / 0.13);
     --color-crimson: #b80f2b;
     --color-crimson-bright: #9e0c24;
+    --color-crimson-hover: #9e0c24;
     --color-gold: #a37a2e;
     --color-gold-bright: #7a581b;
     --color-veil: #1d1914;

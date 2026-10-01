@@ -83,6 +83,7 @@ function TypedAnswer({
     <div className="space-y-3 text-center">
       {label && <p className="-mb-1.5 pl-1 text-left text-[11px] tracking-[0.2em] text-smoke uppercase">{label}</p>}
       <p
+        lang={side === "jp" ? "ja" : undefined}
         className={cn(
           "flex items-center justify-center rounded-2xl border bg-veil/[0.03] px-5 text-2xl text-paper",
           label ? "h-14" : "h-16",
@@ -93,7 +94,7 @@ function TypedAnswer({
         {given ? (
           <span className={cn(side === "jp" && "jp-scale")}>{given}</span>
         ) : (
-          <span className="font-sans text-base text-smoke">No answer</span>
+          <span lang="en" className="font-sans text-base text-smoke">No answer</span>
         )}
       </p>
       {!correct && (

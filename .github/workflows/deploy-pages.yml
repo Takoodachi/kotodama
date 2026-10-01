@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, feat/kotodama-app]
+    branches: [main]
   # The dictionary (JMdict) is fetched at build time; its licence asks for the
   # data to be refreshed at least monthly, so the site is rebuilt on the 1st.
   schedule:

@@ -41,7 +41,7 @@ export function ModePicker({ modes, value, onChange }: ModePickerProps) {
                 className="absolute inset-0 rounded-xl border border-crimson/70 bg-crimson/[0.09] shadow-[0_0_30px_-10px_rgb(200_16_46/0.8)]"
               />
             )}
-            <span className={cn("jp relative text-3xl transition-colors", selected ? "text-paper" : "text-mist")}>
+            <span lang="ja" className={cn("jp relative text-3xl transition-colors", selected ? "text-paper" : "text-mist")}>
               {info.glyph}
             </span>
             <span className="relative text-[11px] leading-tight tracking-wide text-paper">{info.title}</span>

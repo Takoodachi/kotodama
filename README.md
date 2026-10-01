@@ -38,6 +38,10 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
   several devices adds up, even offline; see [Accounts and sync](#accounts-and-sync).
 - **Look back:** "Previous card" (or `←`) shows earlier cards in a session and plays them again.
 - **Keyboard:** `1`–`4` answer, `Enter` or `Space` continue, `←` look back, `Esc` ends the session.
+- **Kept safe:** once there is progress, the app asks the browser to keep its storage for good.
+  Browsers otherwise clear a site's data when space runs low, and Safari after a week without a
+  visit unless the app is installed; Settings says so when the browser hasn't agreed and no
+  account holds a copy.
 - **Offline:** after one visit, every page, the content library and the Japanese font slices it
   needs are cached. Audio uses the device's speech voices; when offline, the app picks an on-device voice.
   The full dictionary is the exception: only what has been looked up or practiced before is kept.
@@ -59,8 +63,8 @@ iOS Safari, use **Share → Add to Home Screen**.
 
 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) runs the tests, builds
 the dictionary files and a static export, and publishes it to
-**https://takoodachi.github.io/kotodama/**. It runs on every push to `main` or `feat/kotodama-app`,
-on the 1st of each month (to refresh the dictionary), and can also be started by hand.
+**https://takoodachi.github.io/kotodama/**. It runs on every push to `main`, on the 1st of each
+month (to refresh the dictionary), and can also be started by hand.
 
 Setting `PAGES_BASE_PATH` (the workflow does this) switches `next.config.ts` to
 `output: "export"` under that sub-path. Without it, the app builds for `next start` and sends its
@@ -92,7 +96,10 @@ Nothing downloads the dictionary whole. The files are:
 - The entries, most common first, 32 to a file for common words and 128 for the rest. Showing a
   page of results reads the files those entries are in.
 - One file per JLPT level with its words for the quiz, and the links from the app's own words to
-  their entries.
+  their entries. A quiz word's meanings are the dictionary's, tidied for a card: the sense the JLPT
+  list has in mind leads when the dictionary's first sense is about something else (肉 is "meat"
+  before "flesh"), and long notes in parentheses are dropped ("cup", not "cup (drinking vessel,
+  measure, …)").
 
 The service worker keeps every dictionary file it has fetched, so earlier lookups and used word
 sets work offline. The files sit in a folder named after the JMdict release and the word sets built from it; when a new one is

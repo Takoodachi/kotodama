@@ -1,8 +1,15 @@
 import { toHiragana, toRomaji } from "wanakana";
-import { withoutNotes } from "@/lib/jmdict/keys.mjs";
+import { hasJapanese, withoutNotes } from "@/lib/jmdict/keys.mjs";
 
 const PUNCTUATION =
   /[\s　.,!?;:'"`~()\[\]{}\-‐–—（）「」『』【】［］、。！？・…〜～♪’‘“”]/g;
+
+/**
+ * The `lang` for a label that may be Japanese or not ("人", "N5"): marking
+ * Japanese as Japanese lets screen readers pronounce it and browsers pick
+ * Japanese forms of the characters.
+ */
+export const langOf = (text: string) => (hasJapanese(text) ? "ja" : undefined);
 
 export function stripPunctuation(text: string): string {
   return text.replace(PUNCTUATION, "");
