@@ -5,6 +5,8 @@ import { motion, useAnimate } from "motion/react";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { JpText } from "@/components/japanese/Furigana";
+import { KanaChartButton } from "@/components/kana/KanaChartButton";
+import { KanaChartFrame } from "@/components/kana/KanaChartFrame";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { MuteButton } from "@/components/ui/MuteButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -18,12 +20,13 @@ import { useStartSession } from "@/hooks/useStartSession";
 import { cn } from "@/lib/cn";
 import { GRID_CATEGORIES } from "@/lib/quiz/directions";
 import { toSurface } from "@/lib/furigana";
-import { cardColumns, checkGridAnswer, gridAnswer, gridHint, packRows } from "@/lib/quiz/grid";
+import { arrowMove, cardColumns, checkGridAnswer, gridAnswer, gridHint, packRows, type ArrowMove } from "@/lib/quiz/grid";
 import { seededRng, shuffle } from "@/lib/random";
 import { scriptNames } from "@/lib/writing";
 import { useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
 import { useLibraryRevision, useFetchedSets } from "@/store/fetchedSets";
+import { useKanaChart } from "@/store/kanaChart";
 
 interface CardState {
   status: "open" | "right";
@@ -65,11 +68,13 @@ interface CardProps {
    * right, or null if there was nothing new to check.
    */
   onCheck: (input: HTMLInputElement, how: Move | "leave") => boolean | null;
+  /** Moves to another card with an arrow key, checking nothing. Returns whether there was one that way. */
+  onArrow: (move: ArrowMove) => boolean;
   inputRef: (el: HTMLInputElement | null) => void;
   onPlay: () => void;
 }
 
-function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: CardProps) {
+function GridCard({ item, shown, state, finished, onCheck, onArrow, inputRef, onPlay }: CardProps) {
   const [scope, animate] = useAnimate<HTMLDivElement>();
   const shake = () => void animate(scope.current, { x: [0, -7, 7, -4, 4, 0] }, { duration: 0.4 });
   const right = state.status === "right";
@@ -136,12 +141,19 @@ function GridCard({ item, shown, state, finished, onCheck, inputRef, onPlay }: C
           spellCheck={false}
           enterKeyHint="next"
           onKeyDown={(event) => {
-            if (event.key !== "Enter" && event.key !== "Tab") return;
-            // The Enter that confirms a Japanese keyboard's conversion isn't a submit.
+            // While a Japanese keyboard is converting, its keys are its own: Enter confirms, the arrows pick.
             if (event.nativeEvent.isComposing || event.keyCode === 229) return;
-            event.preventDefault();
-            const move = event.key === "Tab" && event.shiftKey ? "previous" : "next";
-            if (onCheck(event.currentTarget, move) === false) shake();
+            const input = event.currentTarget;
+            if (event.key === "Enter" || event.key === "Tab") {
+              event.preventDefault();
+              const move = event.key === "Tab" && event.shiftKey ? "previous" : "next";
+              if (onCheck(input, move) === false) shake();
+              return;
+            }
+            // With a modifier the arrows select text, jump by word or go back a page.
+            if (event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
+            const move = arrowMove(event.key, input.value.length, input.selectionStart, input.selectionEnd);
+            if (move && onArrow(move)) event.preventDefault();
           }}
           // Tapping or clicking another card checks the answer too.
           onBlur={(event) => {
@@ -188,6 +200,8 @@ export function GridPractice() {
   const checked = useRef(new Map<string, string>());
   // Cards tried at least once: like a quiz, only the first try counts toward spaced repetition.
   const tried = useRef(new Set<string>());
+  // Set while an arrow key moves to another card: that only moves, so the field left isn't checked.
+  const arrowing = useRef(false);
 
   // Words from the dictionary's sets are fetched after a reload, and join the grid when they land.
   const revision = useLibraryRevision();
@@ -241,14 +255,17 @@ export function GridPractice() {
   /**
    * Moves to the next card still waiting for an answer, in reading order, or
    * the previous one. Past the last card it loops back to the first one still
-   * open, so wrong and skipped cards come round again. False if none is left.
+   * open, so wrong and skipped cards come round again; without `loop` it stops
+   * at the ends. False if there is no card to move to.
    */
-  const focusOpen = (fromId: string, move: Move): boolean => {
+  const focusOpen = (fromId: string, move: Move, loop = true): boolean => {
     const count = ordered.length;
     const start = ordered.findIndex((i) => i.id === fromId);
     const step = move === "next" ? 1 : -1;
     for (let k = 1; k < count; k++) {
-      const card = ordered[(((start + step * k) % count) + count) % count];
+      const at = start + step * k;
+      if (!loop && (at < 0 || at >= count)) break;
+      const card = ordered[((at % count) + count) % count];
       const input = inputs.current.get(card.id);
       if (!input || stateOf(card.id).status === "right") continue;
       input.focus();
@@ -257,6 +274,46 @@ export function GridPractice() {
       return true;
     }
     return false;
+  };
+
+  /**
+   * Moves to the open card nearest above or below, going by where the fields
+   * are on screen: cards are one to three columns wide, so the one above isn't
+   * a fixed number of cards back. False from the first or last row with one.
+   */
+  const focusRow = (fromId: string, move: "up" | "down"): boolean => {
+    const from = inputs.current.get(fromId)?.getBoundingClientRect();
+    if (!from) return false;
+    const middle = from.left + from.width / 2;
+    // Fields in one row share a top, give or take a pixel of rounding.
+    const sameRow = 4;
+    let best: { input: HTMLInputElement; away: number; aside: number } | null = null;
+    for (const input of inputs.current.values()) {
+      const box = input.getBoundingClientRect();
+      const away = move === "down" ? box.top - from.top : from.top - box.top;
+      if (away < sameRow) continue;
+      const aside = Math.abs(box.left + box.width / 2 - middle);
+      const nearer = !best || away < best.away - sameRow || (away < best.away + sameRow && aside < best.aside);
+      if (nearer) best = { input, away, aside };
+    }
+    if (!best) return false;
+    best.input.focus();
+    best.input.select();
+    return true;
+  };
+
+  /**
+   * Moves with an arrow key. Unlike Enter, Tab or a click on another card it
+   * checks nothing: what's typed stays as it is, to come back to or to be
+   * counted at Finish.
+   */
+  const focusByArrow = (fromId: string, move: ArrowMove): boolean => {
+    arrowing.current = true;
+    try {
+      return move === "up" || move === "down" ? focusRow(fromId, move) : focusOpen(fromId, move, false);
+    } finally {
+      arrowing.current = false;
+    }
   };
 
   /** Grades an answer, records a first try, and returns the card's new state. */
@@ -277,7 +334,9 @@ export function GridPractice() {
 
   const check = (item: StudyItem, input: HTMLInputElement, how: Move | "leave"): boolean | null => {
     // Cards being rearranged for a new column count: not the learner leaving the field.
-    if (how === "leave" && refocus.current) return null;
+    // Nor is opening the kana chart to look something up (focus comes back when it closes),
+    // and the arrow keys move without checking.
+    if (how === "leave" && (refocus.current || arrowing.current || useKanaChart.getState().open)) return null;
     const value = input.value.trim();
     let correct: boolean | null = null;
     // Nothing new to check (empty, or the same wrong answer again): Enter and Tab just move on.
@@ -340,140 +399,151 @@ export function GridPractice() {
   if (!hydrated) return <div className="flex-1" />;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 md:px-8">
-      <header className="pt-safe sticky top-0 z-20 -mx-4 border-b border-line bg-ink-950/80 px-4 backdrop-blur-xl md:-mx-8 md:px-8">
-        <div className="flex h-14 items-center gap-4">
-          <Link
-            href="/practice"
-            aria-label="Back to practice"
-            className="-ml-2 flex size-10 items-center justify-center rounded-full text-mist transition-colors hover:bg-veil/5 hover:text-paper"
-          >
-            <X className="size-5" strokeWidth={1.5} />
-          </Link>
-          <p className="hidden font-display text-[11px] tracking-[0.3em] text-mist uppercase sm:block">All at once</p>
-          <div className="flex-1">
-            <ProgressBar value={items.length ? rightCount / items.length : 0} />
-          </div>
-          <span className="text-xs text-mist tabular-nums">
-            {rightCount} / {items.length}
-          </span>
-          <MuteButton />
-        </div>
-      </header>
-
-      {items.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-          <p className="text-sm text-mist">Pick some kana, kanji or words on the Practice page first.</p>
-          <LinkButton href="/practice" variant="primary">
-            Choose sets <ArrowRight className="size-4" />
-          </LinkButton>
-        </div>
-      ) : (
-        <>
-          {finished ? (
-            <motion.section
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass mt-6 flex flex-col gap-5 rounded-2xl p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+    // The sides start beside the header and stop short of the bar at the bottom.
+    <KanaChartFrame side="top-3 mt-3 max-h-[calc(100dvh-6.25rem)]">
+      <div className="flex max-w-6xl min-w-0 flex-1 flex-col px-4 md:px-8">
+        <header className="pt-safe sticky top-0 z-20 -mx-4 border-b border-line bg-ink-950/80 px-4 backdrop-blur-xl md:-mx-8 md:px-8">
+          <div className="flex h-14 items-center gap-4">
+            <Link
+              href="/practice"
+              aria-label="Back to practice"
+              className="-ml-2 flex size-10 items-center justify-center rounded-full text-mist transition-colors hover:bg-veil/5 hover:text-paper"
             >
-              <div>
-                <p className="eyebrow">{perfect ? "Perfect" : "Result"}</p>
-                <p className="mt-1 font-mincho text-4xl text-paper tabular-nums">
-                  {rightCount} <span className="text-2xl text-mist">/ {items.length}</span>
-                </p>
-                <p className="mt-1 text-xs text-mist">
-                  {perfect
-                    ? `Every card right${retriedCount > 0 ? `, ${firstTryCount} of them first time` : " first time"}.`
-                    : `${firstTryCount} right first time${retriedCount > 0 ? ` · ${retriedCount} after another try` : ""} · ${items.length - rightCount} to learn. Missed cards show their answers in red.`}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {toPractise.length > 0 && (
-                  <Button
-                    variant="primary"
-                    onClick={() => startSession(toPractise, { length: Math.min(20, toPractise.length * 2) })}
-                  >
-                    <Target className="size-4" />
-                    {perfect ? `Review the ${toPractise.length} I got wrong first` : `Quiz the ${toPractise.length} I missed`}
-                  </Button>
-                )}
-                <Button onClick={restart}>
-                  <RotateCcw className="size-4" /> Try again
-                </Button>
-              </div>
-            </motion.section>
-          ) : (
-            <section className="mt-6 max-w-2xl">
-              <h1 className="font-mincho text-3xl text-paper">Type what you know</h1>
-              <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-mist marker:text-smoke">
-                <li>Type the romaji for kana, or a reading or the meaning for kanji and words.</li>
-                <li>
-                  Press Enter or Tab to check and move on. Right cards turn gold; wrong ones stay red, and after the last
-                  card you loop back round to them.
-                </li>
-                <li>Skip any you don&apos;t know, and press Finish (or Esc) when you&apos;re done.</li>
-              </ul>
-            </section>
-          )}
-
-          <div
-            ref={grid}
-            className="mt-6 grid grid-cols-3 gap-2 pb-32 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:gap-2.5"
-          >
-            {ordered.map((item) => (
-              <GridCard
-                key={item.id}
-                item={item}
-                shown={writtenItem(item, writing)}
-                state={stateOf(item.id)}
-                finished={finished}
-                onCheck={(input, how) => check(item, input, how)}
-                inputRef={(el) => {
-                  if (el) inputs.current.set(item.id, el);
-                  else inputs.current.delete(item.id);
-                }}
-                onPlay={() => speak(speechText(item))}
-              />
-            ))}
+              <X className="size-5" strokeWidth={1.5} />
+            </Link>
+            <p className="hidden font-display text-[11px] tracking-[0.3em] text-mist uppercase sm:block">All at once</p>
+            <div className="flex-1">
+              <ProgressBar value={items.length ? rightCount / items.length : 0} />
+            </div>
+            <span className="text-xs text-mist tabular-nums">
+              {rightCount} / {items.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <KanaChartButton />
+              <MuteButton />
+            </div>
           </div>
+        </header>
 
-          {/* Always in reach at the bottom, however far down the grid you are. */}
-          <div className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-ink-950/85 backdrop-blur-xl">
-            <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-              <p className="min-w-0 text-xs text-mist tabular-nums">
-                {rightCount} of {items.length} right
-                {!finished && untriedCount === 0 && !perfect && (
-                  <span className="block text-paper sm:inline"> · every card tried: fix the red ones or finish</span>
-                )}
-              </p>
-              {finished ? (
-                <div className="flex shrink-0 gap-2">
+        {items.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
+            <p className="text-sm text-mist">Pick some kana, kanji or words on the Practice page first.</p>
+            <LinkButton href="/practice" variant="primary">
+              Choose sets <ArrowRight className="size-4" />
+            </LinkButton>
+          </div>
+        ) : (
+          <>
+            {finished ? (
+              <motion.section
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass mt-6 flex flex-col gap-5 rounded-2xl p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+              >
+                <div>
+                  <p className="eyebrow">{perfect ? "Perfect" : "Result"}</p>
+                  <p className="mt-1 font-mincho text-4xl text-paper tabular-nums">
+                    {rightCount} <span className="text-2xl text-mist">/ {items.length}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-mist">
+                    {perfect
+                      ? `Every card right${retriedCount > 0 ? `, ${firstTryCount} of them first time` : " first time"}.`
+                      : `${firstTryCount} right first time${retriedCount > 0 ? ` · ${retriedCount} after another try` : ""} · ${items.length - rightCount} to learn. Missed cards show their answers in red.`}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
                   {toPractise.length > 0 && (
                     <Button
                       variant="primary"
                       onClick={() => startSession(toPractise, { length: Math.min(20, toPractise.length * 2) })}
                     >
-                      <Target className="size-4" /> {perfect ? "Review" : "Quiz missed"}
+                      <Target className="size-4" />
+                      {perfect ? `Review the ${toPractise.length} I got wrong first` : `Quiz the ${toPractise.length} I missed`}
                     </Button>
                   )}
                   <Button onClick={restart}>
                     <RotateCcw className="size-4" /> Try again
                   </Button>
                 </div>
-              ) : (
-                <div className="flex shrink-0 items-center gap-3">
-                  <kbd className="hidden rounded border border-veil/15 px-1.5 py-0.5 font-sans text-[10px] text-mist pointer-fine:inline">
-                    Esc
-                  </kbd>
-                  <Button variant="primary" onClick={finish}>
-                    Finish <ArrowRight className="size-4" />
-                  </Button>
-                </div>
-              )}
+              </motion.section>
+            ) : (
+              <section className="mt-6 max-w-2xl">
+                <h1 className="font-mincho text-3xl text-paper">Type what you know</h1>
+                <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-mist marker:text-smoke">
+                  <li>Type the romaji for kana, or a reading or the meaning for kanji and words.</li>
+                  <li>
+                    Press Enter or Tab to check and move on. Right cards turn gold; wrong ones stay red, and after the last
+                    card you loop back round to them.
+                  </li>
+                  <li className="hidden pointer-fine:list-item">
+                    The arrow keys move between cards without checking anything: ← and → once the cursor is at the
+                    start or end of what you&apos;ve typed, ↑ and ↓ at any time.
+                  </li>
+                  <li>Skip any you don&apos;t know, and press Finish (or Esc) when you&apos;re done.</li>
+                </ul>
+              </section>
+            )}
+
+            <div
+              ref={grid}
+              className="mt-6 grid grid-cols-3 gap-2 pb-32 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))] sm:gap-2.5"
+            >
+              {ordered.map((item) => (
+                <GridCard
+                  key={item.id}
+                  item={item}
+                  shown={writtenItem(item, writing)}
+                  state={stateOf(item.id)}
+                  finished={finished}
+                  onCheck={(input, how) => check(item, input, how)}
+                  onArrow={(move) => focusByArrow(item.id, move)}
+                  inputRef={(el) => {
+                    if (el) inputs.current.set(item.id, el);
+                    else inputs.current.delete(item.id);
+                  }}
+                  onPlay={() => speak(speechText(item))}
+                />
+              ))}
             </div>
-          </div>
-        </>
-      )}
-    </div>
+
+            {/* Always in reach at the bottom, however far down the grid you are. */}
+            <div className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-ink-950/85 backdrop-blur-xl">
+              <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-8">
+                <p className="min-w-0 text-xs text-mist tabular-nums">
+                  {rightCount} of {items.length} right
+                  {!finished && untriedCount === 0 && !perfect && (
+                    <span className="block text-paper sm:inline"> · every card tried: fix the red ones or finish</span>
+                  )}
+                </p>
+                {finished ? (
+                  <div className="flex shrink-0 gap-2">
+                    {toPractise.length > 0 && (
+                      <Button
+                        variant="primary"
+                        onClick={() => startSession(toPractise, { length: Math.min(20, toPractise.length * 2) })}
+                      >
+                        <Target className="size-4" /> {perfect ? "Review" : "Quiz missed"}
+                      </Button>
+                    )}
+                    <Button onClick={restart}>
+                      <RotateCcw className="size-4" /> Try again
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex shrink-0 items-center gap-3">
+                    <kbd className="hidden rounded border border-veil/15 px-1.5 py-0.5 font-sans text-[10px] text-mist pointer-fine:inline">
+                      Esc
+                    </kbd>
+                    <Button variant="primary" onClick={finish}>
+                      Finish <ArrowRight className="size-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </KanaChartFrame>
   );
 }

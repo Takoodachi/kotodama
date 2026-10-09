@@ -10,12 +10,13 @@ export function MuteButton({ className }: { className?: string }) {
   const hydrated = useHydrated();
   const muted = useSettings((s) => s.muted) && hydrated;
   const setMuted = useSettings((s) => s.setMuted);
-  const label = muted ? "Sound off: tap to turn it on" : "Sound on: tap to mute";
+  const label = muted ? "Sound off: tap or press M to turn it on" : "Sound on: tap or press M to mute";
   return (
     <button
       type="button"
       aria-pressed={muted}
       aria-label={muted ? "Unmute" : "Mute"}
+      aria-keyshortcuts="M"
       title={label}
       onClick={() => setMuted(!muted)}
       className={cn(

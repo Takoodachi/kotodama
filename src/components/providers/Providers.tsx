@@ -2,6 +2,7 @@
 
 import { MotionConfig } from "motion/react";
 import { useEffect, useMemo } from "react";
+import { useHotkeys } from "@/hooks/useHotkeys";
 import { useHydrated } from "@/hooks/useHydrated";
 import { AccountSync } from "@/components/account/AccountSync";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
@@ -88,6 +89,17 @@ function FetchedSetLoader() {
   return null;
 }
 
+/** M turns every pronunciation off and back on, on any page; like every shortcut, not while typing in a field. */
+function MuteHotkey() {
+  const toggle = () => {
+    const { muted, setMuted } = useSettings.getState();
+    setMuted(!muted);
+  };
+  // Both cases, for Shift and Caps Lock.
+  useHotkeys({ m: toggle, M: toggle });
+  return null;
+}
+
 /** Once there is progress to lose, asks the browser not to clear this site's storage by itself. */
 function StorageKeeper() {
   const hydrated = useHydrated();
@@ -105,6 +117,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <PreferenceSync />
       <FetchedSetLoader />
       <StorageKeeper />
+      <MuteHotkey />
       <ServiceWorkerRegister />
       <AccountSync />
       {children}

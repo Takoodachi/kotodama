@@ -39,6 +39,8 @@ interface SettingsState {
   /** Silences every pronunciation, everywhere. */
   muted: boolean;
   theme: Theme;
+  /** Whether the kana chart is shown beside the pages that have it, on screens with the room. */
+  kanaChart: boolean;
 
   toggleGroup: (id: string) => void;
   setGroups: (ids: string[], on: boolean) => void;
@@ -59,6 +61,7 @@ interface SettingsState {
   setGuideSeen: (seen: boolean) => void;
   setMuted: (muted: boolean) => void;
   setTheme: (theme: Theme) => void;
+  setKanaChart: (shown: boolean) => void;
 }
 
 export const useSettings = create<SettingsState>()(
@@ -79,6 +82,7 @@ export const useSettings = create<SettingsState>()(
       guideSeen: false,
       muted: false,
       theme: "dark",
+      kanaChart: true,
 
       toggleGroup: (id) =>
         set((s) => ({
@@ -122,6 +126,7 @@ export const useSettings = create<SettingsState>()(
         set({ muted });
       },
       setTheme: (theme) => set({ theme }),
+      setKanaChart: (kanaChart) => set({ kanaChart }),
     }),
     {
       name: "kotodama-settings",

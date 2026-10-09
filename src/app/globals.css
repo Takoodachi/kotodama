@@ -27,6 +27,9 @@
   /* Text on solid crimson and gold, the same in both themes. */
   --color-on-accent: #fbf8f3;
 
+  /* Wide enough for the kana chart at both sides of a page: `wide:`. */
+  --breakpoint-wide: 85rem;
+
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   --animate-drift-a: drift-a 38s ease-in-out infinite alternate;

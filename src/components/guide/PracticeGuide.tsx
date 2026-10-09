@@ -116,7 +116,7 @@ const STEPS: Step[] = [
       "Press Begin. Anything you miss comes back a few cards later.",
       "New words show an example sentence. Tap it to hear it and see the translation.",
       "Tap “Previous card” to look back at earlier cards and hear them again.",
-      "On a computer, use the number keys to answer, Enter or Space to move on, and ← to look back.",
+      "On a computer, use the number keys to answer, Enter or Space to move on, ← to look back and M to mute.",
     ],
   },
   {

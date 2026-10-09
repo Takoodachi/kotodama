@@ -12,6 +12,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Select } from "@/components/ui/Select";
 import { Toggle } from "@/components/ui/Toggle";
 import { useHydrated } from "@/hooks/useHydrated";
+import { useTouchDevice } from "@/hooks/useTouchDevice";
 import { useJapaneseVoices, useSpeech } from "@/hooks/useSpeech";
 import { plural } from "@/lib/plural";
 import { bestVoice } from "@/lib/speech";
@@ -83,6 +84,7 @@ export function SettingsScreen() {
   const voices = useJapaneseVoices();
   const automaticVoice = bestVoice(voices, null);
   const { supported, speak } = useSpeech();
+  const touch = useTouchDevice();
 
   return (
     <motion.div
@@ -170,7 +172,7 @@ export function SettingsScreen() {
                 checked={settings.muted}
                 onChange={settings.setMuted}
                 label="Mute all pronunciation"
-                description="Same as the speaker button at the top of every screen."
+                description="Same as the speaker button at the top of every screen, or the M key on a keyboard."
               />
             </div>
             <Field label="Play automatically">
@@ -249,7 +251,7 @@ export function SettingsScreen() {
         </div>
       </Panel>
 
-      <Panel eyebrow="App" title="Install">
+      <Panel eyebrow="App" title={touch ? "Install" : "Install on mobile"}>
         <InstallPrompt />
       </Panel>
 
