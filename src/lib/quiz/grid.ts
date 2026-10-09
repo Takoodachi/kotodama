@@ -53,6 +53,24 @@ export function packRows<T>(items: readonly T[], width: (item: T) => number, col
   return packed;
 }
 
+/** Where an arrow key takes the learner from a card's field. */
+export type ArrowMove = "next" | "previous" | "up" | "down";
+
+/**
+ * Whether an arrow key pressed in a card's field moves to another card.
+ * Left and right belong to the text until the caret is at its start or end
+ * (in an empty field it is at both), and a selection is collapsed first, as
+ * in any field. Up and down have no use in a one-line field, so they always move.
+ */
+export function arrowMove(key: string, length: number, start: number | null, end: number | null): ArrowMove | null {
+  if (key === "ArrowUp") return "up";
+  if (key === "ArrowDown") return "down";
+  if (start !== end) return null;
+  if (key === "ArrowLeft" && start === 0) return "previous";
+  if (key === "ArrowRight" && start === length) return "next";
+  return null;
+}
+
 /** What to type, as a field placeholder; shorter on a one-column card. */
 export function gridHint(item: StudyItem, wide = false): string {
   if (isKana(item)) return "romaji";

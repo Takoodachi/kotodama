@@ -93,6 +93,9 @@ function KeyboardHints({
           <span className="flex items-center gap-1.5">
             <Key>Esc</Key> end
           </span>
+          <span className="flex items-center gap-1.5">
+            <Key>M</Key> mute
+          </span>
         </>
       )}
     </p>
