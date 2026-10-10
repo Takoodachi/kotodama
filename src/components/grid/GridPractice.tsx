@@ -10,7 +10,7 @@ import { KanaChartFrame } from "@/components/kana/KanaChartFrame";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { MuteButton } from "@/components/ui/MuteButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { itemsForGroups, speechText, writtenItem } from "@/data/library";
+import { itemsByIds, itemsForGroups, speechText, writtenItem } from "@/data/library";
 import { setKeys } from "@/data/fetchedSets";
 import type { StudyItem } from "@/data/types";
 import { useHotkeys } from "@/hooks/useHotkeys";
@@ -22,7 +22,9 @@ import { GRID_CATEGORIES } from "@/lib/quiz/directions";
 import { toSurface } from "@/lib/furigana";
 import { arrowMove, cardColumns, checkGridAnswer, gridAnswer, gridHint, packRows, type ArrowMove } from "@/lib/quiz/grid";
 import { seededRng, shuffle } from "@/lib/random";
+import { scrolling } from "@/lib/scroll";
 import { scriptNames } from "@/lib/writing";
+import { useCustomQuiz } from "@/store/customQuiz";
 import { useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
 import { useLibraryRevision, useFetchedSets } from "@/store/fetchedSets";
@@ -43,15 +45,22 @@ const newSeed = () => Math.floor(Math.random() * 2 ** 31);
 
 const SPANS = { 1: undefined, 2: "col-span-2", 3: "col-span-3" } as const;
 
+/** The longest text that fits on one line of the widest card. */
+const ONE_LINE = 10;
+
 /**
  * How wide a card is and how big its text, so words never wrap. The grid is
  * three columns on a phone (about 100px each) and more on wider screens;
  * see `cardColumns`. Three characters fit one column only at a smaller size.
+ * Anything too long for the widest card (a phrase or sentence in a quiz of
+ * one's own) is set smaller and does wrap.
  */
-function cardSize(text: string): { span?: string; glyph: string; wide: boolean } {
+function cardSize(text: string): { span?: string; glyph: string; wide: boolean; wraps?: boolean } {
   const columns = cardColumns(text);
+  const length = [...text].length;
+  if (length > ONE_LINE) return { span: SPANS[3], glyph: "text-xl", wide: true, wraps: true };
   if (columns > 1) return { span: SPANS[columns], glyph: "text-3xl", wide: true };
-  return { glyph: [...text].length <= 2 ? "text-4xl" : "text-2xl", wide: false };
+  return { glyph: length <= 2 ? "text-4xl" : "text-2xl", wide: false };
 }
 
 /** Where Enter and Tab go from a card: forward, or back with Shift+Tab. */
@@ -106,10 +115,15 @@ function GridCard({ item, shown, state, finished, onCheck, onArrow, inputRef, on
         disabled={!revealed}
         tabIndex={revealed ? 0 : -1}
         aria-label={revealed ? `Play ${shown.surface}` : undefined}
-        className={cn("jp leading-tight whitespace-nowrap text-paper", size.glyph, revealed && "cursor-pointer")}
+        className={cn(
+          "jp text-paper",
+          size.wraps ? "leading-snug" : "leading-tight whitespace-nowrap",
+          size.glyph,
+          revealed && "cursor-pointer",
+        )}
         lang="ja"
       >
-        <JpText text={shown.surface} ruby="none" scale="fit" />
+        <JpText text={shown.surface} ruby="none" scale={size.wraps ? "wrap" : "fit"} />
       </button>
       {revealed ? (
         <div className="min-h-9 text-xs leading-snug">
@@ -170,21 +184,19 @@ function GridCard({ item, shown, state, finished, onCheck, onArrow, inputRef, on
   );
 }
 
-/** Scrolling glides, unless the device asks for reduced motion. */
-const scrolling = (): ScrollBehavior =>
-  window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-
 /**
  * Tofugu-style "type what you know": every selected kana, kanji and word on
  * one page. Type an answer and press Enter; right cards turn gold, wrong ones
- * shake and can be tried again. Finish shows the rest.
+ * shake and can be tried again. Finish shows the rest. With `own` it is the
+ * quiz the learner built themselves instead, phrases and sentences included.
  */
-export function GridPractice() {
+export function GridPractice({ own = false }: { own?: boolean }) {
   const saved = useHydrated();
   const selected = useSettings((s) => s.selected);
-  // Selected sets that are fetched (JLPT words, the full kanji sets) come first, so the grid is laid out once, complete.
+  const ownQuiz = useCustomQuiz((s) => s.quiz);
+  // Sets that are fetched (JLPT words, the full kanji sets) come first, so the grid is laid out once, complete.
   const setStatus = useFetchedSets((s) => s.status);
-  const fetching = setKeys(selected).some((key) => !setStatus[key] || setStatus[key] === "loading");
+  const fetching = setKeys(own ? ownQuiz : selected).some((key) => !setStatus[key] || setStatus[key] === "loading");
   const hydrated = saved && !fetching;
   const writing = useSettings((s) => s.writing);
   const autoplay = useSettings((s) => s.audio.autoplay);
@@ -206,9 +218,13 @@ export function GridPractice() {
   // Words from the dictionary's sets are fetched after a reload, and join the grid when they land.
   const revision = useLibraryRevision();
   const items = useMemo(
-    () => shuffle(itemsForGroups(selected).filter((i) => GRID_CATEGORIES.has(i.category)), seededRng(seed)),
+    () =>
+      shuffle(
+        own ? itemsByIds(ownQuiz) : itemsForGroups(selected).filter((i) => GRID_CATEGORIES.has(i.category)),
+        seededRng(seed),
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selected, seed, revision],
+    [own, ownQuiz, selected, seed, revision],
   );
 
   // The grid's column count, measured, so the cards can be put in row order (see packRows).
@@ -393,8 +409,10 @@ export function GridPractice() {
     window.scrollTo({ top: 0, behavior: scrolling() });
   };
 
-  // Missed, or right only after another try: worth a focused quiz.
+  // Missed, or right only after another try: worth a focused quiz. A quiz of one's own is a typed one.
   const toPractise = items.filter((i) => stateOf(i.id).firstTry !== true).map((i) => i.id);
+  const quizMissed = () =>
+    startSession(toPractise, { length: Math.min(20, toPractise.length * 2), ...(own && { mode: "reading" as const }) });
 
   if (!hydrated) return <div className="flex-1" />;
 
@@ -427,9 +445,13 @@ export function GridPractice() {
 
         {items.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
-            <p className="text-sm text-mist">Pick some kana, kanji or words on the Practice page first.</p>
+            <p className="text-sm text-mist">
+              {own
+                ? "Your quiz is empty. Add some words to it on the Practice page first."
+                : "Pick some kana, kanji or words on the Practice page first."}
+            </p>
             <LinkButton href="/practice" variant="primary">
-              Choose sets <ArrowRight className="size-4" />
+              {own ? "Build your quiz" : "Choose sets"} <ArrowRight className="size-4" />
             </LinkButton>
           </div>
         ) : (
@@ -453,10 +475,7 @@ export function GridPractice() {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {toPractise.length > 0 && (
-                    <Button
-                      variant="primary"
-                      onClick={() => startSession(toPractise, { length: Math.min(20, toPractise.length * 2) })}
-                    >
+                    <Button variant="primary" onClick={quizMissed}>
                       <Target className="size-4" />
                       {perfect ? `Review the ${toPractise.length} I got wrong first` : `Quiz the ${toPractise.length} I missed`}
                     </Button>
@@ -470,7 +489,11 @@ export function GridPractice() {
               <section className="mt-6 max-w-2xl">
                 <h1 className="font-mincho text-3xl text-paper">Type what you know</h1>
                 <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm text-mist marker:text-smoke">
-                  <li>Type the romaji for kana, or a reading or the meaning for kanji and words.</li>
+                  <li>
+                    {own
+                      ? "Type a reading or the meaning of each card."
+                      : "Type the romaji for kana, or a reading or the meaning for kanji and words."}
+                  </li>
                   <li>
                     Press Enter or Tab to check and move on. Right cards turn gold; wrong ones stay red, and after the last
                     card you loop back round to them.
@@ -518,10 +541,7 @@ export function GridPractice() {
                 {finished ? (
                   <div className="flex shrink-0 gap-2">
                     {toPractise.length > 0 && (
-                      <Button
-                        variant="primary"
-                        onClick={() => startSession(toPractise, { length: Math.min(20, toPractise.length * 2) })}
-                      >
+                      <Button variant="primary" onClick={quizMissed}>
                         <Target className="size-4" /> {perfect ? "Review" : "Quiz missed"}
                       </Button>
                     )}

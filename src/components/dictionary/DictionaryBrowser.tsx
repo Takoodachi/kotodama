@@ -2,7 +2,7 @@
 
 import { BookOpenCheck } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import type { Category } from "@/data/types";
+import type { Category, StudyItem } from "@/data/types";
 import { CATEGORY_LABELS } from "@/lib/analytics";
 import { cn } from "@/lib/cn";
 import { DICTIONARY_CATEGORIES, dictionaryEntries, searchDictionary } from "@/lib/dictionary";
@@ -29,6 +29,8 @@ interface DictionaryBrowserProps {
   autoFocus?: boolean;
   /** Classes for the search bar and filters, e.g. to make them stick while the list scrolls. */
   controlsClassName?: string;
+  /** Something to do with each entry: the quiz builder's Add button. */
+  action?: (item: StudyItem) => React.ReactNode;
 }
 
 function Chip({
@@ -66,6 +68,7 @@ export function DictionaryBrowser({
   query: givenQuery,
   autoFocus,
   controlsClassName,
+  action,
 }: DictionaryBrowserProps) {
   const furigana = useSettings((s) => s.furigana);
   const revision = useLibraryRevision();
@@ -181,6 +184,7 @@ export function DictionaryBrowser({
                 unlocked={unlocked.has(item.id)}
                 showLock={scope === "all"}
                 furigana={furigana}
+                action={action?.(item)}
               />
             ))}
           </ul>

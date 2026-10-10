@@ -127,6 +127,72 @@ export const MATCHES = 8;
 export const PHRASE_WORDS = 5;
 
 /**
+ * The app's class of word for JMdict parts of speech; the first that maps wins.
+ * @param {string[]} tags
+ */
+export function partOfSpeech(tags) {
+  for (const tag of tags) {
+    if (tag === "adj-i" || tag === "adj-ix") return "i-adj";
+    if (tag === "adj-na") return "na-adj";
+    if (tag === "pn") return "pronoun";
+    if (tag === "ctr") return "counter";
+    if (tag === "adv" || tag === "adv-to") return "adverb";
+    if (tag === "exp" || tag === "int" || tag === "conj") return "expression";
+    if (/^v(1|5|k|z|s-|n|r)/.test(tag)) return "verb";
+    if (tag === "n" || tag === "vs" || tag === "num" || tag === "adj-no" || tag.startsWith("n-")) return "noun";
+  }
+  return undefined;
+}
+
+/** Senses a learner shouldn't meet first: dated, crude or slang. */
+const SIDE_SENSE = new Set(["arch", "obs", "rare", "dated", "hist", "vulg", "sl", "net-sl", "m-sl", "derog", "X"]);
+
+/** Notes in parentheses that explain rather than complete a meaning: "(e.g. a salary)", "(esp. Japanese-style)". */
+const EXPLAINS = /^(e\.g\.|esp\.|i\.e\.|cf\.|usu\.|orig\.|incl\.|lit\.|often|also|sometimes|as |of |in |on |for a|from )/i;
+/** The longest note worth keeping on a quiz card: "(something)", "(for, at, in)". */
+const SHORT_NOTE = 12;
+
+/**
+ * A dictionary gloss as a quiz should show it. Dictionaries qualify their
+ * glosses at length: "cup (drinking vessel, measure, brassiere, prize, etc.)",
+ * "dog (Canis (lupus) familiaris)". A card wants "cup" and "dog". Short notes
+ * that complete the meaning stay: "(hard) candy", "to lose (something)".
+ * @param {string} gloss
+ */
+export function quizMeaning(gloss) {
+  // Notes inside notes are always explanation.
+  const nested = /\([^()]*\(/.test(gloss);
+  const trimmed = (nested ? withoutNotes(gloss) : gloss.replace(/\(([^()]*)\)/g, (note, inside) =>
+    inside.length > SHORT_NOTE || EXPLAINS.test(inside) ? " " : note,
+  ))
+    .replace(/\s+/g, " ")
+    .replace(/ ([,;])/g, "$1")
+    .trim();
+  return trimmed || gloss;
+}
+
+/**
+ * The meanings a quiz card gives a word: the first glosses of the sense that
+ * leads, then one from each other sense in everyday use, four at most, tidied
+ * (see `quizMeaning`) and without repeats.
+ * @param {string[]} main the glosses of the leading sense
+ * @param {{ gloss: string, misc: string[] }[]} others the first gloss and the usage notes of each other sense
+ */
+export function quizMeanings(main, others) {
+  const meanings = main.slice(0, 3);
+  for (const sense of others) {
+    if (meanings.length >= 4) break;
+    if (!sense.misc.some((m) => SIDE_SENSE.has(m))) meanings.push(sense.gloss);
+  }
+  const seen = new Set();
+  const unique = meanings.map(quizMeaning).filter((m) => {
+    const plain = plainMeaning(m);
+    return plain && !seen.has(plain) && seen.add(plain);
+  });
+  return unique.length ? unique : meanings.slice(0, 1);
+}
+
+/**
  * Furigana markup for a word from how it is written and how it is read:
  * 食べる + たべる → {食|た}べる. Kana in the written form anchors the reading;
  * when the two can't be lined up, the whole reading goes over the whole word.

@@ -80,8 +80,8 @@ describe("mergeDocs", () => {
 
   it("lets a newer reset wipe older progress, wherever it happened", () => {
     const reset = emptyDoc(1_000);
-    expect(mergeDocs(phone, reset)).toBe(reset);
-    expect(mergeDocs(reset, laptop)).toBe(reset);
+    expect(mergeDocs(phone, reset)).toEqual(reset);
+    expect(mergeDocs(reset, laptop)).toEqual(reset);
     const afterReset = doc({ resetAt: 1_000, records: { z: rec(2_000) } });
     expect(mergeDocs(afterReset, phone).records).toEqual({ z: rec(2_000) });
   });

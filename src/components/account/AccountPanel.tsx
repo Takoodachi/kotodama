@@ -243,8 +243,8 @@ export function AccountPanel() {
       <h2 className="mt-1.5 font-mincho text-2xl text-paper">Sync across devices</h2>
       <p className="mt-1.5 mb-5 text-xs leading-relaxed text-mist">
         {status === "signed-in"
-          ? "Your progress is saved to your account and kept the same on every device you sign in on."
-          : "Sign in to back up your progress and pick up where you left off on any device. Progress you've made here is kept and added to your account."}
+          ? "Your progress and the quiz you built yourself are saved to your account and kept the same on every device you sign in on."
+          : "Sign in to back up your progress and the quiz you built yourself, and pick up where you left off on any device. What you've done here is kept and added to your account."}
       </p>
       {status === "loading" ? (
         <p className="text-sm text-mist">Checking your account…</p>

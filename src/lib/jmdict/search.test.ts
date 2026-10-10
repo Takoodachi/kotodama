@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildDictionary, COMMON_CHUNK, quizMeaning, RARE_CHUNK } from "../../../scripts/dictionary/build.mjs";
+import { buildDictionary, COMMON_CHUNK, RARE_CHUNK } from "../../../scripts/dictionary/build.mjs";
+import { quizMeaning } from "./keys.mjs";
 import { headword, tagLabel } from "./labels";
 import { Dictionary, romajiKeys } from "./search";
 import type { DictMeta, JmEntry, SetFile } from "./types";

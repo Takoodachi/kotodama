@@ -262,6 +262,54 @@ export function addKanjiSet(file: KanjiSetFile): boolean {
   return true;
 }
 
+/** The set the learner's own items are filed under. It isn't one of the sets to pick on the Practice page. */
+export const CUSTOM_GROUP = "own";
+
+/** What the library needs to know of an item the learner added (see lib/customQuiz). */
+export type CustomRaw = RawItem & { category: "vocab" | "phrase" | "sentence" };
+
+/** The learner's own items in the library, each with what it was built from, to tell when one changes. */
+const customItems = new Map<string, string>();
+
+function removeFrom(list: StudyItem[] | undefined, gone: ReadonlySet<string>) {
+  if (!list) return;
+  for (let i = list.length - 1; i >= 0; i--) if (gone.has(list[i].id)) list.splice(i, 1);
+}
+
+/**
+ * Makes the library hold exactly these items of the learner's own: the entries
+ * they wrote, and the dictionary words they added that are in none of the
+ * sets. New ones join the library, changed ones are replaced, and ones no
+ * longer listed leave. An id the library already has from elsewhere is left
+ * alone. Returns whether anything changed.
+ */
+export function setCustomItems(raws: readonly CustomRaw[]): boolean {
+  const wanted = new Map<string, CustomRaw>();
+  for (const raw of raws) if (customItems.has(raw.id) || !ITEMS_BY_ID.has(raw.id)) wanted.set(raw.id, raw);
+  const built = (id: string) => JSON.stringify(wanted.get(id));
+  const gone = new Set([...customItems.keys()].filter((id) => customItems.get(id) !== built(id)));
+  const added = [...wanted.values()].filter((raw) => !customItems.has(raw.id) || gone.has(raw.id));
+  if (!gone.size && !added.length) return false;
+
+  removeFrom(LIBRARY, gone);
+  for (const list of ITEMS_BY_CATEGORY.values()) removeFrom(list, gone);
+  for (const id of gone) {
+    ITEMS_BY_ID.delete(id);
+    customItems.delete(id);
+  }
+  for (const raw of added) {
+    const { category, ...rest } = raw;
+    const item = resolve({ ...rest, group: CUSTOM_GROUP }, category);
+    LIBRARY.push(item);
+    ITEMS_BY_ID.set(item.id, item);
+    ITEMS_BY_CATEGORY.get(category)!.push(item);
+    customItems.set(item.id, built(item.id));
+  }
+  ITEMS_BY_GROUP.set(CUSTOM_GROUP, itemsByIds(customItems.keys()));
+  revision++;
+  return true;
+}
+
 /**
  * Every item in any of the given groups, without duplicates. This is what
  * makes mix-and-match work: kana rows, kanji levels and phrase sets can be

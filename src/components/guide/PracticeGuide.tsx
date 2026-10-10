@@ -64,6 +64,8 @@ const STEPS: Step[] = [
       "Tap any set to add it: kana rows, kanji levels, word themes, JLPT word lists, phrases or sentences. Tap again to remove it.",
       "Mix anything. A katakana row, N5 kanji and greetings can share one session.",
       "Presets at the top add whole bundles, and several can be on at once.",
+      "“Create your own quiz” builds one from the dictionary instead, a word at a time.",
+      "The page is long: the arrows at its edge, or ↑ or ↓ pressed twice, go to its top and bottom.",
     ],
   },
   {

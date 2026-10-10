@@ -15,7 +15,10 @@ export function ModePicker({ modes, value, onChange }: ModePickerProps) {
     <div
       role="radiogroup"
       aria-label="Quiz mode"
-      className={cn("grid gap-2", modes.length === 4 ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-2" : "grid-cols-3")}
+      className={cn(
+        "grid gap-2",
+        modes.length === 4 ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-2" : modes.length === 2 ? "grid-cols-2" : "grid-cols-3",
+      )}
     >
       {modes.map((mode) => {
         const info = MODE_INFO[mode];

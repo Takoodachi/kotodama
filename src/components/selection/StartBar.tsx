@@ -12,14 +12,14 @@ interface StartBarProps {
   onStart: () => void;
   /** Docked in the sidebar on wide screens, floating above the tab bar otherwise. */
   docked?: boolean;
+  /** What to do when there is nothing to start with, where it isn't picking sets. */
+  emptyHint?: string;
 }
 
-export function StartBar({ itemCount, mode, sessionLength, onStart, docked }: StartBarProps) {
+export function StartBar({ itemCount, mode, sessionLength, onStart, docked, emptyHint }: StartBarProps) {
   const empty = itemCount === 0;
   const summary = empty
-    ? mode === "grid"
-      ? "Select kana, kanji or words"
-      : "Select at least one set"
+    ? (emptyHint ?? (mode === "grid" ? "Select kana, kanji or words" : "Select at least one set"))
     : mode === "grid"
       ? `${MODE_INFO.grid.title} · every card`
       : `${MODE_INFO[mode].title} · ${sessionLength ? `${sessionLength} questions` : "endless"}`;

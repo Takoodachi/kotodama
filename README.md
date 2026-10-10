@@ -23,6 +23,14 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
   know, press Enter to check, retry wrong ones, then Finish to see what you missed. The arrow keys
   move between cards without checking anything: left and right once the cursor is at the start or
   end of what's typed, up and down at any time.
+- **Your own quiz:** "Create your own quiz" on the Practice page swaps the sets for the dictionary,
+  with an Add button on every entry: build a quiz word by word and run it in Reading or All at
+  once. A word the dictionary doesn't have, or a phrase or sentence of your own, can be written
+  in (Japanese, meaning, and the reading where kanji leave it open); it joins your library too.
+  Signed in, the quiz and your entries are saved to your account with your progress, and follow
+  you to your other devices.
+- **Top and bottom:** the Practice page is long, so a pair of buttons goes to either end of it, as
+  does pressing ↑ or ↓ twice.
 - **Kana chart:** hiragana and katakana with their romaji, on the All at once and dictionary
   pages. On a wide screen it stands at both sides of the page (the あ Kana button hides it); on a
   phone the same button opens it in a sheet.
@@ -43,7 +51,7 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
 - **Study heatmap:** the home page shows a year of daily study, GitHub-style.
 - **Progress page:** a radar of known share per category, plus mastery bars for every set
   (N5 kanji, each kana group, each word theme…).
-- **Accounts:** sign in (Settings → Account) to keep progress in sync across devices. Practice on
+- **Accounts:** sign in (Settings → Account) to keep progress and your own quiz in sync across devices. Practice on
   several devices adds up, even offline; see [Accounts and sync](#accounts-and-sync).
 - **Look back:** "Previous card" (or `←`) shows earlier cards in a session and plays them again.
 - **Keyboard:** `1`–`4` answer, `Enter` or `Space` continue, `←` look back, `Esc` ends the session.
@@ -148,6 +156,12 @@ The merge keeps the latest answer per item, keeps each device's answer counts ap
 on two devices adds up instead of overwriting), and carries streaks across devices. A save only
 succeeds if nobody saved since it read; otherwise it merges again. Resetting progress while signed
 in resets it on every device; signing out clears it from that device.
+
+The quiz a learner builds themselves is saved in the same document, three seconds after a change.
+Each change to it carries its time, and of two devices' changes to the same thing the later one
+stands, so a word added on one device and taken out on another ends up the way it was last left.
+Nothing is dropped from the document, only marked as taken out, which is what lets devices merge
+in any order. A reset of progress leaves the quiz alone.
 
 ## How it's built
 

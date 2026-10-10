@@ -38,10 +38,12 @@ interface JmdictEntryProps {
    */
   practice?: "locked" | "unlocked";
   furigana: FuriganaMode;
+  /** Something to do with the entry, beside its name: adding it to a quiz, say. */
+  action?: React.ReactNode;
 }
 
 /** One entry of the full dictionary: how the word is written and read, each of its senses, and its kanji to open. */
-export function JmdictEntry({ entry, tags, practice, furigana }: JmdictEntryProps) {
+export function JmdictEntry({ entry, tags, practice, furigana, action }: JmdictEntryProps) {
   const [open, setOpen] = useState(false);
   const [kanjiOpen, setKanjiOpen] = useState(false);
   const word = headword(entry);
@@ -83,6 +85,7 @@ export function JmdictEntry({ entry, tags, practice, furigana }: JmdictEntryProp
             </span>
           )}
           <SpeakButton text={word.reading} size="sm" />
+          {action}
         </div>
       </div>
 
