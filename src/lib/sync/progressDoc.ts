@@ -1,4 +1,5 @@
 import { isUnlocked, unlockedAt, type SrsRecord } from "@/lib/srs";
+import { emptyOwn, mergeOwn, readOwn, type OwnDoc } from "./ownDoc";
 
 /**
  * Progress as it is saved to an account: one document that every device
@@ -36,12 +37,14 @@ export interface ProgressDoc {
   records: Record<string, SrsRecord>;
   streak: Streak;
   devices: Record<string, DeviceCounts>;
+  /** The quiz the learner built themselves (see ./ownDoc). It isn't progress: a reset leaves it alone. */
+  own: OwnDoc;
 }
 
 const ZERO: Counts = { answered: 0, correct: 0 };
 
 export function emptyDoc(resetAt = 0): ProgressDoc {
-  return { v: 1, resetAt, records: {}, streak: { count: 0, lastDay: null }, devices: {} };
+  return { v: 1, resetAt, records: {}, streak: { count: 0, lastDay: null }, devices: {}, own: emptyOwn() };
 }
 
 // ---------------------------------------------------------------- dates
@@ -148,8 +151,9 @@ export function mergeStreaks(streaks: Streak[], history: Record<string, Counts>)
 
 /** Combines two versions of an account's progress. Order doesn't matter, and merging twice changes nothing. */
 export function mergeDocs(a: ProgressDoc, b: ProgressDoc): ProgressDoc {
-  // A reset on any device clears everything that happened before it.
-  if (a.resetAt !== b.resetAt) return a.resetAt > b.resetAt ? a : b;
+  const own = mergeOwn(a.own, b.own);
+  // A reset on any device clears all the progress made before it.
+  if (a.resetAt !== b.resetAt) return { ...(a.resetAt > b.resetAt ? a : b), own };
 
   const records: Record<string, SrsRecord> = { ...a.records };
   for (const [id, record] of Object.entries(b.records)) {
@@ -162,7 +166,7 @@ export function mergeDocs(a: ProgressDoc, b: ProgressDoc): ProgressDoc {
   }
 
   const streak = mergeStreaks([a.streak, b.streak], combinedCounts(devices).history);
-  return { v: 1, resetAt: a.resetAt, records, streak, devices };
+  return { v: 1, resetAt: a.resetAt, records, streak, devices, own };
 }
 
 // ---------------------------------------------------------------- checking
@@ -236,5 +240,6 @@ export function readDoc(value: unknown): ProgressDoc {
       lastDay: typeof streak.lastDay === "string" ? streak.lastDay : null,
     },
     devices,
+    own: readOwn(value.own),
   };
 }

@@ -32,10 +32,12 @@ interface DictionaryEntryProps {
   /** Shows whether the entry is unlocked; not needed where every entry listed is. */
   showLock: boolean;
   furigana: FuriganaMode;
+  /** Something to do with the entry, beside its name: adding it to a quiz, say. */
+  action?: React.ReactNode;
 }
 
 /** One dictionary entry: how it's written and read, what it means, and (for words) an example to open. */
-export function DictionaryEntry({ item, unlocked, showLock, furigana }: DictionaryEntryProps) {
+export function DictionaryEntry({ item, unlocked, showLock, furigana, action }: DictionaryEntryProps) {
   const [open, setOpen] = useState(false);
   const long = [...item.surface].length > 8;
   const kind = item.category === "vocab" ? item.pos && PART_OF_SPEECH[item.pos] : item.category;
@@ -96,6 +98,7 @@ export function DictionaryEntry({ item, unlocked, showLock, furigana }: Dictiona
               </span>
             ))}
           <SpeakButton text={speechText(item)} size="sm" />
+          {action}
         </div>
       </div>
       {open && (

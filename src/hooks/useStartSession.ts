@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import { ITEMS_BY_ID } from "@/data/library";
 import { weakestItems } from "@/lib/analytics";
-import { quizMode } from "@/lib/quiz/directions";
+import { quizMode, type Mode } from "@/lib/quiz/directions";
 import { useProgress } from "@/store/progress";
 import { useSession, type SessionLabel } from "@/store/session";
 import { useSettings } from "@/store/settings";
@@ -20,10 +20,10 @@ export const GHOST_SIZE = 20;
 export function useStartSession() {
   const router = useRouter();
   return useCallback(
-    (itemIds: string[], overrides?: { length?: number; label?: SessionLabel }) => {
+    (itemIds: string[], overrides?: { length?: number; label?: SessionLabel; mode?: Mode }) => {
       const settings = useSettings.getState();
       const { directions, sessionLength, writing } = settings;
-      const mode = quizMode(settings.mode, isTouchDevice());
+      const mode = overrides?.mode ?? quizMode(settings.mode, isTouchDevice());
       const started = useSession.getState().start({
         itemIds,
         mode,

@@ -1,8 +1,12 @@
 "use client";
 
 import { CloudOff, RotateCw } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ITEMS_BY_ID } from "@/data/library";
+import type { StudyItem } from "@/data/types";
 import { wordSetItemId } from "@/data/wordSets";
+import { dictionaryWordId, isOwnId } from "@/lib/customQuiz";
+import { searchDictionary } from "@/lib/dictionary";
 import { langOf } from "@/lib/japanese";
 import { loadDictionaryFile, openDictionary } from "@/lib/jmdict/client";
 import { kanjiIn } from "@/lib/jmdict/kanji";
@@ -11,7 +15,8 @@ import type { JmEntry } from "@/lib/jmdict/types";
 import { isUnlocked } from "@/lib/srs";
 import { useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
-import { useFetchedSets } from "@/store/fetchedSets";
+import { useFetchedSets, useLibraryRevision } from "@/store/fetchedSets";
+import { DictionaryEntry } from "./DictionaryEntry";
 import { JmdictEntry } from "./JmdictEntry";
 import { KanjiCards } from "./KanjiDetails";
 
@@ -35,12 +40,27 @@ interface JmdictResultsProps {
   onQuery: (query: string) => void;
   /** Switches to the learner's own library, which needs no connection. */
   onUseLibrary: () => void;
+  /**
+   * Something to do with each entry (the quiz builder's Add button), given
+   * the ids the word goes by in the library: as one of the app's own words,
+   * in its JLPT level's set, and as a word added from the dictionary.
+   */
+  action?: (entry: JmEntry, ids: string[]) => React.ReactNode;
+  /** The same for an entry the learner wrote. */
+  ownAction?: (item: StudyItem) => React.ReactNode;
+  /** Shown under the results of a search, told whether there were any: where the quiz builder offers to add the word by hand. */
+  missing?: (query: string, found: boolean) => React.ReactNode;
 }
 
-/** Search results from the full dictionary (JMdict), fetched as the query is typed. */
-export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsProps) {
+/**
+ * Search results from the full dictionary (JMdict), fetched as the query is
+ * typed. Entries the learner wrote themselves come first: they are part of
+ * their dictionary too.
+ */
+export function JmdictResults({ query, onQuery, onUseLibrary, action, ownAction, missing }: JmdictResultsProps) {
   const furigana = useSettings((s) => s.furigana);
   const records = useProgress((s) => s.records);
+  const revision = useLibraryRevision();
   const meta = useFetchedSets((s) => s.meta);
   const loadMeta = useFetchedSets((s) => s.loadMeta);
   const typed = query.trim();
@@ -123,11 +143,40 @@ export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsPro
     return () => observer.disconnect();
   }, [more, showMore]);
 
+  const idsOf = (entry: JmEntry) => [
+    ...(taught?.get(entry.s) ?? []),
+    ...(entry.j ? [wordSetItemId(entry.j, entry.s)] : []),
+    dictionaryWordId(entry.s),
+  ];
   const practice = (entry: JmEntry) => {
-    const ids = [...(taught?.get(entry.s) ?? []), ...(entry.j ? [wordSetItemId(entry.j, entry.s)] : [])];
+    // A word from outside the sets is practiced only once the learner has added it.
+    const ids = idsOf(entry).filter((id) => id !== dictionaryWordId(entry.s) || ITEMS_BY_ID.has(id));
     if (!ids.length) return undefined;
     return ids.some((id) => isUnlocked(records[id])) ? "unlocked" : "locked";
   };
+
+  const own = useMemo(
+    () => (typed ? searchDictionary(typed, (item) => isOwnId(item.id)) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the library changes when an entry is written or deleted
+    [typed, revision],
+  );
+  const ownEntries = own.length > 0 && (
+    <section aria-label="Your own entries" className="mt-4">
+      <h2 className="mb-2 px-1 text-[11px] tracking-wide text-smoke">Your own entries</h2>
+      <ul className="space-y-2.5">
+        {own.map((item) => (
+          <DictionaryEntry
+            key={item.id}
+            item={item}
+            unlocked={isUnlocked(records[item.id])}
+            showLock
+            furigana={furigana}
+            action={ownAction?.(item)}
+          />
+        ))}
+      </ul>
+    </section>
+  );
 
   if (!typed) {
     return (
@@ -156,29 +205,33 @@ export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsPro
 
   if (failed === typed) {
     return (
-      <div className="mt-8 px-2 text-center" role="alert">
-        <CloudOff className="mx-auto size-6 text-smoke" strokeWidth={1.5} />
-        <p className="mt-3 text-sm leading-relaxed text-mist">
-          The full dictionary couldn&apos;t be reached. It needs a connection for words you haven&apos;t looked up
-          before.
-        </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <button
-            type="button"
-            onClick={() => setAttempt(attempt + 1)}
-            className="flex h-9 items-center gap-1.5 rounded-full border border-line px-4 text-xs text-paper transition-colors hover:border-veil/25"
-          >
-            <RotateCw className="size-3.5" /> Try again
-          </button>
-          <button
-            type="button"
-            onClick={onUseLibrary}
-            className="h-9 rounded-full border border-gold/40 px-4 text-xs text-gold-bright transition-colors hover:border-gold/60"
-          >
-            Search my library instead
-          </button>
+      <>
+        {ownEntries}
+        <div className="mt-8 px-2 text-center" role="alert">
+          <CloudOff className="mx-auto size-6 text-smoke" strokeWidth={1.5} />
+          <p className="mt-3 text-sm leading-relaxed text-mist">
+            The full dictionary couldn&apos;t be reached. It needs a connection for words you haven&apos;t looked up
+            before.
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAttempt(attempt + 1)}
+              className="flex h-9 items-center gap-1.5 rounded-full border border-line px-4 text-xs text-paper transition-colors hover:border-veil/25"
+            >
+              <RotateCw className="size-3.5" /> Try again
+            </button>
+            <button
+              type="button"
+              onClick={onUseLibrary}
+              className="h-9 rounded-full border border-gold/40 px-4 text-xs text-gold-bright transition-colors hover:border-gold/60"
+            >
+              Search my library instead
+            </button>
+          </div>
         </div>
-      </div>
+        {missing?.(typed, own.length > 0)}
+      </>
     );
   }
 
@@ -195,6 +248,7 @@ export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsPro
   if (!shown) {
     return (
       <>
+        {ownEntries}
         {kanji}
         <p className="mt-8 px-2 text-center text-sm text-mist" role="status">
           Searching…
@@ -206,18 +260,21 @@ export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsPro
   if (shown.hits.length === 0 && current) {
     return (
       <>
+        {ownEntries}
         {kanji}
         <p className="mt-8 px-2 text-center text-sm leading-relaxed text-mist">
-          No {kanji ? "words" : "matches"} for <span className="text-paper">&ldquo;{typed}&rdquo;</span>. Verbs and
-          adjectives are listed in their dictionary form (<span lang="ja" className="jp">食べる</span>, not{" "}
-          <span lang="ja" className="jp">食べます</span>).
+          {own.length > 0 ? "Nothing else" : kanji ? "No words" : "No matches"} for{" "}
+          <span className="text-paper">&ldquo;{typed}&rdquo;</span>. Verbs and adjectives are listed in their dictionary
+          form (<span lang="ja" className="jp">食べる</span>, not <span lang="ja" className="jp">食べます</span>).
         </p>
+        {missing?.(typed, own.length > 0)}
       </>
     );
   }
 
   return (
     <div className={current ? undefined : "opacity-50 transition-opacity"} aria-busy={!current}>
+      {ownEntries}
       {kanji}
       <p className="mt-4 mb-2 px-1 text-[11px] tracking-wide text-smoke tabular-nums" aria-live="polite">
         {current
@@ -226,7 +283,14 @@ export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsPro
       </p>
       <ul className="space-y-2.5">
         {shown.entries.map((entry) => (
-          <JmdictEntry key={entry.s} entry={entry} tags={meta?.tags ?? {}} practice={practice(entry)} furigana={furigana} />
+          <JmdictEntry
+            key={entry.s}
+            entry={entry}
+            tags={meta?.tags ?? {}}
+            practice={practice(entry)}
+            furigana={furigana}
+            action={action?.(entry, idsOf(entry))}
+          />
         ))}
       </ul>
       {more && (
@@ -239,6 +303,7 @@ export function JmdictResults({ query, onQuery, onUseLibrary }: JmdictResultsPro
           Show more
         </button>
       )}
+      {current && missing?.(typed, true)}
     </div>
   );
 }

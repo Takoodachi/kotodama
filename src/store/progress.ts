@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { review, unlock, type SrsRecord } from "@/lib/srs";
+import { emptyOwn } from "@/lib/sync/ownDoc";
 import {
   combinedCounts,
   emptyDoc,
@@ -76,9 +77,20 @@ const addTo = (counts: Counts | undefined, correct: boolean): Counts => ({
   correct: (counts?.correct ?? 0) + (correct ? 1 : 0),
 });
 
-/** Progress as a document to sync with the account. */
+/**
+ * Progress as a document to sync with the account. The learner's own quiz,
+ * which is saved in the same document, is kept in its own store: whoever
+ * syncs puts it in (see store/account).
+ */
 export function progressDoc(state: Pick<ProgressState, "resetAt" | "records" | "streak" | "devices">): ProgressDoc {
-  return { v: 1, resetAt: state.resetAt, records: state.records, streak: state.streak, devices: state.devices };
+  return {
+    v: 1,
+    resetAt: state.resetAt,
+    records: state.records,
+    streak: state.streak,
+    devices: state.devices,
+    own: emptyOwn(),
+  };
 }
 
 function fromDoc(doc: ProgressDoc) {

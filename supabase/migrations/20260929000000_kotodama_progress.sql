@@ -5,8 +5,8 @@
 -- adds the kotodama_progress table.
 --
 -- One row per account holding its whole progress document (spaced-repetition
--- records, streak and per-device answer counts), merged on the device; see
--- src/lib/sync. `version` goes up with every save, and a save only succeeds
+-- records, streak, per-device answer counts, and the quiz the learner built
+-- themselves), merged on the device; see src/lib/sync. `version` goes up with every save, and a save only succeeds
 -- if the version is still the one it read, so two devices saving at once
 -- merge instead of overwriting each other.
 

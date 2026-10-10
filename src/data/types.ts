@@ -32,6 +32,12 @@ export interface RawItem {
   note?: string;
   /** Kana that sounds the same and is also accepted when this one is typed from its romaji (ぢ for "ji"). */
   sameSound?: string;
+  /**
+   * In a typed reading, は, へ and を also count as they are said (wa, e, o).
+   * For phrases and sentences without romaji written out by hand: the
+   * learner's own, and the dictionary's expressions.
+   */
+  saidParticles?: boolean;
   /** English meanings; the first is the primary one. Empty for kana. */
   meaning: string[];
   /** Kanji only: on'yomi in katakana. */

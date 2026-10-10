@@ -12,13 +12,21 @@ import {
 } from "@/lib/japanese";
 import { answerSide, isCloze, type Direction, type Side } from "./directions";
 
+/** は, へ and を as particles are said wa, e and o; either spelling counts. */
+const foldParticles = (kana: string) => kana.replace(/は/g, "わ").replace(/へ/g, "え").replace(/を/g, "お");
+
+/** A reading, in kana or romaji, as a key that doesn't tell a particle spelled from one said. */
+const saidKey = (reading: string) =>
+  readingKey(foldParticles(toHiragana(normalizeRomaji(reading), { passRomaji: false })));
+
 /**
  * Reading answers. Kana are checked against their listed romaji exactly (so
  * "chi" is not accepted for ティ). A Japanese keyboard left on turns typed
  * romaji into kana ("ka" → か), so kana typed in are read back as romaji.
  * Everything else is compared by reading key,
  * which accepts any common romanization, and against the listed romaji, which
- * covers particles written as pronounced (は → wa).
+ * covers particles written as pronounced (は → wa). Where no romaji was
+ * written out (`saidParticles`), particles count either way.
  */
 export function checkReading(item: StudyItem, input: string): boolean {
   const literal = literalRomajiKey(input);
@@ -34,7 +42,8 @@ export function checkReading(item: StudyItem, input: string): boolean {
   const key = readingKey(input);
   if (!key) return false;
   const readings = item.category === "kanji" ? kanjiReadings(item) : [item.reading];
-  return [...readings, ...item.romaji].some((r) => readingKey(r) === key);
+  if ([...readings, ...item.romaji].some((r) => readingKey(r) === key)) return true;
+  return !!item.saidParticles && saidKey(input) === saidKey(item.reading);
 }
 
 /**
@@ -101,9 +110,6 @@ export function checkJapanese(item: StudyItem, input: string): boolean {
   if (item.category === "kanji") accepted.push(...kanjiReadings(item));
   return accepted.some((a) => japaneseKey(a, strict) === answer);
 }
-
-/** は, へ and を as particles are said wa, e and o; either spelling counts. */
-const foldParticles = (kana: string) => kana.replace(/は/g, "わ").replace(/へ/g, "え").replace(/を/g, "お");
 
 /**
  * The missing word in a grammar sentence. In Japanese it must be spelled

@@ -7,6 +7,7 @@ import { useHydrated } from "@/hooks/useHydrated";
 import { AccountSync } from "@/components/account/AccountSync";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { setKeys, type SetKey } from "@/data/fetchedSets";
+import { useCustomQuiz } from "@/store/customQuiz";
 import { useProgress } from "@/store/progress";
 import { useSession } from "@/store/session";
 import { useSettings } from "@/store/settings";
@@ -18,6 +19,8 @@ function StoreHydrator() {
   useEffect(() => {
     void useSettings.persist.rehydrate();
     void useProgress.persist.rehydrate();
+    // Before the session: a quiz under way may be over the learner's own items.
+    void useCustomQuiz.persist.rehydrate();
     void useSession.persist.rehydrate();
   }, []);
   return null;
@@ -63,19 +66,20 @@ function PreferenceSync() {
 /**
  * Fetches the sets in use that aren't bundled with the app (JLPT words, the
  * full kanji sets): the ones selected for practice, and the ones with items
- * already practiced or in the quiz under way, so their progress shows
- * everywhere. Tried again when the connection returns.
+ * already practiced, in the quiz under way or in the learner's own quiz, so
+ * their progress shows everywhere. Tried again when the connection returns.
  */
 function FetchedSetLoader() {
   const hydrated = useHydrated();
   const selected = useSettings((s) => s.selected);
   const records = useProgress((s) => s.records);
   const poolIds = useSession((s) => s.poolIds);
+  const ownQuiz = useCustomQuiz((s) => s.quiz);
   const ensure = useFetchedSets((s) => s.ensure);
   // As one string, so the effect below only runs again when the sets needed change.
   const keys = useMemo(
-    () => setKeys([...selected, ...poolIds, ...Object.keys(records)]).join(" "),
-    [selected, poolIds, records],
+    () => setKeys([...selected, ...poolIds, ...ownQuiz, ...Object.keys(records)]).join(" "),
+    [selected, poolIds, ownQuiz, records],
   );
 
   useEffect(() => {

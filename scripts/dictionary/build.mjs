@@ -4,9 +4,10 @@ import {
   japaneseKey,
   MATCHES,
   meaningWords,
+  partOfSpeech,
   PHRASE_WORDS,
   plainMeaning,
-  withoutNotes,
+  quizMeanings,
 } from "../../src/lib/jmdict/keys.mjs";
 import { buildKanji } from "./kanji.mjs";
 
@@ -71,27 +72,6 @@ function deltas(sorted) {
   return sorted.map((value, i) => (i === 0 ? value : value - sorted[i - 1]));
 }
 
-/**
- * The app's class of word for JMdict parts of speech; the first that maps wins.
- * @param {string[]} tags
- */
-function partOfSpeech(tags) {
-  for (const tag of tags) {
-    if (tag === "adj-i" || tag === "adj-ix") return "i-adj";
-    if (tag === "adj-na") return "na-adj";
-    if (tag === "pn") return "pronoun";
-    if (tag === "ctr") return "counter";
-    if (tag === "adv" || tag === "adv-to") return "adverb";
-    if (tag === "exp" || tag === "int" || tag === "conj") return "expression";
-    if (/^v(1|5|k|z|s-|n|r)/.test(tag)) return "verb";
-    if (tag === "n" || tag === "vs" || tag === "num" || tag === "adj-no" || tag.startsWith("n-")) return "noun";
-  }
-  return undefined;
-}
-
-/** Senses a learner shouldn't meet first: dated, crude or slang. */
-const SIDE_SENSE = new Set(["arch", "obs", "rare", "dated", "hist", "vulg", "sl", "net-sl", "m-sl", "derog", "X"]);
-
 /** @param {number} n */
 const hash = (n) => Math.imul(n, 2654435761) >>> 0;
 
@@ -154,30 +134,6 @@ const sharesWord = (meaning, word) =>
     word.sense.flatMap((sense) => sense.gloss.map((g) => g.text)),
   );
 
-/** Notes in parentheses that explain rather than complete a meaning: "(e.g. a salary)", "(esp. Japanese-style)". */
-const EXPLAINS = /^(e\.g\.|esp\.|i\.e\.|cf\.|usu\.|orig\.|incl\.|lit\.|often|also|sometimes|as |of |in |on |for a|from )/i;
-/** The longest note worth keeping on a quiz card: "(something)", "(for, at, in)". */
-const SHORT_NOTE = 12;
-
-/**
- * A dictionary gloss as a quiz should show it. Dictionaries qualify their
- * glosses at length: "cup (drinking vessel, measure, brassiere, prize, etc.)",
- * "dog (Canis (lupus) familiaris)". A card wants "cup" and "dog". Short notes
- * that complete the meaning stay: "(hard) candy", "to lose (something)".
- * @param {string} gloss
- */
-export function quizMeaning(gloss) {
-  // Notes inside notes are always explanation.
-  const nested = /\([^()]*\(/.test(gloss);
-  const trimmed = (nested ? withoutNotes(gloss) : gloss.replace(/\(([^()]*)\)/g, (note, inside) =>
-    inside.length > SHORT_NOTE || EXPLAINS.test(inside) ? " " : note,
-  ))
-    .replace(/\s+/g, " ")
-    .replace(/ ([,;])/g, "$1")
-    .trim();
-  return trimmed || gloss;
-}
-
 /**
  * A JLPT word as the quiz needs it: [entry number, furigana markup, meanings, class of word].
  *
@@ -216,19 +172,13 @@ function setWord(word, row) {
   const written = kanji && !main.misc.includes("uk") ? kanji : kana;
 
   // Its first glosses, then one from each other sense in everyday use.
-  const meanings = glosses(main).slice(0, 3);
-  for (const sense of senses) {
-    if (meanings.length >= 4) break;
-    if (sense !== main && !sense.misc.some((m) => SIDE_SENSE.has(m))) meanings.push(sense.gloss[0].text);
-  }
-  const seen = new Set();
-  const unique = meanings.map(quizMeaning).filter((m) => {
-    const plain = plainMeaning(m);
-    return plain && !seen.has(plain) && seen.add(plain);
-  });
+  const meanings = quizMeanings(
+    glosses(main),
+    senses.filter((sense) => sense !== main).map((sense) => ({ gloss: sense.gloss[0].text, misc: sense.misc })),
+  );
 
   /** @type {(number | string | string[])[]} */
-  const out = [seqOf(word), furiganaMarkup(written, kana), unique.length ? unique : meanings.slice(0, 1)];
+  const out = [seqOf(word), furiganaMarkup(written, kana), meanings];
   const pos = partOfSpeech(main.partOfSpeech.length ? main.partOfSpeech : senses[0].partOfSpeech);
   if (pos) out.push(pos);
   return out;

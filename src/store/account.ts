@@ -2,7 +2,9 @@ import { create } from "zustand";
 import { BASE_PATH } from "@/lib/basePath";
 import { syncProgress } from "@/lib/sync/cloud";
 import { emptyDoc } from "@/lib/sync/progressDoc";
+import type { OwnDoc } from "@/lib/sync/ownDoc";
 import { accountsEnabled, getSupabase } from "@/lib/sync/supabase";
+import { useCustomQuiz } from "./customQuiz";
 import { progressDoc, useProgress } from "./progress";
 
 export type AuthStatus = "unavailable" | "loading" | "signed-out" | "signed-in";
@@ -15,6 +17,8 @@ interface AccountState {
   sync: SyncStatus;
   lastSynced: number | null;
   syncError: string | null;
+  /** The learner's own quiz as the account has it: while theirs is still this one, there is nothing to save. */
+  savedQuiz: OwnDoc | null;
   /** Arrived from a password-reset email: a new password is needed. */
   recovering: boolean;
 }
@@ -30,6 +34,7 @@ export const useAccount = create<AccountState>()(() => ({
   sync: "idle",
   lastSynced: null,
   syncError: null,
+  savedQuiz: null,
   recovering: false,
 }));
 
@@ -57,12 +62,13 @@ let running: Promise<boolean> | null = null;
 let again = false;
 let applyingRemote = false;
 
-/** True while progress from the account is being merged in, which isn't a change to sync back. */
+/** True while what the account holds is being merged in, which isn't a change to sync back. */
 export const isApplyingRemote = () => applyingRemote;
 
 /**
- * Syncs progress with the account now. Calls made while a sync is running
- * queue one more run afterwards. Resolves to whether everything is saved.
+ * Syncs progress and the learner's own quiz with the account now. Calls made
+ * while a sync is running queue one more run afterwards. Resolves to whether
+ * everything is saved.
  */
 export function syncNow(): Promise<boolean> {
   if (running) {
@@ -83,7 +89,8 @@ export function syncNow(): Promise<boolean> {
 
 async function syncOnce(): Promise<boolean> {
   const { userId, status } = useAccount.getState();
-  if (status !== "signed-in" || !userId || !useProgress.persist.hasHydrated()) return false;
+  const read = useProgress.persist.hasHydrated() && useCustomQuiz.persist.hasHydrated();
+  if (status !== "signed-in" || !userId || !read) return false;
   if (isOffline()) {
     useAccount.setState({ sync: "offline" });
     return false;
@@ -92,18 +99,27 @@ async function syncOnce(): Promise<boolean> {
   try {
     const client = await getSupabase();
     const state = useProgress.getState();
-    // Progress last synced with a different account stays out of this one.
-    const local = state.syncedWith && state.syncedWith !== userId ? emptyDoc() : progressDoc(state);
+    // Progress and a quiz last synced with a different account stay out of this one.
+    const anothers = !!state.syncedWith && state.syncedWith !== userId;
+    const quiz = useCustomQuiz.getState().doc;
+    const local = anothers ? emptyDoc() : { ...progressDoc(state), own: quiz };
     const merged = await syncProgress(client, userId, local);
     // Still the same account? (Signing out mid-sync must not bring progress back.)
     if (useAccount.getState().userId !== userId) return false;
+    // A change made to the quiz while this was under way wasn't sent: it goes with the next sync.
+    const changedSince = useCustomQuiz.getState().doc !== quiz;
     applyingRemote = true;
     try {
+      useCustomQuiz.getState().mergeDoc(merged.own, anothers);
       useProgress.getState().mergeDoc(merged, userId);
     } finally {
       applyingRemote = false;
     }
-    useAccount.setState({ sync: "synced", lastSynced: Date.now() });
+    useAccount.setState({
+      sync: "synced",
+      lastSynced: Date.now(),
+      ...(!changedSince && { savedQuiz: useCustomQuiz.getState().doc }),
+    });
     return true;
   } catch (error) {
     useAccount.setState(isOffline() ? { sync: "offline" } : { sync: "error", syncError: describe(error) });
@@ -178,7 +194,16 @@ export async function signOut({ force = false } = {}): Promise<ActionResult & { 
   } catch {
     // The session is cleared from this device even if the server can't be reached.
   }
-  useAccount.setState({ status: "signed-out", userId: null, email: null, sync: "idle", lastSynced: null, syncError: null });
+  useAccount.setState({
+    status: "signed-out",
+    userId: null,
+    email: null,
+    sync: "idle",
+    lastSynced: null,
+    syncError: null,
+    savedQuiz: null,
+  });
   useProgress.getState().clearLocal();
+  useCustomQuiz.getState().clearLocal();
   return {};
 }

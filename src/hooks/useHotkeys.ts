@@ -7,7 +7,8 @@ type KeyMap = Record<string, (event: KeyboardEvent) => void>;
 /** Keys that work even while a text field has focus. */
 const ALWAYS_ACTIVE = new Set(["Escape"]);
 
-function isTyping(target: EventTarget | null): boolean {
+/** Whether a key pressed there goes into a field being typed in. */
+export function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable || target.tagName === "TEXTAREA" || target.tagName === "SELECT") return true;
   // A read-only field (an answered question) no longer takes typing.

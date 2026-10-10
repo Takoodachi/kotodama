@@ -3,20 +3,23 @@
 import { useEffect } from "react";
 import { accountsEnabled, getSupabase } from "@/lib/sync/supabase";
 import { isApplyingRemote, syncNow, useAccount } from "@/store/account";
+import { useCustomQuiz } from "@/store/customQuiz";
 import { useProgress } from "@/store/progress";
 
 /** How long after an answer progress is saved: long enough to batch a run of answers. */
 const SAVE_DELAY = 15_000;
+/** The learner's own quiz is saved sooner: a change to it is made on purpose, and often just before putting the device down. */
+const QUIZ_SAVE_DELAY = 3_000;
 /** Coming back to the app fetches other devices' practice, at most this often. */
 const REFRESH_EVERY = 60_000;
 
 const signedIn = () => useAccount.getState().status === "signed-in";
 
 /**
- * Keeps the account session and progress sync running in the background:
- * restores the session on load, saves progress a little after it changes
- * and right away when the app is put away, and fetches what other devices
- * did when the app comes back into view or back online.
+ * Keeps the account session and its sync running in the background: restores
+ * the session on load, saves progress and the learner's own quiz a little
+ * after they change and right away when the app is put away, and fetches
+ * what other devices did when the app comes back into view or back online.
  */
 export function AccountSync() {
   useEffect(() => {
@@ -44,11 +47,15 @@ export function AccountSync() {
       .catch(() => useAccount.setState({ status: "signed-out" }));
 
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let due = 0;
+    /** Saves after `delay`, or sooner if a save is already waiting to go before then. */
     const saveSoon = (delay: number) => {
+      const at = Date.now() + delay;
       if (timer) {
-        if (delay > 0) return;
+        if (at >= due) return;
         clearTimeout(timer);
       }
+      due = at;
       timer = setTimeout(() => {
         timer = undefined;
         void syncNow();
@@ -66,7 +73,11 @@ export function AccountSync() {
       if (state.resetAt !== prev.resetAt) saveSoon(0);
       else if (state.records !== prev.records || state.devices !== prev.devices) saveSoon(SAVE_DELAY);
     });
+    const unsubscribeQuiz = useCustomQuiz.subscribe((state, prev) => {
+      if (signedIn() && !isApplyingRemote() && state.doc !== prev.doc) saveSoon(QUIZ_SAVE_DELAY);
+    });
     const unsubscribeHydration = useProgress.persist.onFinishHydration(() => void syncNow());
+    const unsubscribeQuizHydration = useCustomQuiz.persist.onFinishHydration(() => void syncNow());
 
     const onVisibility = () => {
       if (!signedIn()) return;
@@ -83,7 +94,9 @@ export function AccountSync() {
       cancelled = true;
       unsubscribeAuth();
       unsubscribeProgress();
+      unsubscribeQuiz();
       unsubscribeHydration();
+      unsubscribeQuizHydration();
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", flush);

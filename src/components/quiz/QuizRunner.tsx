@@ -224,8 +224,9 @@ export function QuizRunner() {
     return (
       <SessionSummary
         results={results}
-        onPracticeMissed={(ids) => startSession(ids, { length: Math.min(20, ids.length * 2) })}
-        onRepeat={() => startSession(poolIds)}
+        // In the mode of the session just done: a quiz of one's own isn't run in the mode saved for the sets.
+        onPracticeMissed={(ids) => startSession(ids, { length: Math.min(20, ids.length * 2), mode })}
+        onRepeat={() => startSession(poolIds, { mode })}
       />
     );
   }
