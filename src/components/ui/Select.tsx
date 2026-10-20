@@ -168,7 +168,7 @@ export function Select<T extends string>({ value, options, onChange, label, clas
             exit={{ opacity: 0, y: above ? 6 : -6, scale: 0.98, transition: { duration: 0.15 } }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className={cn(
-              "absolute inset-x-0 z-30 max-h-80 overflow-y-auto overscroll-contain rounded-2xl border border-line bg-ink-900/95 p-1.5 shadow-2xl shadow-black/50 outline-none backdrop-blur-xl [scrollbar-color:color-mix(in_srgb,var(--color-veil)_22%,transparent)_transparent] [scrollbar-width:thin] light:shadow-black/15",
+              "absolute inset-x-0 z-30 max-h-80 overflow-y-auto overscroll-contain rounded-2xl border border-line bg-ink-900/95 p-1.5 shadow-2xl shadow-black/50 outline-none backdrop-blur-xl light:shadow-black/15",
               above ? "bottom-full mb-2 origin-bottom" : "top-full mt-2 origin-top",
             )}
           >

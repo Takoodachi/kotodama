@@ -11,7 +11,7 @@ function Side({ script, className }: { script: KanaScript; className?: string })
   return (
     <aside
       className={cn(
-        "glass sticky hidden w-66 shrink-0 self-start overflow-y-auto rounded-2xl p-3 [scrollbar-width:thin] wide:block",
+        "glass sticky hidden w-66 shrink-0 self-start overflow-y-auto rounded-2xl p-3 wide:block",
         className,
       )}
     >

@@ -156,6 +156,12 @@
     background: var(--color-ink-950);
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
+    /* A quiet thumb on no track, for the page and every panel (scrollbar-color is inherited). */
+    scrollbar-color: color-mix(in srgb, var(--color-veil) 22%, transparent) transparent;
+  }
+
+  * {
+    scrollbar-width: thin;
   }
 
   body {

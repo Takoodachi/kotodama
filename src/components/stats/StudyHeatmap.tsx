@@ -123,7 +123,7 @@ export function StudyHeatmap({ history, today }: StudyHeatmapProps) {
         Studied on {studiedDays} of the last {cells.length} days, {plural(yearAnswers, "answer")} in total. Longest streak:{" "}
         {plural(best, "day")}.
       </p>
-      <div ref={scroller} className="relative overflow-x-auto pb-2 [scrollbar-width:thin]" aria-hidden>
+      <div ref={scroller} className="relative overflow-x-auto pb-2" aria-hidden>
         <div className="relative" style={{ width, height }}>
           <svg width={width} height={height} onPointerLeave={() => setHover(null)} className="block">
             {months.map((m) => (
