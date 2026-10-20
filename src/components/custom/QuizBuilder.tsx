@@ -174,7 +174,7 @@ export function QuizBuilder() {
           or a phrase or sentence of your own, you can write in yourself.
         </p>
         {items.length > 0 && (
-          <ul className="mt-4 flex max-h-44 flex-wrap gap-1.5 overflow-y-auto [scrollbar-width:thin]" aria-label="In your quiz">
+          <ul className="mt-4 flex max-h-44 flex-wrap gap-1.5 overflow-y-auto" aria-label="In your quiz">
             {items.map((item) => (
               <li
                 key={item.id}
