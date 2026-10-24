@@ -1,7 +1,7 @@
 "use client";
 
-import { Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { DictionaryBrowser } from "@/components/dictionary/DictionaryBrowser";
 import { JmdictResults } from "@/components/dictionary/JmdictResults";
 import { SearchField } from "@/components/dictionary/SearchField";
@@ -10,6 +10,7 @@ import { setKeys } from "@/data/fetchedSets";
 import { ITEMS_BY_ID, itemsByIds } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import { wordSetItemId } from "@/data/wordSets";
+import { useArmed } from "@/hooks/useArmed";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useUnlockProgress } from "@/hooks/useUnlockProgress";
 import { dictionaryWordId, entryItem, isOwnId } from "@/lib/customQuiz";
@@ -20,47 +21,12 @@ import { useCustomQuiz } from "@/store/customQuiz";
 import { useFetchedSets, useLibraryRevision } from "@/store/fetchedSets";
 import { useProgress } from "@/store/progress";
 import { AddButton } from "./AddButton";
+import { DeleteButton } from "./DeleteButton";
 import { OwnEntryForm } from "./OwnEntryForm";
 import { QuizSaveStatus } from "./QuizSaveStatus";
+import { SavedQuizzes } from "./SavedQuizzes";
 
 type Source = "jmdict" | "library";
-
-/** A button that acts on the second press: the first one arms it for a few seconds. */
-function useArmed(): [boolean, (act: () => void) => void] {
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    if (!armed) return;
-    const timer = setTimeout(() => setArmed(false), 4000);
-    return () => clearTimeout(timer);
-  }, [armed]);
-  const press = (act: () => void) => {
-    if (!armed) return setArmed(true);
-    act();
-    setArmed(false);
-  };
-  return [armed, press];
-}
-
-/** Deletes an entry the learner wrote, on the second press. */
-function DeleteOwn({ item }: { item: StudyItem }) {
-  const deleteOwn = useCustomQuiz((s) => s.deleteOwn);
-  const [armed, press] = useArmed();
-  return (
-    <button
-      type="button"
-      onClick={() => press(() => deleteOwn(item.id))}
-      aria-label={armed ? `Press again to delete ${item.surface}` : `Delete ${item.surface} from your dictionary`}
-      title={armed ? "Press again to delete it" : "Delete this entry of yours"}
-      className={
-        armed
-          ? "flex h-8 shrink-0 items-center rounded-full border border-crimson/60 px-3 text-xs whitespace-nowrap text-crimson-bright"
-          : "flex size-8 shrink-0 items-center justify-center rounded-full text-smoke transition-colors hover:bg-veil/5 hover:text-paper"
-      }
-    >
-      {armed ? "Delete?" : <Trash2 className="size-3.5" strokeWidth={1.75} />}
-    </button>
-  );
-}
 
 /** Where a search with results still offers to write the entry by hand: a phrase or sentence of one's own, mostly. */
 function OwnEntryOffer({ query, found }: { query: string; found: boolean }) {
@@ -90,6 +56,7 @@ export function QuizBuilder() {
   const add = useCustomQuiz((s) => s.add);
   const remove = useCustomQuiz((s) => s.remove);
   const clear = useCustomQuiz((s) => s.clear);
+  const deleteOwn = useCustomQuiz((s) => s.deleteOwn);
   const ensureSets = useFetchedSets((s) => s.ensure);
   const records = useProgress((s) => s.records);
   const revision = useLibraryRevision();
@@ -138,7 +105,13 @@ export function QuizBuilder() {
         name={item.surface}
         onClick={() => (inQuiz.has(item.id) ? remove([item.id]) : add(item.id))}
       />
-      {isOwnId(item.id) && <DeleteOwn item={item} />}
+      {isOwnId(item.id) && (
+        <DeleteButton
+          label={`${item.surface} from your dictionary`}
+          title="Delete this entry of yours"
+          onDelete={() => deleteOwn(item.id)}
+        />
+      )}
     </>
   );
 
@@ -208,6 +181,8 @@ export function QuizBuilder() {
           </div>
         )}
       </section>
+
+      {hydrated && <SavedQuizzes />}
 
       <section aria-label="Dictionary">
         <SearchField value={query} onChange={setQuery} />

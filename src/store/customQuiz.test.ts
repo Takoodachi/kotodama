@@ -71,6 +71,7 @@ describe("the learner's own quiz", () => {
     quiz().mergeDoc({
       quiz: { a: { at: later, in: false }, b: { at: later, in: true } },
       items: { "jmd-1": { at: later, item: oil } },
+      saved: {},
     });
     expect(quiz().quiz).toEqual(["own-cat", "b"]);
     expect(quiz().items).toEqual([cat, oil]);
@@ -87,10 +88,44 @@ describe("the learner's own quiz", () => {
 
   it("takes another account's quiz as it is, and forgets its own on signing out", () => {
     quiz().add("a");
-    quiz().mergeDoc({ quiz: { z: { at: 5, in: true } }, items: {} }, true);
+    quiz().mergeDoc({ quiz: { z: { at: 5, in: true } }, items: {}, saved: {} }, true);
     expect(quiz().quiz).toEqual(["z"]);
     quiz().clearLocal();
     expect(quiz().doc).toEqual(emptyOwn());
     expect(quiz().quiz).toEqual([]);
+  });
+
+  it("puts quizzes by under a name and loads them again, in their order", () => {
+    quiz().add("a");
+    quiz().add("jmd-1", oil);
+    quiz().saveQuiz("Food");
+    quiz().clear();
+    quiz().add("b");
+    quiz().saveQuiz("Verbs");
+    quiz().loadQuiz(quiz().saved[0].id);
+    expect(quiz().saved.map((saved) => saved.name)).toEqual(["Food", "Verbs"]);
+    expect(quiz().quiz).toEqual(["a", "jmd-1"]);
+    // A word kept with a saved quiz is still in the library when the quiz comes back.
+    expect(ITEMS_BY_ID.has("jmd-1")).toBe(true);
+
+    // Saved again under the same name, it is replaced; deleted, it is gone.
+    quiz().add("c");
+    quiz().saveQuiz("Food");
+    expect(quiz().saved.map((saved) => [saved.name, saved.ids])).toEqual([
+      ["Food", ["a", "jmd-1", "c"]],
+      ["Verbs", ["b"]],
+    ]);
+    quiz().deleteSaved(quiz().saved[1].id);
+    expect(quiz().saved.map((saved) => saved.name)).toEqual(["Food"]);
+  });
+
+  it("leaves out of a loaded quiz an entry deleted since it was saved", () => {
+    quiz().saveOwn(cat);
+    quiz().add("a");
+    quiz().saveQuiz("Mine");
+    quiz().deleteOwn("own-cat");
+    quiz().clear();
+    quiz().loadQuiz(quiz().saved[0].id);
+    expect(quiz().quiz).toEqual(["a"]);
   });
 });

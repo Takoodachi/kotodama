@@ -27,8 +27,9 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
   with an Add button on every entry: build a quiz word by word and run it in Reading or All at
   once. A word the dictionary doesn't have, or a phrase or sentence of your own, can be written
   in (Japanese, meaning, and the reading where kanji leave it open); it joins your library too.
-  Signed in, the quiz and your entries are saved to your account with your progress, and follow
-  you to your other devices.
+  Save a quiz under a name to load it again later; saving under a name already used replaces
+  that quiz. Signed in, the quiz, your saved quizzes and your entries are saved to your account
+  with your progress, and follow you to your other devices.
 - **Top and bottom:** the Practice page is long, so a pair of buttons goes to either end of it, as
   does pressing ↑ or ↓ twice.
 - **Kana chart:** hiragana and katakana with their romaji, on the All at once and dictionary
@@ -157,7 +158,8 @@ on two devices adds up instead of overwriting), and carries streaks across devic
 succeeds if nobody saved since it read; otherwise it merges again. Resetting progress while signed
 in resets it on every device; signing out clears it from that device.
 
-The quiz a learner builds themselves is saved in the same document, three seconds after a change.
+The quiz a learner builds themselves, and the quizzes they put by under a name, are saved in the
+same document, three seconds after a change.
 Each change to it carries its time, and of two devices' changes to the same thing the later one
 stands, so a word added on one device and taken out on another ends up the way it was last left.
 Nothing is dropped from the document, only marked as taken out, which is what lets devices merge
