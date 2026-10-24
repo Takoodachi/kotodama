@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CustomItem } from "@/lib/customQuiz";
-import { emptyOwn, itemsOf, mergeOwn, quizOf, readOwn, stamp, type OwnDoc } from "./ownDoc";
+import { emptyOwn, itemsOf, mergeOwn, quizOf, readOwn, savedOf, stamp, type OwnDoc } from "./ownDoc";
 import { emptyDoc, mergeDocs, readDoc, sameDoc } from "./progressDoc";
 
 const cat: CustomItem = { id: "own-cat", category: "vocab", jp: "{三毛猫|みけねこ}", meaning: ["calico cat"], saidParticles: true };
@@ -52,6 +52,10 @@ describe("mergeOwn", () => {
     same(ab, mergeOwn(laptop, phone));
     same(mergeOwn(ab, phone), ab);
     same(mergeOwn(ab, ab), ab);
+    // Saved quizzes merge the same way: a later deletion stands, a new one is kept.
+    const saves = own({ saved: { s1: { at: 400, quiz: null }, s2: { at: 100, quiz: { name: "Food", ids: ["a"] } } } });
+    const older = own({ saved: { s1: { at: 300, quiz: { name: "Old", ids: ["b"] } } } });
+    expect(savedOf(mergeOwn(older, saves))).toEqual([{ id: "s2", name: "Food", ids: ["a"] }]);
     // Two changes at the same moment still come out one way.
     const x = own({ quiz: { a: { at: 100, in: false } } });
     same(mergeOwn(phone, x), mergeOwn(x, phone));
@@ -81,6 +85,17 @@ describe("readOwn", () => {
       },
     });
     expect(doc.quiz).toEqual({ a: { at: 5, in: true }, c: { at: 7, in: false } });
+    expect(
+      readOwn({
+        saved: {
+          s1: { at: 2, quiz: { name: "Food", ids: ["a", "b"], extra: 1 } },
+          s2: { at: 3, quiz: null },
+          s3: { at: 4, quiz: { name: "", ids: ["a"] } },
+          s4: { at: 5, quiz: { name: "Bad", ids: [1] } },
+          s5: { quiz: { name: "Undated", ids: [] } },
+        },
+      }).saved,
+    ).toEqual({ s1: { at: 2, quiz: { name: "Food", ids: ["a", "b"] } }, s2: { at: 3, quiz: null } });
     // The id an item is filed under is the id it has.
     expect(doc.items).toEqual({ "own-cat": { at: 3, item: cat }, "own-gone": { at: 4, item: null } });
   });

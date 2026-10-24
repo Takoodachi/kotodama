@@ -18,9 +18,17 @@ export interface OwnDoc {
    * or null once deleted.
    */
   items: Record<string, { at: number; item: CustomItem | null }>;
+  /** Quizzes put by under a name to be loaded again, by id: when each was last saved, and it, or null once deleted. */
+  saved: Record<string, { at: number; quiz: SavedQuiz | null }>;
 }
 
-export const emptyOwn = (): OwnDoc => ({ quiz: {}, items: {} });
+/** A quiz put by under a name: the ids it held, in their order. */
+export interface SavedQuiz {
+  name: string;
+  ids: string[];
+}
+
+export const emptyOwn = (): OwnDoc => ({ quiz: {}, items: {}, saved: {} });
 
 /** The ids in the quiz, in the order they were added. */
 export function quizOf(doc: OwnDoc): string[] {
@@ -36,6 +44,13 @@ export function itemsOf(doc: OwnDoc): CustomItem[] {
     .filter((entry): entry is { at: number; item: CustomItem } => entry.item !== null)
     .sort((x, y) => x.at - y.at || (x.item.id < y.item.id ? -1 : 1))
     .map((entry) => entry.item);
+}
+
+/** The quizzes put by, in the order of their names. */
+export function savedOf(doc: OwnDoc): (SavedQuiz & { id: string })[] {
+  return Object.entries(doc.saved)
+    .flatMap(([id, entry]) => (entry.quiz ? [{ id, ...entry.quiz }] : []))
+    .sort((x, y) => x.name.localeCompare(y.name, undefined, { numeric: true }) || (x.id < y.id ? -1 : 1));
 }
 
 let lastStamp = 0;
@@ -65,7 +80,7 @@ function mergeEntries<T extends { at: number }>(a: Record<string, T>, b: Record<
 
 /** Combines two versions of the quiz. Order doesn't matter, and merging twice changes nothing. */
 export function mergeOwn(a: OwnDoc, b: OwnDoc): OwnDoc {
-  return { quiz: mergeEntries(a.quiz, b.quiz), items: mergeEntries(a.items, b.items) };
+  return { quiz: mergeEntries(a.quiz, b.quiz), items: mergeEntries(a.items, b.items), saved: mergeEntries(a.saved, b.saved) };
 }
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -110,6 +125,15 @@ export function readOwn(value: unknown): OwnDoc {
       const item = entry.item === null ? null : readItem(id, entry.item);
       // An item that can't be read is left out rather than taken for deleted.
       if (entry.item === null || item) doc.items[id] = { at: time(entry.at), item };
+    }
+  }
+  if (isObject(value.saved)) {
+    for (const [id, entry] of Object.entries(value.saved)) {
+      if (!isObject(entry) || !time(entry.at)) continue;
+      const { quiz } = entry;
+      const ids = isObject(quiz) ? strings(quiz.ids) : null;
+      if (quiz === null) doc.saved[id] = { at: time(entry.at), quiz: null };
+      else if (isObject(quiz) && typeof quiz.name === "string" && quiz.name && ids) doc.saved[id] = { at: time(entry.at), quiz: { name: quiz.name, ids } };
     }
   }
   return doc;

@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { setCustomItems } from "@/data/library";
 import { isOwnId, type CustomItem } from "@/lib/customQuiz";
 import { toSurface } from "@/lib/furigana";
-import { emptyOwn, itemsOf, mergeOwn, quizOf, readOwn, stamp, type OwnDoc } from "@/lib/sync/ownDoc";
+import { emptyOwn, itemsOf, mergeOwn, quizOf, readOwn, savedOf, stamp, type OwnDoc, type SavedQuiz } from "@/lib/sync/ownDoc";
 import { useFetchedSets } from "./fetchedSets";
 
 /** The two ways a quiz of one's own is run: typed card by card, or every card on one page. */
@@ -26,6 +26,8 @@ interface CustomQuizState {
    * stay when taken out of the quiz, so their progress keeps something to belong to.
    */
   items: CustomItem[];
+  /** From `doc`: the quizzes put by under a name, in the order of their names. */
+  saved: (SavedQuiz & { id: string })[];
 
   setBuilding: (building: boolean) => void;
   setMode: (mode: CustomMode) => void;
@@ -40,6 +42,11 @@ interface CustomQuizState {
   saveOwn: (item: CustomItem) => string;
   /** Deletes an entry the learner wrote, from the quiz as well. */
   deleteOwn: (id: string) => void;
+  /** Puts the quiz by under a name; one saved under the same name is replaced. */
+  saveQuiz: (name: string) => void;
+  /** Makes a quiz put by the one being built, in place of what is there. */
+  loadQuiz: (id: string) => void;
+  deleteSaved: (id: string) => void;
   /** Merges in the quiz from the account, or takes it as it is when this device's belongs to another account. */
   mergeDoc: (doc: OwnDoc, replace?: boolean) => void;
   /** Forgets the quiz on this device, e.g. when signing out. */
@@ -49,13 +56,20 @@ interface CustomQuizState {
 /** An id for a new entry of the learner's own. */
 export const newOwnId = () => `own-${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
 
-const withDoc = (doc: OwnDoc) => ({ doc, quiz: quizOf(doc), items: itemsOf(doc) });
+const newSavedId = () => `quiz-${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`;
+
+const withDoc = (doc: OwnDoc) => ({ doc, quiz: quizOf(doc), items: itemsOf(doc), saved: savedOf(doc) });
 
 /** The doc with some ids put in the quiz or taken out of it, now. */
 function withQuiz(doc: OwnDoc, ids: readonly string[], inQuiz: boolean): OwnDoc {
   const quiz = { ...doc.quiz };
   for (const id of ids) quiz[id] = { at: stamp(quiz[id]), in: inQuiz };
   return { ...doc, quiz };
+}
+
+/** The doc with a quiz put by, or deleted (null), now. */
+function withSaved(doc: OwnDoc, id: string, quiz: SavedQuiz | null): OwnDoc {
+  return { ...doc, saved: { ...doc.saved, [id]: { at: stamp(doc.saved[id]), quiz } } };
 }
 
 /** The doc with an item written, or deleted (null), now. */
@@ -96,6 +110,21 @@ export const useCustomQuiz = create<CustomQuizState>()(
           const doc = withItem(s.doc, id, null);
           return withDoc(doc.quiz[id]?.in ? withQuiz(doc, [id], false) : doc);
         }),
+      saveQuiz: (name) =>
+        set((s) => {
+          const id = s.saved.find((other) => other.name === name)?.id ?? newSavedId();
+          return withDoc(withSaved(s.doc, id, { name, ids: s.quiz }));
+        }),
+      loadQuiz: (id) =>
+        set((s) => {
+          // An entry deleted since the quiz was saved is left out.
+          const ids = s.doc.saved[id]?.quiz?.ids.filter((item) => s.doc.items[item]?.item !== null);
+          if (!ids) return s;
+          const out = s.quiz.filter((item) => !ids.includes(item));
+          // Put in again in the saved order, so the quiz runs as it did.
+          return withDoc(withQuiz(withQuiz(s.doc, out, false), ids, true));
+        }),
+      deleteSaved: (id) => set((s) => withDoc(withSaved(s.doc, id, null))),
       mergeDoc: (doc, replace = false) =>
         set((s) => {
           const merged = replace ? doc : mergeOwn(s.doc, doc);
