@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { JpText, type RubyDisplay } from "@/components/japanese/Furigana";
 import { SpeakButton } from "@/components/japanese/SpeakButton";
+import { useSpeech } from "@/hooks/useSpeech";
 import { GAP, speechText } from "@/data/library";
 import type { StudyItem } from "@/data/types";
 import { cn } from "@/lib/cn";
@@ -59,6 +60,19 @@ function rubyFor(furigana: FuriganaMode, direction: Direction, answered: boolean
   return furigana === "after" || asksReading(direction) ? "reserve" : "show";
 }
 
+/** A card that is heard: one big button to hear it again, and a word when the sound is off. */
+function HeardPrompt({ text }: { text: string }) {
+  const { muted } = useSpeech();
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <SpeakButton text={text} size="lg" />
+      <p className="text-xs text-smoke">
+        {muted ? "Sound is off: turn it on at the top to hear this card." : "Tap to hear it again"}
+      </p>
+    </div>
+  );
+}
+
 /** Holds the empty slot open at the height of a Japanese character. */
 const IDEOGRAPHIC_SPACE = String.fromCharCode(0x3000);
 
@@ -87,6 +101,8 @@ function GapSentence({ item, ruby, answered }: { item: StudyItem; ruby: RubyDisp
 export function PromptCard({ item, direction, mode, furigana, correct, ghost, review = false }: PromptCardProps) {
   const side = promptSide(direction);
   const answered = correct !== null;
+  // A heard card shows nothing written until it is answered; then it shows the Japanese.
+  const heard = side === "audio";
   const gap = isCloze(direction) && !!item.cloze;
   // The meaning appears once answered, unless it is the question or the answer itself.
   // A grammar gap shows it from the start: it says which word fits.
@@ -94,7 +110,7 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
     side !== "en" && answerSide(direction) !== "en" && item.meaning.length ? promptText(item, "en") : null;
   const meaningShown = answered || gap;
   // Hearing the word would give away a reading question or a gap, so the button waits for the answer.
-  const canSpeak = gap ? answered : side === "jp" ? !asksReading(direction) || answered : answered;
+  const canSpeak = heard || (gap ? answered : side === "jp" ? !asksReading(direction) || answered : answered);
 
   return (
     <div
@@ -124,7 +140,7 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
 
       <div className="relative flex items-center justify-between gap-3">
         <p className="eyebrow text-left">{questionHint(item, direction, mode)}</p>
-        <SpeakButton text={speechText(item)} locked={!canSpeak} />
+        {!(heard && !answered) && <SpeakButton text={speechText(item)} locked={!canSpeak} />}
       </div>
 
       <motion.div
@@ -135,7 +151,9 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
       >
         {gap ? (
           <GapSentence item={item} ruby={rubyFor(furigana, direction, answered)} answered={answered} />
-        ) : side === "jp" ? (
+        ) : heard && !answered ? (
+          <HeardPrompt text={speechText(item)} />
+        ) : side === "jp" || heard ? (
           <JpText
             text={item.jp}
             ruby={rubyFor(furigana, direction, answered)}

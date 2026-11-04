@@ -30,6 +30,10 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
   Save a quiz under a name to load it again later; saving under a name already used replaces
   that quiz. Signed in, the quiz, your saved quizzes and your entries are saved to your account
   with your progress, and follow you to your other devices.
+- **Listening:** turn on "Listen → 日本語" (multiple choice or typing) or "Listening" (reading mode)
+  and cards are heard instead of seen: the card is read aloud, then you pick or type what was said.
+  Kana, words, phrases and sentences can be heard; kanji are asked by sight, as many share a sound.
+  Options never include another word that sounds the same (花 and 鼻).
 - **Top and bottom:** the Practice page is long, so a pair of buttons goes to either end of it, as
   does pressing ↑ or ↓ twice.
 - **Kana chart:** hiragana and katakana with their romaji, on the All at once and dictionary

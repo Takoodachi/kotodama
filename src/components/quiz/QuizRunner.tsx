@@ -13,7 +13,7 @@ import { useSpeech } from "@/hooks/useSpeech";
 import { useStartSession } from "@/hooks/useStartSession";
 import { inDictionary } from "@/lib/dictionary";
 import { checkBoth, checkTypedAnswer } from "@/lib/quiz/check";
-import { answersInJapanese } from "@/lib/quiz/directions";
+import { answersInJapanese, isListening } from "@/lib/quiz/directions";
 import type { ChoiceOption } from "@/lib/quiz/distractors";
 import { useSession, type AnswerParts } from "@/store/session";
 import { useSettings } from "@/store/settings";
@@ -165,9 +165,11 @@ export function QuizRunner() {
     if (hydrated && status === "idle") router.replace("/practice");
   }, [hydrated, status, router]);
 
-  // "On reveal" audio, only where hearing the word doesn't give the answer away.
+  // A heard card is read out as it appears, whatever the setting: the sound is the question.
+  // Otherwise "on reveal" audio, only where hearing the word doesn't give the answer away.
   useEffect(() => {
-    if (autoplay === "reveal" && item && question?.direction === "jp-en") speak(speechText(item));
+    if (!item || !question) return;
+    if (isListening(question.direction) || (autoplay === "reveal" && question.direction === "jp-en")) speak(speechText(item));
   }, [autoplay, item, question, speak]);
 
   // Auto-advance after a correct answer, but never over the pronunciation:

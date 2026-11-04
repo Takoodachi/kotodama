@@ -10,21 +10,37 @@ export type PracticeMode = Mode | "grid";
  * What the card shows → what the learner answers with. "jp-both" asks for the
  * reading and the meaning together, in two fields. Grammar cards are
  * sentences with a gap: "cloze" is answered in Japanese, "cloze-romaji" in romaji.
+ * "audio-…" cards are heard, not seen: the card is read aloud and the learner
+ * picks or types what was said.
  */
-export type Direction = "jp-en" | "jp-romaji" | "jp-both" | "romaji-jp" | "en-jp" | "cloze" | "cloze-romaji";
+export type Direction =
+  | "jp-en"
+  | "jp-romaji"
+  | "jp-both"
+  | "romaji-jp"
+  | "en-jp"
+  | "audio-jp"
+  | "audio-romaji"
+  | "cloze"
+  | "cloze-romaji";
 
 export const isCloze = (direction: Direction) => direction === "cloze" || direction === "cloze-romaji";
+
+/** Whether the card is heard rather than seen. */
+export const isListening = (direction: Direction) => direction === "audio-jp" || direction === "audio-romaji";
 
 /** Whether the card asks how it's read, so furigana and audio wait for the answer. */
 export const asksReading = (direction: Direction) => direction === "jp-romaji" || direction === "jp-both";
 
 export type Side = "jp" | "romaji" | "en";
+/** What a card shows: one of the sides, or only its sound. */
+export type PromptSide = Side | "audio";
 
 export const MODE_DIRECTIONS: Record<Mode, Direction[]> = {
-  choice: ["jp-en", "jp-romaji", "romaji-jp", "en-jp"],
-  // One at a time, chosen as "Answer with": the reading, the meaning, or both.
-  reading: ["jp-romaji", "jp-en", "jp-both"],
-  typing: ["en-jp", "romaji-jp"],
+  choice: ["jp-en", "jp-romaji", "romaji-jp", "en-jp", "audio-jp"],
+  // One at a time, chosen as "Answer with": the reading, the meaning, both, or what was heard.
+  reading: ["jp-romaji", "jp-en", "jp-both", "audio-romaji"],
+  typing: ["en-jp", "romaji-jp", "audio-jp"],
 };
 
 export const DEFAULT_DIRECTIONS: Record<Mode, Direction[]> = {
@@ -39,6 +55,8 @@ export const DIRECTION_LABELS: Record<Direction, { from: string; to: string }> =
   "jp-both": { from: "日本語", to: "Reading & English" },
   "romaji-jp": { from: "Romaji", to: "日本語" },
   "en-jp": { from: "English", to: "日本語" },
+  "audio-jp": { from: "Listen", to: "日本語" },
+  "audio-romaji": { from: "Listen", to: "Reading" },
   cloze: { from: "文", to: "Gap" },
   "cloze-romaji": { from: "文", to: "Gap" },
 };
@@ -60,6 +78,10 @@ export function directionDescription(direction: Direction, mode: Mode): string {
       return typed ? "See romaji, type it in Japanese" : "See romaji, pick the Japanese";
     case "en-jp":
       return typed ? "See English, type it in Japanese" : "See English, pick the Japanese";
+    case "audio-jp":
+      return typed ? "Hear it, type it in Japanese" : "Hear it, pick what was said";
+    case "audio-romaji":
+      return "Hear it, type what was said in romaji";
   }
 }
 
@@ -92,9 +114,9 @@ export function shownMode(mode: PracticeMode, touch: boolean): PracticeMode {
 /** Kinds of item the all-at-once grid can show: short ones with a reading to type. */
 export const GRID_CATEGORIES = new Set<Category>(["hiragana", "katakana", "kanji", "vocab"]);
 
-export function promptSide(direction: Direction): Side {
+export function promptSide(direction: Direction): PromptSide {
   if (isCloze(direction)) return "jp";
-  return direction.split("-")[0] as Side;
+  return direction.split("-")[0] as PromptSide;
 }
 
 export function answerSide(direction: Direction): Side {
@@ -110,13 +132,16 @@ const isKana = (item: Pick<StudyItem, "category">) => item.category === "hiragan
 export function supportedDirections(item: Pick<StudyItem, "category">, mode: Mode): Direction[] {
   // Grammar is always fill-in-the-gap; reading mode answers it in romaji.
   if (item.category === "grammar") return [mode === "reading" ? "cloze-romaji" : "cloze"];
-  if (isKana(item)) return mode === "typing" ? ["romaji-jp"] : mode === "reading" ? ["jp-romaji"] : ["jp-romaji", "romaji-jp"];
+  if (isKana(item)) {
+    if (mode === "typing") return ["romaji-jp", "audio-jp"];
+    return mode === "reading" ? ["jp-romaji", "audio-romaji"] : ["jp-romaji", "romaji-jp", "audio-jp"];
+  }
   switch (mode) {
     case "choice":
-      // Romaji → kanji is ambiguous (many kanji share a reading), so it is left out.
+      // Romaji or sound → kanji is ambiguous (many kanji share a reading), so they are left out.
       return item.category === "kanji" ? ["jp-en", "jp-romaji", "en-jp"] : MODE_DIRECTIONS.choice;
     case "reading":
-      return MODE_DIRECTIONS.reading;
+      return item.category === "kanji" ? ["jp-romaji", "jp-en", "jp-both"] : MODE_DIRECTIONS.reading;
     case "typing":
       return item.category === "kanji" ? ["en-jp"] : MODE_DIRECTIONS.typing;
   }
@@ -132,7 +157,7 @@ export interface DirectionLimit {
 
 const LIMITED: { label: string; categories: Category[]; reason: string }[] = [
   { label: "Kana", categories: ["hiragana", "katakana"], reason: "they have no English meaning" },
-  { label: "Kanji", categories: ["kanji"], reason: "many kanji share a reading, so romaji can't point to one" },
+  { label: "Kanji", categories: ["kanji"], reason: "many kanji share a reading, so romaji or sound can't point to one" },
 ];
 
 /**
@@ -150,15 +175,18 @@ export function directionLimits(
     const supported = supportedDirections({ category: kinds[0] }, mode);
     if (enabled.every((d) => supported.includes(d))) return [];
     const allowed = supported.filter((d) => enabled.includes(d));
-    return [{ label, used: allowed.length ? allowed : supported, reason }];
+    return [{ label, used: allowed.length ? allowed : supported.filter((d) => !isListening(d)), reason }];
   });
 }
 
-/** A direction the learner enabled and the item supports, or the item's first option. */
+/**
+ * A direction the learner enabled and the item supports, or else one of the
+ * item's others; never a listening one unless it was turned on.
+ */
 export function pickDirection(item: StudyItem, mode: Mode, enabled: readonly Direction[], rng: Rng): Direction {
   const supported = supportedDirections(item, mode);
   const allowed = supported.filter((d) => enabled.includes(d));
-  return pick(allowed.length ? allowed : supported, rng);
+  return pick(allowed.length ? allowed : supported.filter((d) => !isListening(d)), rng);
 }
 
 /** Short instruction shown above the prompt. */
@@ -181,6 +209,10 @@ export function questionHint(item: StudyItem, direction: Direction, mode: Mode):
     case "en-jp":
       if (typed) return item.category === "kanji" ? "Type the kanji (or its reading)" : "Type it in Japanese";
       return "Which one means this?";
+    case "audio-jp":
+      return typed ? "Type what you hear, in Japanese" : "Which one did you hear?";
+    case "audio-romaji":
+      return "Type what you hear, in romaji";
   }
 }
 
