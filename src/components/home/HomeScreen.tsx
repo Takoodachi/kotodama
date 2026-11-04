@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { GhostModeButton } from "@/components/practice/GhostModeButton";
 import { InstallPrompt, useIsStandalone } from "@/components/pwa/InstallPrompt";
 import { StudyHeatmap } from "@/components/stats/StudyHeatmap";
+import { DailyGoal } from "./DailyGoal";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { countForGroups, ITEMS_BY_CATEGORY, ITEMS_BY_ID, itemsForGroups } from "@/data/library";
 import type { Category } from "@/data/types";
@@ -14,7 +15,7 @@ import { useHydrated } from "@/hooks/useHydrated";
 import { useStartSession } from "@/hooks/useStartSession";
 import { plural } from "@/lib/plural";
 import { isDue, isMastered, isWeak, priority } from "@/lib/srs";
-import { currentStreak, useProgress } from "@/store/progress";
+import { currentStreak, localDay, useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
 import { useLibraryRevision, useFetchedSets } from "@/store/fetchedSets";
 
@@ -52,6 +53,7 @@ export function HomeScreen() {
   const standalone = useIsStandalone();
   const selected = useSettings((s) => s.selected);
   const sessionLength = useSettings((s) => s.sessionLength);
+  const dailyGoal = useSettings((s) => s.dailyGoal);
   const startSession = useStartSession();
   // Captured once per visit; the dashboard doesn't need to tick.
   const [now] = useState(() => Date.now());
@@ -128,6 +130,12 @@ export function HomeScreen() {
           </span>
         </motion.div>
       </section>
+
+      {hydrated && dailyGoal > 0 && (
+        <motion.section {...rise(0.65)} aria-label="Today's goal" className="mb-3">
+          <DailyGoal answered={history[localDay(today)]?.answered ?? 0} goal={dailyGoal} />
+        </motion.section>
+      )}
 
       <motion.section {...rise(0.7)} aria-label="Your progress" className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat icon={Flame} value={hydrated ? String(currentStreak(streak)) : "—"} label="Day streak" />
