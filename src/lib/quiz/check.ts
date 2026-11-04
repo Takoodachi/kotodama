@@ -4,7 +4,9 @@ import type { PartOfSpeech, StudyItem } from "@/data/types";
 import {
   contentWords,
   editDistance,
+  foldNumbers,
   japaneseKey,
+  kanjiToDigits,
   literalRomajiKey,
   normalizeEnglish,
   normalizeRomaji,
@@ -46,27 +48,33 @@ export function checkReading(item: StudyItem, input: string): boolean {
   return !!item.saidParticles && saidKey(input) === saidKey(item.reading);
 }
 
+/** An English answer as compared: numbers and dates written any way are one ("the 24th", "twenty-fourth day of the month"). */
+const meaningKey = (text: string) => foldNumbers(normalizeEnglish(text).replace(/\s+/g, " "));
+
 /**
  * English answers, forgiving small typos in longer words. Phrases and
  * sentences can be put many ways, so for them it's enough to have the words
  * that carry the meaning, in any order (see `sameWords`).
  */
 export function checkMeaning(item: StudyItem, input: string): boolean {
-  const answer = normalizeEnglish(input);
+  const answer = meaningKey(input);
   if (!answer) return false;
   const loose = item.category === "phrase" || item.category === "sentence";
   return item.meaning.some((m) => {
-    const expected = normalizeEnglish(m);
+    const expected = meaningKey(m);
     if (expected === answer) return true;
     const allowed = expected.length >= 8 ? 2 : expected.length >= 4 ? 1 : 0;
-    if (editDistance(expected, answer) <= allowed) return true;
+    // A typo is forgiven in the words, never in a number: 24th is not 25th.
+    if (digits(expected) === digits(answer) && editDistance(expected, answer) <= allowed) return true;
     return loose && sameWords(m, input);
   });
 }
 
-/** Two words that are the same, give or take a typo in a longer one. */
+const digits = (text: string) => text.replace(/\D/g, "");
+
+/** Two words that are the same, give or take a typo in a longer one (but not in a number). */
 function sameWord(a: string, b: string): boolean {
-  return a === b || (Math.max(a.length, b.length) >= 5 && editDistance(a, b) <= 1);
+  return a === b || (!digits(a + b) && Math.max(a.length, b.length) >= 5 && editDistance(a, b) <= 1);
 }
 
 /**
@@ -99,16 +107,19 @@ export function checkBoth(item: StudyItem, reading: string, meaning: string): { 
  * Japanese answers typed with an IME. The written form or the kana reading are
  * both accepted, and katakana/hiragana are treated as equal, except for the
  * katakana set itself, where the script is the point. A kana asked as plain
- * "ji" or "zu" also takes its twin (ぢ, づ), which sounds the same.
+ * "ji" or "zu" also takes its twin (ぢ, づ), which sounds the same. Numbers
+ * count in digits or kanji (24日 for 二十四日), except in the kanji set, which
+ * asks for the kanji itself.
  */
 export function checkJapanese(item: StudyItem, input: string): boolean {
   const strict = item.category === "katakana";
-  const answer = japaneseKey(input, strict);
+  const key = (text: string) => (item.category === "kanji" ? japaneseKey(text, strict) : kanjiToDigits(japaneseKey(text, strict)));
+  const answer = key(input);
   if (!answer) return false;
   const accepted = [item.surface, item.reading];
   if (item.sameSound) accepted.push(item.sameSound);
   if (item.category === "kanji") accepted.push(...kanjiReadings(item));
-  return accepted.some((a) => japaneseKey(a, strict) === answer);
+  return accepted.some((a) => key(a) === answer);
 }
 
 /**

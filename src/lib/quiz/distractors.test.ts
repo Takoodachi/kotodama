@@ -17,8 +17,8 @@ describe("buildOptions", () => {
         expect(new Set(options.map((o) => o.label.toLowerCase())).size, where).toBe(4);
       }
     }
-    // Every item in the library, so it can outlast the default 5s on a busy machine.
-  }, 30_000);
+    // About 12,000 questions, 25-40s here: the limit leaves room for a busy machine.
+  }, 120_000);
 
   it("never offers a second item that fits the prompt (じ and ぢ are both 'ji')", () => {
     const ji = ITEMS_BY_ID.get("h-じ")!;

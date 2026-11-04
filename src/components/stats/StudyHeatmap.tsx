@@ -120,7 +120,7 @@ export function StudyHeatmap({ history, today }: StudyHeatmapProps) {
   return (
     <div>
       <p className="sr-only">
-        Studied on {studiedDays} of the last {cells.length} days, {plural(yearAnswers, "answer")} in total. Longest streak:{" "}
+        Studied on {plural(studiedDays, "day")} in the past year, {plural(yearAnswers, "answer")} in all. Longest streak:{" "}
         {plural(best, "day")}.
       </p>
       <div ref={scroller} className="relative overflow-x-auto pb-2" aria-hidden>

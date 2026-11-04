@@ -163,6 +163,32 @@ describe("checkMeaning", () => {
   it("keeps words to their exact meaning", () => {
     expect(checkMeaning(item("v-taberu"), "eat food")).toBe(false);
   });
+
+  it("takes a number or a date however it is written", () => {
+    const fourth = item("v-yokka"); // the fourth; four days
+    for (const answer of ["4th", "fourth", "the 4th", "4th of the month", "the fourth day of the month", "four days", "4 days"]) {
+      expect(checkMeaning(fourth, answer), answer).toBe(true);
+    }
+    for (const answer of ["5th", "four", "4", "the fifth day of the month", "14th"]) {
+      expect(checkMeaning(fourth, answer), answer).toBe(false);
+    }
+    const day = { ...item("v-hatsuka"), meaning: ["twenty-fourth day of the month", "twenty-four days"] };
+    for (const answer of ["the 24th", "24th", "twenty fourth", "Twenty-fourth of the month", "24th day of the month", "24 days"]) {
+      expect(checkMeaning(day, answer), answer).toBe(true);
+    }
+    for (const answer of ["25th", "23rd", "24", "42th", "25 days"]) {
+      expect(checkMeaning(day, answer), answer).toBe(false);
+    }
+    expect(checkMeaning(item("v-futsuka"), "2nd")).toBe(true);
+    expect(checkMeaning(item("v-ichiji"), "1 o'clock")).toBe(true);
+  });
+
+  it("forgives a typo in the words of a number, but not in the number", () => {
+    const eight = item("v-youka"); // eighth day of the month; eight days
+    expect(checkMeaning(eight, "8 dyas")).toBe(true);
+    expect(checkMeaning(eight, "9 days")).toBe(false);
+    expect(checkMeaning(item("s-masu-7"), "Every night I go to bed at twenty")).toBe(false);
+  });
 });
 
 describe("sameWords", () => {
@@ -189,6 +215,18 @@ describe("checkJapanese", () => {
     expect(checkJapanese(item("s-desu-1"), "私は学生です")).toBe(true);
     expect(checkJapanese(item("k-日"), "日")).toBe(true);
     expect(checkJapanese(item("k-日"), "にち")).toBe(true);
+  });
+
+  it("takes numbers in digits as well as kanji, but not for a kanji itself", () => {
+    const fourth = item("v-yokka");
+    expect(checkJapanese(fourth, "4日")).toBe(true);
+    expect(checkJapanese(fourth, "４日")).toBe(true);
+    expect(checkJapanese(fourth, "5日")).toBe(false);
+    const day = { ...fourth, jp: "{二十四日|にじゅうよっか}", surface: "二十四日", reading: "にじゅうよっか" };
+    expect(checkJapanese(day, "24日")).toBe(true);
+    expect(checkJapanese(day, "二十四日")).toBe(true);
+    expect(checkJapanese(day, "42日")).toBe(false);
+    expect(checkJapanese(item("k-四"), "4")).toBe(false);
   });
 
   it("does not count raw romaji as Japanese", () => {

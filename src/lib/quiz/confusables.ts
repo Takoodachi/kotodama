@@ -37,7 +37,8 @@ function base(ch: string): string {
 }
 
 export function areConfusable(a: string, b: string): boolean {
-  if (a === b) return false;
+  // Only single kana and two-kana combinations can look alike; words are compared by the hundred.
+  if (a === b || a.length > 2 || b.length > 2) return false;
   const [a0, b0] = [[...a], [...b]];
   // Single characters: shared cluster, or same base kana (か / が, は / ば / ぱ)
   if (a0.length === 1 && b0.length === 1) {

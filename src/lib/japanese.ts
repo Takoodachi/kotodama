@@ -72,10 +72,67 @@ export function literalRomajiKey(input: string): string {
   return normalizeRomaji(input).replace(/[^a-z]/g, "");
 }
 
+const KANJI_DIGITS = "〇一二三四五六七八九";
+const KANJI_TENS: Record<string, number> = { 十: 10, 百: 100, 千: 1000 };
+
+/** Numbers in kanji as digits, the way an IME may write them: 二十四日 → 24日, 二〇二六 → 2026. */
+export function kanjiToDigits(text: string): string {
+  return text.replace(/[〇一二三四五六七八九十百千]+/g, (run) => {
+    if (!/[十百千]/.test(run)) return [...run].map((kanji) => KANJI_DIGITS.indexOf(kanji)).join("");
+    let total = 0;
+    let digit = 0;
+    for (const kanji of run) {
+      if (kanji in KANJI_TENS) {
+        total += (digit || 1) * KANJI_TENS[kanji];
+        digit = 0;
+      } else digit = KANJI_DIGITS.indexOf(kanji);
+    }
+    return `${total + digit}`;
+  });
+}
+
 /** Normalizes typed Japanese. Katakana is folded to hiragana unless `strict` is set. */
 export function japaneseKey(input: string, strict = false): string {
   const text = stripPunctuation(input.normalize("NFKC"));
   return strict ? text : toHiragana(text, { passRomaji: true, convertLongVowelMark: false });
+}
+
+const UNITS = "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split(" ");
+const UNIT_ORDINALS =
+  "zeroth first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelfth thirteenth fourteenth fifteenth sixteenth seventeenth eighteenth nineteenth".split(" ");
+const TENS = "twenty thirty forty fifty sixty seventy eighty ninety".split(" ");
+const TEN_ORDINALS = "twentieth thirtieth fortieth fiftieth sixtieth seventieth eightieth ninetieth".split(" ");
+
+/** Number words as digits, and ordinals as "<n>th". */
+const NUMBERS = new Map<string, string>([
+  ...UNITS.map((word, n): [string, string] => [word, `${n}`]),
+  ...UNIT_ORDINALS.map((word, n): [string, string] => [word, `${n}th`]),
+  ...TENS.map((word, i): [string, string] => [word, `${(i + 2) * 10}`]),
+  ...TEN_ORDINALS.map((word, i): [string, string] => [word, `${(i + 2) * 10}th`]),
+  ["hundred", "100"],
+]);
+
+const COMPOUND_NUMBER = new RegExp(
+  `\\b(${TENS.join("|")}) (${[...UNITS.slice(1, 10), ...UNIT_ORDINALS.slice(1, 10)].join("|")})\\b`,
+  "g",
+);
+
+/**
+ * Numbers however they are written, as one: words as digits ("twenty four" →
+ * 24), every ordinal as "<n>th" ("twenty fourth", "24th", "21st" → 24th,
+ * 21th), and a day of the month as its ordinal alone ("24th day of the
+ * month", "24th of the month" → 24th). For lower-case text whose punctuation
+ * (hyphens too) is already spaces, one between words.
+ */
+export function foldNumbers(text: string): string {
+  return text
+    .replace(COMPOUND_NUMBER, (_, tens: string, unit: string) => {
+      const value = Number(NUMBERS.get(tens)) + parseInt(NUMBERS.get(unit)!);
+      return NUMBERS.get(unit)!.endsWith("th") ? `${value}th` : `${value}`;
+    })
+    .replace(/[a-z]+/g, (word) => NUMBERS.get(word) ?? word)
+    .replace(/\b(\d+) ?(?:st|nd|rd|th)\b/g, "$1th")
+    .replace(/\b(\d+th)(?: day)?(?: of(?: the| a)? month)?\b/g, "$1");
 }
 
 export function normalizeEnglish(input: string): string {
@@ -97,19 +154,13 @@ const FILLER = new Set(
   "a an the i you he she it we they me him her us them my your his its our their is am are was were be been being do does did to of please mr mrs ms miss san".split(" "),
 );
 
-/** Words that mean the same here, folded to one; numbers become digits, so "ten" and "10" match. */
+/** Words that mean the same here, folded to one. (Numbers are folded by `foldNumbers`, so "ten" and "10" match.) */
 const SAME_WORD: Record<string, string> = {
   each: "every",
   film: "movie",
   films: "movies",
   store: "shop",
   stores: "shops",
-  ...Object.fromEntries(
-    "zero one two three four five six seven eight nine ten eleven twelve".split(" ").map((word, n) => [word, String(n)]),
-  ),
-  twenty: "20",
-  thirty: "30",
-  hundred: "100",
 };
 
 /** Trims common endings so "cooks", "cooked" and "cooking" compare as one word. */
@@ -123,8 +174,9 @@ function stem(word: string): string {
  * spelled out ("isn't" → "is not"), filler dropped and endings trimmed.
  */
 export function contentWords(input: string): string[] {
-  return input
-    .normalize("NFKC")
+  return foldNumbers(
+    input
+      .normalize("NFKC")
     .toLowerCase()
     .replace(/[‘’]/g, "'")
     .replace(/\bo'?clock\b/g, " ")
@@ -137,8 +189,10 @@ export function contentWords(input: string): string[] {
     .replace(/'ll\b/g, " will")
     .replace(/'ve\b/g, " have")
     .replace(/'d\b/g, " would")
-    .replace(/\(.*?\)/g, " ")
-    .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\(.*?\)/g, " ")
+      .replace(/[^a-z0-9\s]/g, " ")
+      .replace(/\s+/g, " "),
+  )
     .split(/\s+/)
     .filter((word) => word && !FILLER.has(word))
     .map((word) => stem(SAME_WORD[word] ?? word));

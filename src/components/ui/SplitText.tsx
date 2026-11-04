@@ -4,7 +4,9 @@
  */
 export function SplitText({ text }: { text: string }) {
   return (
-    <span className="relative inline-flex overflow-hidden leading-none" aria-label={text}>
+    <span className="relative inline-flex overflow-hidden leading-none">
+      {/* The letters are drawn twice for the roll, so screen readers get the text once, here. */}
+      <span className="sr-only">{text}</span>
       {[...text].map((ch, i) => {
         const glyph = ch === " " ? " " : ch;
         return (
