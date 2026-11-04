@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { gradeLabel, loadKanji } from "@/lib/jmdict/kanji";
+import { StrokeOrder } from "./StrokeOrder";
 import type { KanjiDetails as Details } from "@/lib/jmdict/types";
 
 /** Details of some kanji, fetched when first shown: null while on their way, "failed" if they can't be reached. */
@@ -60,8 +61,13 @@ function Readings({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-/** One kanji: what it means, how it's read, and where it stands (strokes, grade, JLPT level, how common). */
+/**
+ * One kanji: what it means, how it's read, and where it stands (strokes,
+ * grade, JLPT level, how common). Its stroke order opens on request, so it is
+ * only fetched for the kanji someone wants to see written.
+ */
 export function KanjiCard({ kanji, details, className }: { kanji: string; details?: Details; className?: string }) {
+  const [strokesOpen, setStrokesOpen] = useState(false);
   return (
     <div className={cn("flex gap-4 rounded-xl border border-line bg-veil/[0.02] p-3.5", className)}>
       <span lang="ja" className="jp text-5xl leading-none text-paper">
@@ -90,6 +96,15 @@ export function KanjiCard({ kanji, details, className }: { kanji: string; detail
             {details.s && <Tag>{details.s === 1 ? "1 stroke" : `${details.s} strokes`}</Tag>}
             {details.f && <Tag>No. {details.f.toLocaleString("en")} in newspapers</Tag>}
           </p>
+          <button
+            type="button"
+            aria-expanded={strokesOpen}
+            onClick={() => setStrokesOpen((open) => !open)}
+            className="text-xs text-gold-bright underline decoration-gold/30 underline-offset-4 transition-colors hover:decoration-gold"
+          >
+            {strokesOpen ? "Hide the stroke order" : "Stroke order"}
+          </button>
+          {strokesOpen && <StrokeOrder kanji={kanji} />}
         </div>
       ) : (
         <p className="self-center text-xs text-mist">No details for this character.</p>

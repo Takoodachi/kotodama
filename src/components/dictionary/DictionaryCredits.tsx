@@ -35,7 +35,11 @@ export function DictionaryCredits({ date, className }: { date?: string; classNam
       <a href="https://github.com/stephenmk/yomitan-jlpt-vocab" target="_blank" rel="noreferrer" className={link}>
         yomitan-jlpt-vocab
       </a>
-      .
+      . Stroke order is from{" "}
+      <a href="https://kanjivg.tagaini.net/" target="_blank" rel="noreferrer" className={link}>
+        KanjiVG
+      </a>{" "}
+      by Ulrich Apel (CC BY-SA 3.0).
     </p>
   );
 }
