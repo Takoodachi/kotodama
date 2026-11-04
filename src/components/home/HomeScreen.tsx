@@ -12,6 +12,7 @@ import { countForGroups, ITEMS_BY_CATEGORY, ITEMS_BY_ID, itemsForGroups } from "
 import type { Category } from "@/data/types";
 import { useHydrated } from "@/hooks/useHydrated";
 import { useStartSession } from "@/hooks/useStartSession";
+import { plural } from "@/lib/plural";
 import { isDue, isMastered, isWeak, priority } from "@/lib/srs";
 import { currentStreak, useProgress } from "@/store/progress";
 import { useSettings } from "@/store/settings";
@@ -50,6 +51,7 @@ export function HomeScreen() {
   const history = useProgress((s) => s.history);
   const standalone = useIsStandalone();
   const selected = useSettings((s) => s.selected);
+  const sessionLength = useSettings((s) => s.sessionLength);
   const startSession = useStartSession();
   // Captured once per visit; the dashboard doesn't need to tick.
   const [now] = useState(() => Date.now());
@@ -105,7 +107,7 @@ export function HomeScreen() {
             )}
             {hydrated && stats.review.length === 0 && selectedCount > 0 && (
               <Button variant="ghost" size="lg" onClick={() => startSession(itemsForGroups(selected).map((i) => i.id))}>
-                Quick start · {selectedCount} items
+                Quick start · {plural(selectedCount, "item")} · {sessionLength ? plural(sessionLength, "question") : "endless"}
               </Button>
             )}
           </motion.div>

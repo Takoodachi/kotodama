@@ -36,18 +36,24 @@ function sharesMeaning(a: StudyItem, b: StudyItem): boolean {
   return false;
 }
 
-function fitsPrompt(item: StudyItem, candidate: StudyItem, prompt: Side): boolean {
+/** Whether `candidate` fits the prompt too; `shown` is the prompt's romaji, as a label key. */
+function fitsPrompt(item: StudyItem, candidate: StudyItem, prompt: Side, shown: string): boolean {
   switch (prompt) {
     case "jp":
       return candidate.surface === item.surface;
-    case "romaji": {
+    case "romaji":
       // The card shows one spelling: "ji" fits both じ and ぢ, "ji (di)" only ぢ.
-      const shown = labelKey(romajiLabel(item));
       return candidate.romaji.some((r) => labelKey(r) === shown);
-    }
     case "en":
       return sharesMeaning(item, candidate);
   }
+}
+
+/** What plausibility compares against, worked out once per question rather than once per candidate. */
+interface Target {
+  item: StudyItem;
+  label: string;
+  length: number;
 }
 
 const lastLetter = (romaji: string) => romaji.slice(-1);
@@ -58,13 +64,13 @@ const firstLetter = (romaji: string) => romaji[0];
  * characters score highest, then items from the same set, the same part of
  * speech or JLPT level, and answers of similar length.
  */
-function plausibility(item: StudyItem, candidate: StudyItem, poolIds: Set<string>, direction: Direction): number {
+function plausibility({ item, label: a, length }: Target, candidate: StudyItem, poolIds: Set<string>, side: Side): number {
   let score = 1;
   if (poolIds.has(candidate.id)) score += 1;
   if (candidate.groups.some((g) => item.groups.includes(g))) score += 3;
   if (areConfusable(item.surface, candidate.surface)) score += 8;
   // A lone character among combinations (シ next to キャ) gives the answer away.
-  if ([...candidate.surface].length === [...item.surface].length) score += 3;
+  if ([...candidate.surface].length === length) score += 3;
 
   switch (item.category) {
     case "hiragana":
@@ -82,8 +88,6 @@ function plausibility(item: StudyItem, candidate: StudyItem, poolIds: Set<string
       break;
   }
 
-  const side = answerSide(direction);
-  const a = answerLabel(item, side).label;
   const b = answerLabel(candidate, side).label;
   if (Math.abs(a.length - b.length) <= Math.max(2, a.length * 0.25)) score += 1;
   return score;
@@ -133,20 +137,22 @@ export function buildOptions(
   const poolIds = new Set(pool.map((p) => p.id));
 
   const prompt = promptSide(direction);
+  const shown = prompt === "romaji" ? labelKey(romajiLabel(item)) : "";
+  const target: Target = { item, label: correct.label, length: [...item.surface].length };
   const candidates = (ITEMS_BY_CATEGORY.get(item.category) ?? []).map(show).filter(
     (c) =>
       c.id !== item.id &&
       (side !== "en" || c.meaning.length > 0) &&
       // A distractor that also fits the prompt would be a second right answer,
       // and so would a synonym offered as an English answer.
-      !fitsPrompt(item, c, prompt) &&
+      !fitsPrompt(item, c, prompt, shown) &&
       !(side === "en" && sharesMeaning(item, c)) &&
       !(side === "romaji" && accepted.has(labelKey(answerLabel(c, side).label))),
   );
   // Over-sample, then drop answers that collide with one already chosen.
   const ranked = weightedSample(
     candidates,
-    (c) => plausibility(item, c, poolIds, direction) ** 3,
+    (c) => plausibility(target, c, poolIds, side) ** 3,
     candidates.length,
     rng,
   );
