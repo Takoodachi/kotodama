@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { loadExamples } from "./library";
 import { checkMeaning, checkReading } from "@/lib/quiz/check";
 import { GROUPS_BY_ID } from "./groups";
 import {
@@ -13,6 +14,9 @@ import {
 import { setKeyOf, setKeys, setLabel } from "./fetchedSets";
 import { WORD_SETS, wordSetGroupId, wordSetItemId, wordSetLevel } from "./wordSets";
 
+
+// Words and kanji get their example sentences once these have loaded.
+beforeAll(() => loadExamples());
 describe("word set ids", () => {
   it("say which level a set or a word belongs to", () => {
     expect(wordSetGroupId(5, 1)).toBe("dict-n5-1");

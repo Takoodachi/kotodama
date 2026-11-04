@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import { loadExamples } from "./library";
 import { checkMeaning, checkReading } from "@/lib/quiz/check";
 import { GROUPS_BY_ID, SECTIONS } from "./groups";
 import { KANJI_SETS, kanjiGroupIds, kanjiSetOf } from "./kanjiSets";
@@ -13,6 +14,9 @@ import {
   libraryRevision,
 } from "./library";
 
+
+// Words and kanji get their example sentences once these have loaded.
+beforeAll(() => loadExamples());
 describe("kanji set ids", () => {
   it("keep a level's plain id for its first part, and number the rest", () => {
     expect(kanjiGroupIds("n", 5, 1)).toEqual(["kanji-n5"]);

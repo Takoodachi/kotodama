@@ -3,7 +3,9 @@
  *
  * - Install precaches every page, plus every script, stylesheet and font
  *   those pages reference, so any screen opens without a connection. The
- *   content library ships inside those scripts, so it comes along.
+ *   content library ships inside those scripts, so it comes along; its
+ *   example sentences are a script of their own that the app fetches a
+ *   moment after it starts, and so are cached on the first visit online.
  * - Pages and RSC payloads: network first, falling back to the cached copy.
  * - Build assets and icons: cache first (their URLs change when their content does).
  * - Fonts: cache first in a cache that outlives deploys, since font files
