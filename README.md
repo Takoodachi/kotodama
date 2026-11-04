@@ -7,7 +7,9 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
 - **Dictionary:** the whole of [JMdict](https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project)
   (about 219,000 entries), opened from the Practice page. Search in English, Japanese or romaji.
   Any entry opens the details of its kanji (readings, meanings, strokes, grade, JLPT level), and
-  searching a kanji shows them straight away. It is fetched a few small files at a time, so it
+  searching a kanji shows them straight away. "Stroke order" on a kanji draws it stroke by
+  stroke, numbered, from [KanjiVG](https://kanjivg.tagaini.net/) (CC BY-SA 3.0). Each kanji's
+  strokes are fetched from jsDelivr the first time they're opened and kept for offline use. It is fetched a few small files at a time, so it
   needs a connection for words not looked up before; see [The dictionary](#the-dictionary).
 - **Kanji:** all 2,136 jōyō kanji, by JLPT level or school grade, in sets of under two hundred.
   The app carries 524 itself, with example sentences; the rest come from KANJIDIC and are fetched

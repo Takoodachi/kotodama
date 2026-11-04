@@ -14,6 +14,9 @@
  *   folder named after the dictionary release; when the summary (meta.json,
  *   network first) names a new one, the old release's files are dropped.
  *
+ * - Kanji stroke order comes from a pinned KanjiVG release on jsDelivr: cache
+ *   first, in a cache of its own that outlives deploys and dictionary releases.
+ *
  * The page registers this file as `sw.js?v=<build id>`, so every deploy
  * installs a fresh worker and drops the previous build's caches.
  * URLs resolve against the worker's scope, so the same file works at the
@@ -24,6 +27,9 @@ const PAGES = `kotodama-${BUILD}-pages`;
 const ASSETS = `kotodama-${BUILD}-assets`;
 const FONTS = "kotodama-fonts";
 const DICTIONARY = "kotodama-dict";
+const STROKES = "kotodama-strokes";
+/** Keep in step with KANJIVG_FILES in src/lib/strokes.ts. */
+const KANJIVG = "https://cdn.jsdelivr.net/gh/KanjiVG/kanjivg@";
 
 const scoped = (path) => new URL(path, self.registration.scope).href;
 const ROUTES = ["", "practice", "practice/dictionary", "quiz", "all", "progress", "settings"];
@@ -70,7 +76,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key !== PAGES && key !== ASSETS && key !== FONTS && key !== DICTIONARY)
+            .filter((key) => ![PAGES, ASSETS, FONTS, DICTIONARY, STROKES].includes(key))
             .map((key) => caches.delete(key)),
         ),
       )
@@ -145,6 +151,7 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
+  if (request.url.startsWith(KANJIVG)) return event.respondWith(cacheFirst(request, STROKES));
   if (url.origin !== self.location.origin) return;
 
   const isPageData = request.mode === "navigate" || request.headers.get("RSC") === "1" || url.searchParams.has("_rsc");

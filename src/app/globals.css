@@ -105,6 +105,13 @@
   padding-top: env(safe-area-inset-top);
 }
 
+/* A stroke of a kanji drawn from its start; see StrokeOrder. */
+@keyframes draw-stroke {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 @layer base {
   :root {
     color-scheme: dark;
