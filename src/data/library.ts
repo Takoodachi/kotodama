@@ -2,7 +2,6 @@ import { toHiragana, toRomaji } from "wanakana";
 import { cleanKanjiReading } from "@/lib/japanese";
 import { toReading, toSurface } from "@/lib/furigana";
 import { ALL_SCRIPTS, isStandardWriting, writeAs, writeSurfaceAs, type Script } from "@/lib/writing";
-import examplesJson from "./examples.json";
 import grammarJson from "./grammar.json";
 import { HIRAGANA_ROWS, KATAKANA_ROWS } from "./kana";
 import kanjiJson from "./kanji.json";
@@ -15,8 +14,12 @@ import { kanjiSetOf } from "./kanjiSets";
 import type { Category, Example, RawItem, StudyItem } from "./types";
 import { wordSetGroupId, wordSetItemId } from "./wordSets";
 
-/** Example sentences for words and kanji, keyed by item id. */
-export const EXAMPLES: Record<string, Example> = examplesJson;
+/**
+ * Example sentences for words and kanji, keyed by item id: empty until
+ * `loadExamples` brings them. They are 40% of the library and no page needs
+ * them to first draw, so they come in a script of their own.
+ */
+export let EXAMPLES: Record<string, Example> = {};
 
 function resolve(raw: RawItem, category: Category): StudyItem {
   const example = EXAMPLES[raw.id];
@@ -127,22 +130,44 @@ export const LIBRARY: StudyItem[] = [
  * Kanji without a hand-written example borrow the shortest sentence in the
  * library that uses them: a word's example sentence or a grammar sentence.
  * (The sentences are the app's own, so kanji fetched later borrow from the
- * same ones.)
+ * same ones.) Empty until the examples arrive.
  */
-const EXAMPLE_POOL: { example: Example; surface: string }[] = [
-  ...LIBRARY.filter((i) => i.category === "vocab" && i.example).map((i) => i.example!),
-  ...LIBRARY.filter((i) => i.category === "sentence").map((i) => ({ jp: i.jp, en: i.meaning[0] })),
-]
-  .map((example) => ({ example, surface: toSurface(example.jp) }))
-  .sort((a, b) => a.surface.length - b.surface.length);
+let examplePool: { example: Example; surface: string }[] = [];
 
 function borrowExample(item: StudyItem) {
   if (item.category === "kanji" && !item.example) {
-    item.example = EXAMPLE_POOL.find((ex) => ex.surface.includes(item.surface))?.example;
+    item.example = examplePool.find((ex) => ex.surface.includes(item.surface))?.example;
   }
 }
 
-LIBRARY.forEach(borrowExample);
+let examplesLoaded: Promise<void> | null = null;
+
+/**
+ * Brings the example sentences and gives each word and kanji its own,
+ * including those fetched before they came. Called once the app has started;
+ * a failed load is tried again on the next call.
+ */
+export function loadExamples(): Promise<void> {
+  examplesLoaded ??= import("./examples.json").then(
+    ({ default: all }) => {
+      EXAMPLES = all as Record<string, Example>;
+      for (const item of LIBRARY) item.example = EXAMPLES[item.id] ?? item.example;
+      examplePool = [
+        ...LIBRARY.filter((i) => i.category === "vocab" && i.example).map((i) => i.example!),
+        ...LIBRARY.filter((i) => i.category === "sentence").map((i) => ({ jp: i.jp, en: i.meaning[0] })),
+      ]
+        .map((example) => ({ example, surface: toSurface(example.jp) }))
+        .sort((a, b) => a.surface.length - b.surface.length);
+      LIBRARY.forEach(borrowExample);
+      revision++;
+    },
+    (error) => {
+      examplesLoaded = null;
+      throw error;
+    },
+  );
+  return examplesLoaded;
+}
 
 export const ITEMS_BY_ID = new Map(LIBRARY.map((item) => [item.id, item]));
 

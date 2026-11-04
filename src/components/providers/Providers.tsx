@@ -7,6 +7,7 @@ import { useHydrated } from "@/hooks/useHydrated";
 import { AccountSync } from "@/components/account/AccountSync";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { setKeys, type SetKey } from "@/data/fetchedSets";
+import { loadExamples } from "@/data/library";
 import { useCustomQuiz } from "@/store/customQuiz";
 import { useProgress } from "@/store/progress";
 import { useSession } from "@/store/session";
@@ -22,6 +23,9 @@ function StoreHydrator() {
     // Before the session: a quiz under way may be over the learner's own items.
     void useCustomQuiz.persist.rehydrate();
     void useSession.persist.rehydrate();
+    // Screens already drawn pick the examples up when they come. Offline
+    // before they were ever fetched, words simply show none until they can be.
+    loadExamples().then(() => useFetchedSets.setState((s) => ({ revision: s.revision + 1 })), () => {});
   }, []);
   return null;
 }

@@ -1,11 +1,13 @@
 import { isKana, toHiragana } from "wanakana";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { isWellFormedFurigana, toReading, toSurface } from "@/lib/furigana";
 import { readingKey, stripPunctuation } from "@/lib/japanese";
 import { ALL_GROUPS, SECTIONS } from "./groups";
-import { EXAMPLES, exampleTarget, GAP, ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, ITEMS_BY_ID, LIBRARY, writtenItem } from "./library";
+import { EXAMPLES, exampleTarget, GAP, ITEMS_BY_CATEGORY, ITEMS_BY_GROUP, ITEMS_BY_ID, LIBRARY, loadExamples, writtenItem } from "./library";
 import type { Category } from "./types";
 import { wordSetLevel } from "./wordSets";
+
+beforeAll(() => loadExamples());
 
 describe("content library", () => {
   it("has unique ids", () => {

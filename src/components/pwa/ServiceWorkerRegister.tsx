@@ -18,7 +18,8 @@ async function warmJapaneseFonts() {
   } catch {
     return;
   }
-  const { LIBRARY } = await import("@/data/library");
+  const { LIBRARY, loadExamples } = await import("@/data/library");
+  await loadExamples();
   const chars = new Set<string>();
   for (const item of LIBRARY) {
     for (const ch of item.surface + item.reading + (item.example ? item.example.jp : "")) chars.add(ch);
