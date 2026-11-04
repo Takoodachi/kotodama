@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import { ITEMS_BY_ID } from "@/data/library";
 import { weakestItems } from "@/lib/analytics";
-import { quizMode, type Mode } from "@/lib/quiz/directions";
+import { isListening, quizMode, type Mode } from "@/lib/quiz/directions";
+import { speechSupported } from "@/lib/speech";
 import { useProgress } from "@/store/progress";
 import { useSession, type SessionLabel } from "@/store/session";
 import { useSettings } from "@/store/settings";
@@ -27,7 +28,8 @@ export function useStartSession() {
       const started = useSession.getState().start({
         itemIds,
         mode,
-        directions: directions[mode],
+        // Without speech, cards can't be heard: they are asked the other ways that are on.
+        directions: speechSupported() ? directions[mode] : directions[mode].filter((d) => !isListening(d)),
         length: overrides?.length ?? sessionLength,
         label: overrides?.label,
         writing,

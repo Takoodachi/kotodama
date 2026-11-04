@@ -2,12 +2,14 @@
 
 import { ArrowRight } from "lucide-react";
 import type { Category } from "@/data/types";
+import { useSpeech } from "@/hooks/useSpeech";
 import { cn } from "@/lib/cn";
 import { langOf } from "@/lib/japanese";
 import {
   DIRECTION_LABELS,
   directionDescription,
   directionLimits,
+  isListening,
   MODE_DIRECTIONS,
   type Direction,
   type Mode,
@@ -34,11 +36,12 @@ function DirectionName({ direction }: { direction: Direction }) {
 
 export function DirectionPicker({ mode, enabled, onToggle, categories }: DirectionPickerProps) {
   const limits = directionLimits(categories, mode, enabled);
+  const { supported: canHear } = useSpeech();
 
   return (
     <div>
       <div className="grid grid-cols-2 gap-2">
-        {MODE_DIRECTIONS[mode].map((direction) => {
+        {MODE_DIRECTIONS[mode].filter((direction) => canHear || !isListening(direction)).map((direction) => {
           const on = enabled.includes(direction);
           const { from, to } = DIRECTION_LABELS[direction];
           const description = directionDescription(direction, mode);

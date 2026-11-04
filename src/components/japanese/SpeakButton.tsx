@@ -8,13 +8,16 @@ import { cn } from "@/lib/cn";
 interface SpeakButtonProps {
   text: string;
   className?: string;
-  size?: "sm" | "md";
+  /** "lg" is the whole question on a card that is heard, not seen. */
+  size?: "sm" | "md" | "lg";
   /**
    * Shown but not playable, e.g. before answering a reading question, where
    * hearing the word would give the answer away.
    */
   locked?: boolean;
 }
+
+const ICON = { sm: "size-4", md: "size-[18px]", lg: "size-9" };
 
 export function SpeakButton({ text, className, size = "md", locked = false }: SpeakButtonProps) {
   const { supported, speaking, speak, muted } = useSpeech();
@@ -32,7 +35,7 @@ export function SpeakButton({ text, className, size = "md", locked = false }: Sp
       title={label}
       className={cn(
         "relative inline-flex shrink-0 items-center justify-center rounded-full border border-line text-mist transition-colors hover:border-veil/25 hover:text-paper",
-        size === "md" ? "size-11" : "size-9",
+        size === "lg" ? "size-24" : size === "md" ? "size-11" : "size-9",
         speaking && "border-gold/60 text-gold-bright",
         (locked || muted) && "cursor-not-allowed opacity-40 hover:border-line hover:text-mist",
         className,
@@ -47,9 +50,9 @@ export function SpeakButton({ text, className, size = "md", locked = false }: Sp
         />
       )}
       {muted ? (
-        <VolumeX className={size === "md" ? "size-[18px]" : "size-4"} strokeWidth={1.6} />
+        <VolumeX className={ICON[size]} strokeWidth={1.6} />
       ) : (
-        <Volume2 className={size === "md" ? "size-[18px]" : "size-4"} strokeWidth={1.6} />
+        <Volume2 className={ICON[size]} strokeWidth={1.6} />
       )}
       {locked && !muted && (
         <span className="absolute -right-0.5 -bottom-0.5 flex size-4 items-center justify-center rounded-full bg-ink-800">

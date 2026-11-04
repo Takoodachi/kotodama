@@ -18,6 +18,7 @@ describe("directionLimits", () => {
 
   it("falls back to every way the kind supports when none that are on fit", () => {
     expect(directionLimits(["katakana"], "choice", ["jp-en"])[0].used).toEqual(["jp-romaji", "romaji-jp"]);
+    expect(directionLimits(["kanji"], "choice", ["audio-jp"])[0].used).toEqual(["jp-en", "jp-romaji", "en-jp"]);
   });
 });
 
@@ -29,6 +30,17 @@ describe("pickDirection in reading mode", () => {
     for (const id of ["v-taberu", "p-ohayou", "s-masu-1", "k-日"]) {
       expect(ask(id, "jp-en")).toBe("jp-en");
       expect(ask(id, "jp-both")).toBe("jp-both");
+    }
+  });
+
+  it("lets words and kana be heard, but asks kanji by sight", () => {
+    const heard = (id: string) => pickDirection(ITEMS_BY_ID.get(id)!, "reading", ["audio-romaji"], seededRng(1));
+    expect(heard("v-taberu")).toBe("audio-romaji");
+    expect(heard("h-あ")).toBe("audio-romaji");
+    expect(heard("k-日")).not.toBe("audio-romaji");
+    // Never heard unless listening was turned on.
+    for (let seed = 0; seed < 30; seed++) {
+      expect(pickDirection(ITEMS_BY_ID.get("h-あ")!, "choice", ["jp-en"], seededRng(seed))).not.toBe("audio-jp");
     }
   });
 

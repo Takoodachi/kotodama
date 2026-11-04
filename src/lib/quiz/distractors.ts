@@ -1,10 +1,10 @@
 import { ITEMS_BY_CATEGORY, romajiLabel, writtenItem } from "@/data/library";
 import type { StudyItem } from "@/data/types";
-import { normalizeEnglish } from "@/lib/japanese";
+import { normalizeEnglish, readingKey } from "@/lib/japanese";
 import { shuffle, weightedSample, type Rng } from "@/lib/random";
 import { ALL_SCRIPTS, type Script } from "@/lib/writing";
 import { areConfusable } from "./confusables";
-import { answerLabel, answerSide, isCloze, primaryMeaning, promptSide, type Direction, type Side } from "./directions";
+import { answerLabel, answerSide, isCloze, primaryMeaning, promptSide, type Direction, type PromptSide, type Side } from "./directions";
 
 export interface ChoiceOption {
   itemId: string;
@@ -36,9 +36,26 @@ function sharesMeaning(a: StudyItem, b: StudyItem): boolean {
   return false;
 }
 
+// How each item sounds, as reading keys, worked out once: a heard card compares hundreds.
+const soundCache = new Map<string, Set<string>>();
+function soundsOf(item: StudyItem): Set<string> {
+  let set = soundCache.get(item.id);
+  if (!set) {
+    set = new Set([item.reading, ...item.romaji].map(readingKey));
+    soundCache.set(item.id, set);
+  }
+  return set;
+}
+
 /** Whether `candidate` fits the prompt too; `shown` is the prompt's romaji, as a label key. */
-function fitsPrompt(item: StudyItem, candidate: StudyItem, prompt: Side, shown: string): boolean {
+function fitsPrompt(item: StudyItem, candidate: StudyItem, prompt: PromptSide, shown: string): boolean {
   switch (prompt) {
+    case "audio": {
+      // Heard, 橋 and 箸 (or じ and ぢ) are the same: one can't be offered against the other.
+      const sounds = soundsOf(item);
+      for (const sound of soundsOf(candidate)) if (sounds.has(sound)) return true;
+      return false;
+    }
     case "jp":
       return candidate.surface === item.surface;
     case "romaji":

@@ -20,6 +20,16 @@ describe("buildOptions", () => {
     // About 12,000 questions, 25-40s here: the limit leaves room for a busy machine.
   }, 120_000);
 
+  it("never offers, for a card that is heard, another that sounds the same (花 and 鼻)", () => {
+    const flower = ITEMS_BY_ID.get("v-hana")!;
+    const nose = ITEMS_BY_ID.get("v-hana-nose")!;
+    const ji = ITEMS_BY_ID.get("h-じ")!;
+    for (let seed = 0; seed < 50; seed++) {
+      expect(buildOptions(flower, "audio-jp", [flower, nose], seededRng(seed)).map((o) => o.itemId)).not.toContain(nose.id);
+      expect(buildOptions(ji, "audio-jp", [ji], seededRng(seed)).map((o) => o.label)).not.toContain("ぢ");
+    }
+  });
+
   it("never offers a second item that fits the prompt (じ and ぢ are both 'ji')", () => {
     const ji = ITEMS_BY_ID.get("h-じ")!;
     for (let seed = 0; seed < 50; seed++) {
