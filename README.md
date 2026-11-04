@@ -55,6 +55,8 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
   the word highlighted (words and kanji fetched from the dictionary borrow one where they can). Tap the sentence to hear it and see the translation. The first time you meet a
   word, its sentence always shows.
 - **Ghost mode:** one tap drills the 20 items you have the lowest accuracy on.
+- **Daily goal:** a number of answers a day to aim for (Settings → Practice; 20 to start with, or
+  off). The home page shows today's progress as a ring that closes in gold when it's met.
 - **Study heatmap:** the home page shows a year of daily study, GitHub-style.
 - **Progress page:** a radar of known share per category, plus mastery bars for every set
   (N5 kanji, each kana group, each word theme…).

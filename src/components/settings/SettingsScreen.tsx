@@ -18,7 +18,7 @@ import { plural } from "@/lib/plural";
 import { bestVoice } from "@/lib/speech";
 import { useAccount } from "@/store/account";
 import { useProgress } from "@/store/progress";
-import { JP_SIZES, useSettings } from "@/store/settings";
+import { DAILY_GOALS, JP_SIZES, useSettings } from "@/store/settings";
 import { useStorage } from "@/store/storage";
 
 const SAMPLE = "{日本語|にほんご}を{勉強|べんきょう}しています。";
@@ -235,6 +235,14 @@ export function SettingsScreen() {
       </Panel>
 
       <Panel eyebrow="Practice" title="Flow">
+        <Field label="Daily goal" hint="Answers a day to aim for. The home page shows how far along today is.">
+          <SegmentedControl
+            label="Daily goal"
+            value={settings.dailyGoal}
+            onChange={settings.setDailyGoal}
+            options={DAILY_GOALS.map((goal) => ({ value: goal, label: goal ? String(goal) : "Off" }))}
+          />
+        </Field>
         <div className="-my-3 divide-y divide-line">
           <Toggle
             checked={settings.autoAdvance}

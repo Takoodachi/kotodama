@@ -9,6 +9,10 @@ export type GlyphStyle = "sans" | "mincho";
 export type Autoplay = "off" | "answer" | "reveal";
 /** Number of questions; 0 means endless. */
 export type SessionLength = 10 | 20 | 30 | 50 | 0;
+
+/** Answers a day to aim for; 0 is no goal. */
+export const DAILY_GOALS = [0, 10, 20, 50, 100] as const;
+export type DailyGoal = (typeof DAILY_GOALS)[number];
 export type Theme = "dark" | "light" | "system";
 /** How much larger Japanese study text is drawn than normal. */
 export type JpSize = 1 | 1.15 | 1.3 | 1.5;
@@ -41,6 +45,7 @@ interface SettingsState {
   theme: Theme;
   /** Whether the kana chart is shown beside the pages that have it, on screens with the room. */
   kanaChart: boolean;
+  dailyGoal: DailyGoal;
 
   toggleGroup: (id: string) => void;
   setGroups: (ids: string[], on: boolean) => void;
@@ -62,6 +67,7 @@ interface SettingsState {
   setMuted: (muted: boolean) => void;
   setTheme: (theme: Theme) => void;
   setKanaChart: (shown: boolean) => void;
+  setDailyGoal: (goal: DailyGoal) => void;
 }
 
 export const useSettings = create<SettingsState>()(
@@ -83,6 +89,7 @@ export const useSettings = create<SettingsState>()(
       muted: false,
       theme: "dark",
       kanaChart: true,
+      dailyGoal: 20,
 
       toggleGroup: (id) =>
         set((s) => ({
@@ -113,6 +120,7 @@ export const useSettings = create<SettingsState>()(
       setAudio: (audio) => set((s) => ({ audio: { ...s.audio, ...audio } })),
       setBuiltInIme: (builtInIme) => set({ builtInIme }),
       setAutoAdvance: (autoAdvance) => set({ autoAdvance }),
+      setDailyGoal: (dailyGoal) => set({ dailyGoal }),
       toggleWriting: (script) =>
         set((s) => {
           const next = s.writing.includes(script) ? s.writing.filter((w) => w !== script) : [...s.writing, script];
