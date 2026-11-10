@@ -96,7 +96,9 @@ export function writtenItem(item: StudyItem, scripts: readonly Script[] = ALL_SC
 export function kanjiReadings(item: Pick<RawItem, "on" | "kun">): string[] {
   const kun = (item.kun ?? []).map(cleanKanjiReading);
   const on = (item.on ?? []).map((r) => toHiragana(r));
-  return [...new Set([...kun, ...on])];
+  // The kanji's own part of a kun'yomi counts too: た for た.べる. Last, so the first reading stays a whole word.
+  const stems = (item.kun ?? []).map((r) => cleanKanjiReading(r.split(".")[0]));
+  return [...new Set([...kun, ...on, ...stems])];
 }
 
 const readingLabelCache = new Map<string, { label: string; sublabel: string }>();

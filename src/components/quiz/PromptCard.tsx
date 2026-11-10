@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
+import { Kun, Readings } from "@/components/dictionary/KanjiDetails";
 import { JpText, type RubyDisplay } from "@/components/japanese/Furigana";
 import { SpeakButton } from "@/components/japanese/SpeakButton";
 import { useSpeech } from "@/hooks/useSpeech";
@@ -109,6 +110,10 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
   const meaning =
     side !== "en" && answerSide(direction) !== "en" && item.meaning.length ? promptText(item, "en") : null;
   const meaningShown = answered || gap;
+  // A kanji's on'yomi and kun'yomi: there from the start like furigana when the card asks its
+  // meaning, and otherwise once answered, as they are the answer or would point to it.
+  const readings = item.category === "kanji" && !!(item.on?.length || item.kun?.length);
+  const readingsShown = answered || (side === "jp" && !asksReading(direction) && furigana === "show");
   // Hearing the word would give away a reading question or a gap, so the button waits for the answer.
   const canSpeak = heard || (gap ? answered : side === "jp" ? !asksReading(direction) || answered : answered);
 
@@ -172,8 +177,32 @@ export function PromptCard({ item, direction, mode, furigana, correct, ghost, re
       </motion.div>
 
       {/* Space is kept from the start, so revealing the meaning doesn't move the options below. */}
-      {(meaning || item.usual) && (
+      {(meaning || item.usual || readings) && (
         <div className="relative mx-auto mt-3 -mb-4 max-w-md space-y-1 leading-relaxed">
+          {readings && (
+            <div
+              aria-hidden={!readingsShown}
+              className={cn(
+                "mx-auto w-fit text-left transition-opacity duration-500",
+                readingsShown ? "opacity-100" : "invisible opacity-0",
+              )}
+            >
+              {!!item.on?.length && (
+                <Readings label="On">
+                  {item.on.map((reading) => (
+                    <span key={reading}>{reading}</span>
+                  ))}
+                </Readings>
+              )}
+              {!!item.kun?.length && (
+                <Readings label="Kun">
+                  {item.kun.map((reading) => (
+                    <Kun key={reading} reading={reading} />
+                  ))}
+                </Readings>
+              )}
+            </div>
+          )}
           {meaning && (
             <p
               aria-hidden={!meaningShown}

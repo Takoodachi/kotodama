@@ -40,7 +40,7 @@ function Tag({ children, gold }: { children: React.ReactNode; gold?: boolean }) 
 }
 
 /** A kun'yomi with the part written in kana after the kanji set apart: た.べる is た + べる. */
-function Kun({ reading }: { reading: string }) {
+export function Kun({ reading }: { reading: string }) {
   const [stem, okurigana] = reading.split(".");
   return (
     <span className="whitespace-nowrap">
@@ -50,7 +50,7 @@ function Kun({ reading }: { reading: string }) {
   );
 }
 
-function Readings({ label, children }: { label: string; children: React.ReactNode }) {
+export function Readings({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <p className="flex gap-2 text-sm leading-relaxed">
       <span className="w-8 shrink-0 pt-0.5 text-[11px] tracking-wide text-smoke">{label}</span>
