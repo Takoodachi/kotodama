@@ -11,6 +11,7 @@ import {
   sameWords,
   synonymsOf,
 } from "./check";
+import { checkGridAnswer } from "./grid";
 
 const item = (id: string) => {
   const found = ITEMS_BY_ID.get(id);
@@ -124,7 +125,16 @@ describe("checkReading", () => {
     expect(checkReading(sun, "nichi")).toBe(true);
     expect(checkReading(sun, "hi")).toBe(true);
     expect(checkReading(sun, "jitsu")).toBe(true);
-    expect(checkReading(item("k-食"), "taberu")).toBe(true);
+    const eat = item("k-食"); // on ショク; kun た.べる, く.う
+    expect(checkReading(eat, "taberu")).toBe(true);
+    expect(checkReading(eat, "shoku")).toBe(true);
+    expect(checkReading(eat, "ショク")).toBe(true);
+    // The kanji's own part of a kun'yomi, without the kana that follow it.
+    expect(checkReading(eat, "ta")).toBe(true);
+    expect(checkReading(eat, "ku")).toBe(true);
+    expect(checkReading(eat, "beru")).toBe(false);
+    expect(checkGridAnswer(eat, "ta")).toBe(true);
+    expect(checkJapanese(eat, "た")).toBe(true);
     expect(checkReading(sun, "getsu")).toBe(false);
   });
 });

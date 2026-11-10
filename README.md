@@ -13,7 +13,10 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
   needs a connection for words not looked up before; see [The dictionary](#the-dictionary).
 - **Kanji:** all 2,136 jōyō kanji, by JLPT level or school grade, in sets of under two hundred.
   The app carries 524 itself, with example sentences; the rest come from KANJIDIC and are fetched
-  the first time a kanji set is chosen.
+  the first time a kanji set is chosen. A kanji's reading can be answered with any on'yomi or
+  kun'yomi, with or without the kana that follow the kanji (た or たべる for 食). The quiz card
+  shows both, labelled On and Kun: from the start when it asks the meaning (unless furigana is
+  set to show later or never), and once answered when it asks the reading.
 - **JLPT word sets:** every JLPT level's word list (about 7,700 words, N5 to N1), drawn from the
   dictionary and dealt into sets of a couple of hundred. A level's words are fetched when one of
   its sets is first chosen, and work offline after that.
