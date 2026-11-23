@@ -72,7 +72,8 @@ function later<T extends { at: number }>(a: T | undefined, b: T): T {
   return JSON.stringify(a) <= JSON.stringify(b) ? a : b;
 }
 
-function mergeEntries<T extends { at: number }>(a: Record<string, T>, b: Record<string, T>): Record<string, T> {
+/** Two sets of timestamped entries, the later of each standing. */
+export function mergeEntries<T extends { at: number }>(a: Record<string, T>, b: Record<string, T>): Record<string, T> {
   const merged = { ...a };
   for (const [id, entry] of Object.entries(b)) merged[id] = later(merged[id], entry);
   return merged;

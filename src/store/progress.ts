@@ -90,6 +90,7 @@ export function progressDoc(state: Pick<ProgressState, "resetAt" | "records" | "
     streak: state.streak,
     devices: state.devices,
     own: emptyOwn(),
+    settings: {},
   };
 }
 

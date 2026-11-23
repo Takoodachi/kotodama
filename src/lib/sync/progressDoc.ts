@@ -1,5 +1,5 @@
 import { isUnlocked, unlockedAt, type SrsRecord } from "@/lib/srs";
-import { emptyOwn, mergeOwn, readOwn, type OwnDoc } from "./ownDoc";
+import { emptyOwn, mergeEntries, mergeOwn, readOwn, type OwnDoc } from "./ownDoc";
 
 /**
  * Progress as it is saved to an account: one document that every device
@@ -39,12 +39,21 @@ export interface ProgressDoc {
   devices: Record<string, DeviceCounts>;
   /** The quiz the learner built themselves (see ./ownDoc). It isn't progress: a reset leaves it alone. */
   own: OwnDoc;
+  /** Settings that follow the learner between devices. Not progress either. */
+  settings: SettingsDoc;
 }
+
+/**
+ * Settings by name, each with when it was last changed: of two devices'
+ * changes to one setting, the later stands. What each may hold is the
+ * settings store's to check (see store/settings).
+ */
+export type SettingsDoc = Record<string, { at: number; value: unknown }>;
 
 const ZERO: Counts = { answered: 0, correct: 0 };
 
 export function emptyDoc(resetAt = 0): ProgressDoc {
-  return { v: 1, resetAt, records: {}, streak: { count: 0, lastDay: null }, devices: {}, own: emptyOwn() };
+  return { v: 1, resetAt, records: {}, streak: { count: 0, lastDay: null }, devices: {}, own: emptyOwn(), settings: {} };
 }
 
 // ---------------------------------------------------------------- dates
@@ -152,8 +161,9 @@ export function mergeStreaks(streaks: Streak[], history: Record<string, Counts>)
 /** Combines two versions of an account's progress. Order doesn't matter, and merging twice changes nothing. */
 export function mergeDocs(a: ProgressDoc, b: ProgressDoc): ProgressDoc {
   const own = mergeOwn(a.own, b.own);
+  const settings = mergeEntries(a.settings, b.settings);
   // A reset on any device clears all the progress made before it.
-  if (a.resetAt !== b.resetAt) return { ...(a.resetAt > b.resetAt ? a : b), own };
+  if (a.resetAt !== b.resetAt) return { ...(a.resetAt > b.resetAt ? a : b), own, settings };
 
   const records: Record<string, SrsRecord> = { ...a.records };
   for (const [id, record] of Object.entries(b.records)) {
@@ -166,7 +176,7 @@ export function mergeDocs(a: ProgressDoc, b: ProgressDoc): ProgressDoc {
   }
 
   const streak = mergeStreaks([a.streak, b.streak], combinedCounts(devices).history);
-  return { v: 1, resetAt: a.resetAt, records, streak, devices, own };
+  return { v: 1, resetAt: a.resetAt, records, streak, devices, own, settings };
 }
 
 // ---------------------------------------------------------------- checking
@@ -241,5 +251,16 @@ export function readDoc(value: unknown): ProgressDoc {
     },
     devices,
     own: readOwn(value.own),
+    settings: readSettings(value.settings),
   };
+}
+
+/** The settings' times and values, as far as their shape goes; the values themselves are checked where they're used. */
+function readSettings(value: unknown): SettingsDoc {
+  const settings: SettingsDoc = {};
+  if (!isObject(value)) return settings;
+  for (const [name, entry] of Object.entries(value)) {
+    if (isObject(entry) && num(entry.at) > 0 && entry.value !== undefined) settings[name] = { at: num(entry.at), value: entry.value };
+  }
+  return settings;
 }

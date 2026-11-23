@@ -6,6 +6,7 @@ import type { OwnDoc } from "@/lib/sync/ownDoc";
 import { accountsEnabled, getSupabase } from "@/lib/sync/supabase";
 import { useCustomQuiz } from "./customQuiz";
 import { progressDoc, useProgress } from "./progress";
+import { syncedSettings, useSettings } from "./settings";
 
 export type AuthStatus = "unavailable" | "loading" | "signed-out" | "signed-in";
 export type SyncStatus = "idle" | "syncing" | "synced" | "offline" | "error";
@@ -66,7 +67,7 @@ let applyingRemote = false;
 export const isApplyingRemote = () => applyingRemote;
 
 /**
- * Syncs progress and the learner's own quiz with the account now. Calls made
+ * Syncs progress, the learner's own quiz and their settings with the account now. Calls made
  * while a sync is running queue one more run afterwards. Resolves to whether
  * everything is saved.
  */
@@ -89,7 +90,7 @@ export function syncNow(): Promise<boolean> {
 
 async function syncOnce(): Promise<boolean> {
   const { userId, status } = useAccount.getState();
-  const read = useProgress.persist.hasHydrated() && useCustomQuiz.persist.hasHydrated();
+  const read = useProgress.persist.hasHydrated() && useCustomQuiz.persist.hasHydrated() && useSettings.persist.hasHydrated();
   if (status !== "signed-in" || !userId || !read) return false;
   if (isOffline()) {
     useAccount.setState({ sync: "offline" });
@@ -99,10 +100,10 @@ async function syncOnce(): Promise<boolean> {
   try {
     const client = await getSupabase();
     const state = useProgress.getState();
-    // Progress and a quiz last synced with a different account stay out of this one.
+    // Progress, a quiz and settings last synced with a different account stay out of this one.
     const anothers = !!state.syncedWith && state.syncedWith !== userId;
     const quiz = useCustomQuiz.getState().doc;
-    const local = anothers ? emptyDoc() : { ...progressDoc(state), own: quiz };
+    const local = anothers ? emptyDoc() : { ...progressDoc(state), own: quiz, settings: syncedSettings(useSettings.getState()) };
     const merged = await syncProgress(client, userId, local);
     // Still the same account? (Signing out mid-sync must not bring progress back.)
     if (useAccount.getState().userId !== userId) return false;
@@ -111,6 +112,7 @@ async function syncOnce(): Promise<boolean> {
     applyingRemote = true;
     try {
       useCustomQuiz.getState().mergeDoc(merged.own, anothers);
+      useSettings.getState().mergeSynced(merged.settings, anothers);
       useProgress.getState().mergeDoc(merged, userId);
     } finally {
       applyingRemote = false;
