@@ -137,3 +137,28 @@ describe("readDoc", () => {
     expect(sameDoc(readDoc(JSON.parse(JSON.stringify(original))), original)).toBe(true);
   });
 });
+
+describe("settings in the progress document", () => {
+  const laptop = doc({ settings: { furigana: { at: 100, value: "hide" }, theme: { at: 300, value: "light" } } });
+  const phone = doc({ settings: { furigana: { at: 200, value: "after" }, theme: { at: 50, value: "dark" }, glyph: { at: 10, value: "sans" } } });
+
+  it("keeps the later change of each setting, from either device, in either order", () => {
+    const merged = mergeDocs(laptop, phone);
+    expect(merged.settings).toEqual({
+      furigana: { at: 200, value: "after" },
+      theme: { at: 300, value: "light" },
+      glyph: { at: 10, value: "sans" },
+    });
+    expect(sameDoc(merged, mergeDocs(phone, laptop))).toBe(true);
+  });
+
+  it("is left alone by a reset of progress", () => {
+    expect(mergeDocs(laptop, emptyDoc(1_000)).settings).toEqual(laptop.settings);
+  });
+
+  it("reads back only entries with a time and a value", () => {
+    const read = readDoc({ settings: { furigana: { at: 5, value: "hide" }, theme: { value: "light" }, glyph: { at: 3 }, bad: "x" } });
+    expect(read.settings).toEqual({ furigana: { at: 5, value: "hide" } });
+    expect(readDoc({}).settings).toEqual({});
+  });
+});

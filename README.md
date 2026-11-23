@@ -63,7 +63,7 @@ multiple choice, reading or typing quizzes. Spaced repetition brings back whatev
 - **Study heatmap:** the home page shows a year of daily study, GitHub-style.
 - **Progress page:** a radar of known share per category, plus mastery bars for every set
   (N5 kanji, each kana group, each word theme…).
-- **Accounts:** sign in (Settings → Account) to keep progress and your own quiz in sync across devices. Practice on
+- **Accounts:** sign in (Settings → Account) to keep progress, your own quiz and your settings in sync across devices. Practice on
   several devices adds up, even offline; see [Accounts and sync](#accounts-and-sync).
 - **Look back:** "Previous card" (or `←`) shows earlier cards in a session and plays them again.
 - **Keyboard:** `1`–`4` answer, `Enter` or `Space` continue, `←` look back, `Esc` ends the session.
@@ -168,6 +168,12 @@ The merge keeps the latest answer per item, keeps each device's answer counts ap
 on two devices adds up instead of overwriting), and carries streaks across devices. A save only
 succeeds if nobody saved since it read; otherwise it merges again. Resetting progress while signed
 in resets it on every device; signing out clears it from that device.
+
+Settings sync the same way, each with the time it was last changed, so the latest change of a
+setting on any device stands: the sets picked, mode, directions, session length, furigana, glyph
+style, writing, theme, autoplay and speed, auto-advance, daily goal and kanji grouping. Text size,
+voice, mute, the kana converter and the kana chart suit one device and stay on it. A progress
+reset and signing out leave settings alone.
 
 The quiz a learner builds themselves, and the quizzes they put by under a name, are saved in the
 same document, three seconds after a change.

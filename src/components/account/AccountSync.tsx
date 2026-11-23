@@ -5,11 +5,12 @@ import { accountsEnabled, getSupabase } from "@/lib/sync/supabase";
 import { isApplyingRemote, syncNow, useAccount } from "@/store/account";
 import { useCustomQuiz } from "@/store/customQuiz";
 import { useProgress } from "@/store/progress";
+import { useSettings } from "@/store/settings";
 
 /** How long after an answer progress is saved: long enough to batch a run of answers. */
 const SAVE_DELAY = 15_000;
-/** The learner's own quiz is saved sooner: a change to it is made on purpose, and often just before putting the device down. */
-const QUIZ_SAVE_DELAY = 3_000;
+/** The learner's own quiz and settings are saved sooner: a change to them is made on purpose, and often just before putting the device down. */
+const CHOICE_SAVE_DELAY = 3_000;
 /** Coming back to the app fetches other devices' practice, at most this often. */
 const REFRESH_EVERY = 60_000;
 
@@ -17,7 +18,7 @@ const signedIn = () => useAccount.getState().status === "signed-in";
 
 /**
  * Keeps the account session and its sync running in the background: restores
- * the session on load, saves progress and the learner's own quiz a little
+ * the session on load, saves progress, the learner's own quiz and settings a little
  * after they change and right away when the app is put away, and fetches
  * what other devices did when the app comes back into view or back online.
  */
@@ -74,10 +75,14 @@ export function AccountSync() {
       else if (state.records !== prev.records || state.devices !== prev.devices) saveSoon(SAVE_DELAY);
     });
     const unsubscribeQuiz = useCustomQuiz.subscribe((state, prev) => {
-      if (signedIn() && !isApplyingRemote() && state.doc !== prev.doc) saveSoon(QUIZ_SAVE_DELAY);
+      if (signedIn() && !isApplyingRemote() && state.doc !== prev.doc) saveSoon(CHOICE_SAVE_DELAY);
+    });
+    const unsubscribeSettings = useSettings.subscribe((state, prev) => {
+      if (signedIn() && !isApplyingRemote() && state.syncedAt !== prev.syncedAt) saveSoon(CHOICE_SAVE_DELAY);
     });
     const unsubscribeHydration = useProgress.persist.onFinishHydration(() => void syncNow());
     const unsubscribeQuizHydration = useCustomQuiz.persist.onFinishHydration(() => void syncNow());
+    const unsubscribeSettingsHydration = useSettings.persist.onFinishHydration(() => void syncNow());
 
     const onVisibility = () => {
       if (!signedIn()) return;
@@ -97,6 +102,8 @@ export function AccountSync() {
       unsubscribeQuiz();
       unsubscribeHydration();
       unsubscribeQuizHydration();
+      unsubscribeSettings();
+      unsubscribeSettingsHydration();
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", flush);
